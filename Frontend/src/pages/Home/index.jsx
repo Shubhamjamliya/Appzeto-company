@@ -13,11 +13,13 @@ import NativeProduct from './components/NativeProduct';
 import ServiceCategorySection from './components/ServiceCategorySection';
 import HomeRepairSection from './components/HomeRepairSection';
 import NativeProductWithRefer from './components/NativeProductWithRefer';
+import ACApplianceModal from './components/ACApplianceModal';
 
 const Home = () => {
   const navigate = useNavigate();
   const [location] = useState('New Palasia- Indore- Madhya Pradesh...');
   const [cartCount] = useState(0);
+  const [isACModalOpen, setIsACModalOpen] = useState(false);
 
   const handleSearch = (query) => {
     console.log('Search query:', query);
@@ -26,7 +28,12 @@ const Home = () => {
 
   const handleCategoryClick = (category) => {
     console.log('Category clicked:', category);
-    // Navigate to service category page
+    // Open modal for AC & Appliance Repair
+    if (category.title === 'AC & Appliance Repair') {
+      setIsACModalOpen(true);
+    } else {
+      // Navigate to service category page for other categories
+    }
   };
 
   const handlePromoClick = (promo) => {
@@ -36,7 +43,12 @@ const Home = () => {
 
   const handleServiceClick = (service) => {
     console.log('Service clicked:', service);
-    // Navigate to service detail page
+    // Navigate to AC Service page if AC service is clicked
+    if (service.title === 'AC Service and Repair' || service.title?.includes('AC')) {
+      navigate('/ac-service');
+    } else {
+      // Navigate to other service detail pages
+    }
   };
 
   const handleProfessionalClick = (professional) => {
@@ -186,6 +198,14 @@ const Home = () => {
       </main>
 
       <BottomNav />
+
+      {/* AC & Appliance Repair Modal */}
+      <ACApplianceModal
+        isOpen={isACModalOpen}
+        onClose={() => setIsACModalOpen(false)}
+        location={location}
+        cartCount={cartCount}
+      />
     </div>
   );
 };

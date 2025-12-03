@@ -4,6 +4,7 @@ import Home from '../pages/Home';
 import Rewards from '../pages/Rewards';
 import Account from '../pages/Account';
 import Native from '../pages/Native';
+import ACService from '../pages/ACService';
 
 const AppRoutes = () => {
   return (
@@ -12,6 +13,7 @@ const AppRoutes = () => {
       <Route path="/rewards" element={<Rewards />} />
       <Route path="/account" element={<Account />} />
       <Route path="/native" element={<Native />} />
+      <Route path="/ac-service" element={<ACService />} />
     </Routes>
   );
 };
