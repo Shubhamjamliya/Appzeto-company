@@ -63,7 +63,7 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
 
                 <button
                   onClick={() => onViewDetails?.(service)}
-                  className="text-purple-600 text-sm font-medium hover:underline"
+                  className="text-blue-600 text-sm font-medium hover:underline"
                 >
                   View details
                 </button>
@@ -79,7 +79,7 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
                 </div>
                 <button
                   onClick={() => onAddClick?.(service)}
-                  className="absolute bottom-2 right-2 bg-white border border-purple-600 text-purple-600 text-xs font-semibold px-3 py-1 rounded-lg hover:bg-purple-50 active:scale-95 transition-all"
+                  className="absolute bottom-2 right-2 bg-white border border-blue-600 text-blue-600 text-xs font-semibold px-3 py-1 rounded-lg hover:bg-blue-50 active:scale-95 transition-all"
                 >
                   Add
                 </button>

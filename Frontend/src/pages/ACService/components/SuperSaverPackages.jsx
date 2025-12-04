@@ -108,13 +108,13 @@ const SuperSaverPackages = ({ onViewDetails, onAddClick }) => {
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => onViewDetails?.(pkg)}
-                  className="text-purple-600 text-sm font-medium hover:underline"
+                  className="text-blue-600 text-sm font-medium hover:underline"
                 >
                   View details
                 </button>
                 <button
                   onClick={() => onAddClick?.(pkg)}
-                  className="bg-white border border-purple-600 text-purple-600 text-sm font-semibold px-6 py-2 rounded-lg hover:bg-purple-50 active:scale-95 transition-all"
+                  className="bg-white border border-blue-600 text-blue-600 text-sm font-semibold px-6 py-2 rounded-lg hover:bg-blue-50 active:scale-95 transition-all"
                 >
                   Add
                 </button>

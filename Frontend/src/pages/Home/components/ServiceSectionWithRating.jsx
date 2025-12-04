@@ -19,7 +19,7 @@ const ServiceSectionWithRating = ({ title, subtitle, services, onSeeAllClick, on
         {onSeeAllClick && (
           <button
             onClick={onSeeAllClick}
-            className="text-purple-600 font-medium text-sm hover:underline"
+            className="text-blue-600 font-medium text-sm hover:underline"
           >
             See all
           </button>

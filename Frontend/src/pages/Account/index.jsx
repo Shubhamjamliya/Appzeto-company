@@ -139,7 +139,7 @@ const Account = () => {
 
         {/* Refer & Earn Card */}
         <div className="px-4 mb-6">
-          <div className="relative bg-purple-50 rounded-xl overflow-hidden p-4">
+          <div className="relative bg-blue-50 rounded-xl overflow-hidden p-4">
             {/* Gift Box Illustration */}
             <div className="absolute right-4 top-2">
               <div className="relative">
@@ -160,7 +160,7 @@ const Account = () => {
               </p>
               <button
                 onClick={() => handleMenuClick({ label: 'Refer & Earn' })}
-                className="bg-purple-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-purple-700 active:scale-95 transition-all"
+                className="bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-blue-700 active:scale-95 transition-all"
               >
                 Refer now
               </button>

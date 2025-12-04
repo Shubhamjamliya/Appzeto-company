@@ -48,7 +48,7 @@ const ServiceCardWithAdd = ({ image, title, rating, reviews, price, onAddClick, 
               e.stopPropagation();
               onAddClick?.();
             }}
-            className="bg-white border border-purple-600 text-purple-600 text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-purple-50 active:scale-95 transition-all"
+            className="bg-white border border-blue-600 text-blue-600 text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-50 active:scale-95 transition-all"
           >
             Add
           </button>

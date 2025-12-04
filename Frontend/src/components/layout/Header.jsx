@@ -1,13 +1,12 @@
 import React from 'react';
 import { HiLocationMarker } from 'react-icons/hi';
 import LocationSelector from '../common/LocationSelector';
-import CartIcon from '../common/CartIcon';
 
-const Header = ({ location, cartCount, onLocationClick, onCartClick }) => {
+const Header = ({ location, onLocationClick }) => {
   return (
     <header className="bg-white">
       <div className="w-full">
-        {/* Top Row: Logo (Left) and Cart (Right) */}
+        {/* Top Row: Logo (Left) and Location (Right) */}
         <div className="px-4 py-3 flex items-center justify-between">
           {/* Left: Logo */}
           <div>
@@ -18,28 +17,16 @@ const Header = ({ location, cartCount, onLocationClick, onCartClick }) => {
             />
           </div>
 
-          {/* Right: Cart */}
-          <div>
-            <CartIcon 
-              itemCount={cartCount} 
-              onClick={onCartClick}
-            />
-          </div>
-        </div>
-
-        {/* Bottom Row: Location Only */}
-        <div className="px-4 pb-3">
-          <div className="flex items-center">
-            <div className="flex flex-col items-start cursor-pointer" onClick={onLocationClick}>
-              <div className="flex items-center gap-1 mb-0.5">
-                <HiLocationMarker className="w-4 h-4 text-black" />
-                <span className="text-sm text-black font-bold">New Palasia</span>
-              </div>
-              <LocationSelector 
-                location={location} 
-                onLocationClick={onLocationClick}
-              />
+          {/* Right: Location */}
+          <div className="flex flex-col items-end cursor-pointer" onClick={onLocationClick}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <HiLocationMarker className="w-4 h-4 text-black" />
+              <span className="text-sm text-black font-bold">New Palasia</span>
             </div>
+            <LocationSelector 
+              location={location} 
+              onLocationClick={onLocationClick}
+            />
           </div>
         </div>
       </div>

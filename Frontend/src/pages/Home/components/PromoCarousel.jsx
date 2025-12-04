@@ -39,7 +39,7 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
       title: 'Special Offer',
       subtitle: 'Get amazing deals on all services',
       buttonText: 'Book now',
-      className: 'from-purple-600 to-purple-800',
+      className: 'from-blue-600 to-blue-800',
       image: promo4,
     },
     {

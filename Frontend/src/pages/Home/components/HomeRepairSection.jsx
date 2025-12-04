@@ -53,7 +53,7 @@ const HomeRepairSection = ({ services, onSeeAllClick, onServiceClick, onAddClick
         </h2>
         <button
           onClick={onSeeAllClick}
-          className="text-purple-600 font-medium text-sm hover:underline"
+          className="text-blue-600 font-medium text-sm hover:underline"
         >
           See all
         </button>

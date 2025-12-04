@@ -1,36 +1,75 @@
 import React from 'react';
 
-const ServiceCard = ({ image, title, onClick, gif }) => {
+const ServiceCard = ({ image, title, onClick, gif, youtubeUrl }) => {
+  // Extract YouTube video ID from URL (supports shorts and regular videos)
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    // Remove whitespace
+    const cleanUrl = url.trim();
+    // Handle YouTube Shorts: youtube.com/shorts/VIDEO_ID
+    const shortsMatch = cleanUrl.match(/youtube\.com\/shorts\/([^?&]+)/);
+    if (shortsMatch) return shortsMatch[1];
+    // Handle regular YouTube URLs
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = cleanUrl.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const videoId = youtubeUrl ? getYouTubeVideoId(youtubeUrl) : null;
+
+  // Create embed URL with autoplay, loop, mute, and no controls (like a GIF)
+  const embedUrl = videoId
+    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`
+    : null;
+
   return (
-    <div 
+    <div
       className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer active:scale-98 transition-transform"
       onClick={onClick}
     >
-      {gif ? (
-        <img 
-          src={gif} 
-          alt={title} 
+      {youtubeUrl && embedUrl ? (
+        <div className="relative w-full h-full">
+          <iframe
+            src={embedUrl}
+            className="w-full h-full object-cover pointer-events-none"
+            frameBorder="0"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+            }}
+            title={title}
+          />
+        </div>
+      ) : gif ? (
+        <img
+          src={gif}
+          alt={title}
           className="w-full h-full object-cover"
         />
       ) : image ? (
-        <img 
-          src={image} 
-          alt={title} 
+        <img
+          src={image}
+          alt={title}
           className="w-full h-full object-cover"
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-          <svg 
-            className="w-16 h-16 text-gray-400" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-16 h-16 text-gray-400"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
         </div>

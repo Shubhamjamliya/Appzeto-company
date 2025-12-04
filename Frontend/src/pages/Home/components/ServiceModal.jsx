@@ -107,7 +107,7 @@ const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
               {/* Book Now Button */}
               <button
                 onClick={handleServiceDetailClick}
-                className="w-full bg-purple-600 text-white font-semibold py-3 rounded-lg hover:bg-purple-700 active:scale-98 transition-all"
+                className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 active:scale-98 transition-all"
               >
                 Book Now
               </button>

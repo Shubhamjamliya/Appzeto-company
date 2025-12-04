@@ -57,7 +57,7 @@ const NativeProductWithRefer = ({ onBuyClick, onReferClick }) => {
       </div>
 
       {/* Refer & Earn Section */}
-      <div className="mx-4 rounded-xl overflow-hidden bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
+      <div className="mx-4 rounded-xl overflow-hidden bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100">
         <div className="p-4 flex items-center justify-between">
           <div className="flex-1">
             <h3 className="text-lg font-bold text-black mb-1">
@@ -70,7 +70,7 @@ const NativeProductWithRefer = ({ onBuyClick, onReferClick }) => {
           
           {/* Gift Boxes Illustration */}
           <div className="flex items-center gap-1 ml-4">
-            <div className="w-12 h-12 bg-purple-200 rounded-lg flex items-center justify-center transform rotate-12">
+            <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center transform rotate-12">
               <span className="text-2xl">🎁</span>
             </div>
             <div className="w-10 h-10 bg-pink-200 rounded-lg flex items-center justify-center transform -rotate-6 -ml-2">
@@ -83,7 +83,7 @@ const NativeProductWithRefer = ({ onBuyClick, onReferClick }) => {
         </div>
         <button
           onClick={onReferClick}
-          className="w-full bg-purple-600 text-white font-semibold py-3 hover:bg-purple-700 active:scale-98 transition-all"
+          className="w-full bg-blue-600 text-white font-semibold py-3 hover:bg-blue-700 active:scale-98 transition-all"
         >
           Refer Now
         </button>

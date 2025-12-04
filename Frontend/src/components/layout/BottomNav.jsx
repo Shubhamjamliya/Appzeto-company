@@ -1,22 +1,22 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiGift, FiShoppingBag, FiUser } from 'react-icons/fi';
+import { FiHome, FiGift, FiShoppingCart, FiUser } from 'react-icons/fi';
 
-const BottomNav = () => {
+const BottomNav = ({ cartCount, onCartClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const navItems = [
     { id: 'home', label: 'Appzeto', icon: FiHome, path: '/' },
     { id: 'rewards', label: 'Rewards', icon: FiGift, path: '/rewards' },
-    { id: 'native', label: 'Native', icon: FiShoppingBag, path: '/native' },
+    { id: 'cart', label: 'Cart', icon: FiShoppingCart, path: '/cart', isCart: true },
     { id: 'account', label: 'Account', icon: FiUser, path: '/account' },
   ];
 
   const getActiveTab = () => {
     if (location.pathname === '/') return 'home';
     if (location.pathname === '/rewards') return 'rewards';
-    if (location.pathname === '/native') return 'native';
+    if (location.pathname === '/cart') return 'cart';
     if (location.pathname === '/account') return 'account';
     return 'home';
   };
@@ -35,16 +35,31 @@ const BottomNav = () => {
           return (
             <button
               key={item.id}
-              onClick={() => handleTabClick(item.path)}
-              className={`flex flex-col items-center justify-center gap-1 py-2 px-4 transition-colors ${
+              onClick={() => {
+                handleTabClick(item.path);
+              }}
+              className={`flex flex-col items-center justify-center gap-1 py-2 px-4 transition-colors relative ${
                 activeTab === item.id
                   ? item.id === 'home' ? 'text-blue-600' : 'text-black'
                   : 'text-gray-500'
               }`}
             >
-              <IconComponent className={`w-6 h-6 ${
-                activeTab === item.id && item.id === 'home' ? 'text-blue-600' : ''
-              }`} />
+              {item.isCart ? (
+                <div className="relative">
+                  <IconComponent className={`w-6 h-6 ${
+                    activeTab === item.id ? 'text-black' : 'text-gray-500'
+                  }`} />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <IconComponent className={`w-6 h-6 ${
+                  activeTab === item.id && item.id === 'home' ? 'text-blue-600' : ''
+                }`} />
+              )}
               <span className="text-xs font-medium">{item.label}</span>
             </button>
           );

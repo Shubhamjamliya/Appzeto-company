@@ -7,32 +7,39 @@ const CuratedServices = ({ services, onServiceClick }) => {
     {
       id: 1,
       title: 'Bathroom Deep Cleaning',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/Sk9Rb57RoTA?si=4XyV0WBgHkadcYIC', // Replace with actual YouTube link
     },
+
     {
       id: 2,
       title: 'SPA for WOMEN',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/-si75xtzHm0?si=YJja3ZqDEu6IZP0Y', // Replace with actual YouTube link
     },
     {
       id: 3,
       title: 'Massage for Men',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/Sk9Rb57RoTA?si=4XyV0WBgHkadcYIC', // Replace with actual YouTube link
     },
     {
       id: 4,
       title: 'Roll-on waxing',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/Sk9Rb57RoTA?si=4XyV0WBgHkadcYIC', // Replace with actual YouTube link
     },
     {
       id: 5,
       title: 'FACIALS & CLEANUPS',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/Sk9Rb57RoTA?si=4XyV0WBgHkadcYIC', // Replace with actual YouTube link
     },
     {
       id: 6,
       title: 'Professional Sofa Cleaning',
-      gif: null, // Add GIF path here when available
+      gif: null,
+      youtubeUrl: 'https://youtube.com/shorts/Sk9Rb57RoTA?si=4XyV0WBgHkadcYIC', // Replace with actual YouTube link
     },
   ];
 
@@ -57,6 +64,7 @@ const CuratedServices = ({ services, onServiceClick }) => {
             key={service.id}
             title={service.title}
             gif={service.gif}
+            youtubeUrl={service.youtubeUrl}
             onClick={() => onServiceClick?.(service)}
           />
         ))}

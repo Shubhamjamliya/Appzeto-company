@@ -8,7 +8,6 @@ import PromoCarousel from './components/PromoCarousel';
 import CuratedServices from './components/CuratedServices';
 import NewAndNoteworthy from './components/NewAndNoteworthy';
 import MostBookedServices from './components/MostBookedServices';
-import CelebratingProfessionals from './components/CelebratingProfessionals';
 import ServiceSectionWithRating from './components/ServiceSectionWithRating';
 import NativeProduct from './components/NativeProduct';
 // Salon for Women Images
@@ -31,11 +30,15 @@ import refrigeratorRepairImage from '../../assets/images/pages/Home/ServiceCateg
 import homeWiringInstallationImage from '../../assets/images/pages/Home/ServiceCategorySection/ElectricalServices/home-wiring.jpg';
 import panelUpgradeRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ElectricalServices/electrical-panel-upgrade.jpg';
 import smartHomeSetupImage from '../../assets/images/pages/Home/ServiceCategorySection/ElectricalServices/smart home setup.jpg';
+// Cleaning Essentials Images
+import intenseBathroom2Image from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/intense-bathroom-2.jpg';
+import intenseBathroom3Image from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/intense-bathroom-3.jpg';
+import bathroomCleaningImage from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/bathroom-cleaning.png';
 
 const Home = () => {
   const navigate = useNavigate();
   const [location] = useState('New Palasia- Indore- Madhya Pradesh...');
-  const [cartCount] = useState(0);
+  const [cartCount] = useState(3); // Set to 3 for testing - badge will show
   const [isACModalOpen, setIsACModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -71,10 +74,6 @@ const Home = () => {
     setIsServiceModalOpen(true);
   };
 
-  const handleProfessionalClick = (professional) => {
-    console.log('Professional clicked:', professional);
-    // Navigate to professional profile or story
-  };
 
   const handleBuyClick = () => {
     console.log('Buy now clicked');
@@ -152,9 +151,7 @@ const Home = () => {
     <div className="min-h-screen bg-white pb-20">
       <Header
         location={location}
-        cartCount={cartCount}
         onLocationClick={handleLocationClick}
-        onCartClick={handleCartClick}
       />
 
       <main className="pt-0">
@@ -182,9 +179,6 @@ const Home = () => {
           onServiceClick={handleServiceClick}
         />
 
-        <CelebratingProfessionals
-          onProfessionalClick={handleProfessionalClick}
-        />
 
         <ServiceSectionWithRating
           title="Salon for Women"
@@ -270,7 +264,7 @@ const Home = () => {
               price: '950',
               originalPrice: '1,038',
               discount: '8%',
-              image: null,
+              image: intenseBathroom2Image,
             },
             {
               id: 2,
@@ -280,7 +274,7 @@ const Home = () => {
               price: '1,381',
               originalPrice: '1,557',
               discount: '11%',
-              image: null,
+              image: intenseBathroom3Image,
             },
             {
               id: 3,
@@ -290,7 +284,7 @@ const Home = () => {
               price: '785',
               originalPrice: '858',
               discount: '9%',
-              image: null,
+              image: bathroomCleaningImage,
             },
             {
               id: 4,
@@ -300,7 +294,7 @@ const Home = () => {
               price: '1,141',
               originalPrice: '1,287',
               discount: '11%',
-              image: null,
+              image: bathroomCleaningImage,
             },
             {
               id: 5,
@@ -308,7 +302,7 @@ const Home = () => {
               rating: '4.82',
               reviews: '57K',
               price: '299',
-              image: null,
+              image: bathroomCleaningImage,
             },
             {
               id: 6,
@@ -316,7 +310,7 @@ const Home = () => {
               rating: '4.83',
               reviews: '109K',
               price: '599',
-              image: null,
+              image: bathroomCleaningImage,
             },
           ]}
           onSeeAllClick={() => handleSeeAllClick('cleaning-essentials')}
@@ -349,7 +343,10 @@ const Home = () => {
         />
       </main>
 
-      <BottomNav />
+      <BottomNav 
+        cartCount={cartCount}
+        onCartClick={handleCartClick}
+      />
 
       {/* AC & Appliance Repair Modal */}
       <ACApplianceModal
