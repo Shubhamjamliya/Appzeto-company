@@ -22,6 +22,8 @@ import ServiceCategorySection from './components/ServiceCategorySection';
 import HomeRepairSection from './components/HomeRepairSection';
 import NativeProductWithRefer from './components/NativeProductWithRefer';
 import ACApplianceModal from './components/ACApplianceModal';
+import ServiceModal from './components/ServiceModal';
+import CategoryModal from './components/CategoryModal';
 import acRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/ac-repair.jpg';
 import washingMachineRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/washing-machine-repair].jpg';
 import waterHeaterRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/water heater repair.jpg';
@@ -35,6 +37,10 @@ const Home = () => {
   const [location] = useState('New Palasia- Indore- Madhya Pradesh...');
   const [cartCount] = useState(0);
   const [isACModalOpen, setIsACModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   const handleSearch = (query) => {
     console.log('Search query:', query);
@@ -47,7 +53,9 @@ const Home = () => {
     if (category.title === 'AC & Appliance Repair') {
       setIsACModalOpen(true);
     } else {
-      // Navigate to service category page for other categories
+      // Open modal for other categories
+      setSelectedCategory(category);
+      setIsCategoryModalOpen(true);
     }
   };
 
@@ -58,12 +66,9 @@ const Home = () => {
 
   const handleServiceClick = (service) => {
     console.log('Service clicked:', service);
-    // Navigate to AC Service page if AC service is clicked
-    if (service.title === 'AC Service and Repair' || service.title?.includes('AC')) {
-      navigate('/ac-service');
-    } else {
-      // Navigate to other service detail pages
-    }
+    // Open modal for all services
+    setSelectedService(service);
+    setIsServiceModalOpen(true);
   };
 
   const handleProfessionalClick = (professional) => {
@@ -350,6 +355,30 @@ const Home = () => {
       <ACApplianceModal
         isOpen={isACModalOpen}
         onClose={() => setIsACModalOpen(false)}
+        location={location}
+        cartCount={cartCount}
+      />
+
+      {/* Generic Service Modal */}
+      <ServiceModal
+        isOpen={isServiceModalOpen}
+        onClose={() => {
+          setIsServiceModalOpen(false);
+          setSelectedService(null);
+        }}
+        service={selectedService}
+        location={location}
+        cartCount={cartCount}
+      />
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        category={selectedCategory}
         location={location}
         cartCount={cartCount}
       />
