@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 import SearchBar from './components/SearchBar';
@@ -21,7 +21,6 @@ import ServiceCategorySection from './components/ServiceCategorySection';
 import HomeRepairSection from './components/HomeRepairSection';
 import NativeProductWithRefer from './components/NativeProductWithRefer';
 import ACApplianceModal from './components/ACApplianceModal';
-import ServiceModal from './components/ServiceModal';
 import CategoryModal from './components/CategoryModal';
 import acRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/ac-repair.jpg';
 import washingMachineRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/washing-machine-repair].jpg';
@@ -37,11 +36,50 @@ import bathroomCleaningImage from '../../assets/images/pages/Home/ServiceCategor
 
 const Home = () => {
   const navigate = useNavigate();
-  const [location] = useState('New Palasia- Indore- Madhya Pradesh...');
-  const [cartCount] = useState(3); // Set to 3 for testing - badge will show
+  const location = useLocation();
+  const [address] = useState('New Palasia- Indore- Madhya Pradesh...');
+  const [cartCount, setCartCount] = useState(0);
+  
+  // Reset scroll position when coming back from another page
+  useEffect(() => {
+    if (location.state?.scrollToTop) {
+      // Immediately scroll to top before any rendering
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      // Clear the state immediately to prevent re-renders
+      if (location.state) {
+        window.history.replaceState({}, '', location.pathname);
+      }
+    }
+  }, [location]);
+  
+  // Ensure page is visible immediately on mount
+  useEffect(() => {
+    // Force immediate visibility
+    document.body.style.opacity = '1';
+    document.body.style.visibility = 'visible';
+  }, []);
+
+  // Load cart count from localStorage on mount and when cart changes
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      setCartCount(cartItems.length);
+    };
+    
+    updateCartCount();
+    
+    // Listen for storage changes (when cart is updated from other tabs/pages)
+    window.addEventListener('storage', updateCartCount);
+    
+    // Custom event for same-tab updates
+    window.addEventListener('cartUpdated', updateCartCount);
+    
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
   const [isACModalOpen, setIsACModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState(null);
-  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
@@ -52,6 +90,11 @@ const Home = () => {
 
   const handleCategoryClick = (category) => {
     console.log('Category clicked:', category);
+    // Navigate directly to Massage for Men page (no modal)
+    if (category.title === 'Massage for Men') {
+      navigate('/massage-for-men');
+      return;
+    }
     // Open modal for AC & Appliance Repair
     if (category.title === 'AC & Appliance Repair') {
       setIsACModalOpen(true);
@@ -69,9 +112,8 @@ const Home = () => {
 
   const handleServiceClick = (service) => {
     console.log('Service clicked:', service);
-    // Open modal for all services
-    setSelectedService(service);
-    setIsServiceModalOpen(true);
+    // Navigate to service detail page if needed
+    // No modal popup
   };
 
 
@@ -148,11 +190,18 @@ const Home = () => {
 
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      <Header
-        location={location}
-        onLocationClick={handleLocationClick}
-      />
+    <div 
+      className="min-h-screen bg-white pb-20" 
+      style={{ 
+        willChange: 'auto',
+        opacity: 1,
+        visibility: 'visible'
+      }}
+    >
+            <Header
+              location={address}
+              onLocationClick={handleLocationClick}
+            />
 
       <main className="pt-0">
         <SearchBar 
@@ -352,21 +401,10 @@ const Home = () => {
       <ACApplianceModal
         isOpen={isACModalOpen}
         onClose={() => setIsACModalOpen(false)}
-        location={location}
+        location={address}
         cartCount={cartCount}
       />
 
-      {/* Generic Service Modal */}
-      <ServiceModal
-        isOpen={isServiceModalOpen}
-        onClose={() => {
-          setIsServiceModalOpen(false);
-          setSelectedService(null);
-        }}
-        service={selectedService}
-        location={location}
-        cartCount={cartCount}
-      />
 
       {/* Category Modal */}
       <CategoryModal
@@ -376,7 +414,7 @@ const Home = () => {
           setSelectedCategory(null);
         }}
         category={selectedCategory}
-        location={location}
+        location={address}
         cartCount={cartCount}
       />
     </div>

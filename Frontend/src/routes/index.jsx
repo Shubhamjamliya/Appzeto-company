@@ -7,6 +7,11 @@ import Native from '../pages/Native';
 import ACService from '../pages/ACService';
 import Cart from '../pages/Cart';
 import Checkout from '../pages/Checkout';
+import SalonForWomen from '../pages/SalonForWomen';
+import MassageForMen from '../pages/MassageForMen';
+import BathroomKitchenCleaning from '../pages/BathroomKitchenCleaning';
+import SofaCarpetCleaning from '../pages/SofaCarpetCleaning';
+import Electrician from '../pages/Electrician';
 
 const AppRoutes = () => {
   return (
@@ -18,6 +23,11 @@ const AppRoutes = () => {
       <Route path="/ac-service" element={<ACService />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/salon-for-women" element={<SalonForWomen />} />
+      <Route path="/massage-for-men" element={<MassageForMen />} />
+      <Route path="/bathroom-kitchen-cleaning" element={<BathroomKitchenCleaning />} />
+      <Route path="/sofa-carpet-cleaning" element={<SofaCarpetCleaning />} />
+      <Route path="/electrician" element={<Electrician />} />
     </Routes>
   );
 };

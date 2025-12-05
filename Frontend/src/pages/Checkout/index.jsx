@@ -96,19 +96,24 @@ const Checkout = () => {
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-bold text-black">{cartItem.title}</h3>
-            <div className="flex items-center gap-2 border border-blue-600 rounded-lg">
+            <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: '#00a6a6' }}>
               <button
                 onClick={() => handleQuantityChange(-1)}
-                className="p-2 hover:bg-blue-50 transition-colors"
+                className="p-2 transition-colors"
+                style={{ '--hover-bg': 'rgba(0, 166, 166, 0.1)' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               >
-                <FiMinus className="w-4 h-4 text-blue-600" />
+                <FiMinus className="w-4 h-4" style={{ color: '#00a6a6' }} />
               </button>
               <span className="px-3 py-1 text-sm font-medium text-black">{quantity}</span>
               <button
                 onClick={() => handleQuantityChange(1)}
-                className="p-2 hover:bg-blue-50 transition-colors"
+                className="p-2 transition-colors"
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               >
-                <FiPlus className="w-4 h-4 text-blue-600" />
+                <FiPlus className="w-4 h-4" style={{ color: '#00a6a6' }} />
               </button>
             </div>
           </div>
@@ -119,10 +124,10 @@ const Checkout = () => {
         </div>
 
         {/* Plus Membership Plan */}
-        <div className="bg-blue-50 rounded-lg p-4 mb-4">
+        <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-start gap-3 flex-1">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#00a6a6' }}>
                 <MdStar className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
@@ -131,7 +136,7 @@ const Checkout = () => {
                 <p className="text-xs text-gray-600 mb-2">
                   Get 10% off on all bookings, upto ₹100.
                 </p>
-                <button className="text-xs text-blue-600 font-medium hover:underline">
+                <button className="text-xs font-medium hover:underline" style={{ color: '#00a6a6' }}>
                   View all benefits
                 </button>
               </div>
@@ -139,11 +144,29 @@ const Checkout = () => {
             <div className="flex flex-col items-end">
               <button
                 onClick={handleAddPlus}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isPlusAdded
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white border border-blue-600 text-blue-600'
-                }`}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={isPlusAdded ? {
+                  backgroundColor: '#00a6a6',
+                  color: 'white'
+                } : {
+                  backgroundColor: 'white',
+                  border: '1px solid #00a6a6',
+                  color: '#00a6a6'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isPlusAdded) {
+                    e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)';
+                  } else {
+                    e.target.style.backgroundColor = '#008a8a';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isPlusAdded) {
+                    e.target.style.backgroundColor = 'white';
+                  } else {
+                    e.target.style.backgroundColor = '#00a6a6';
+                  }
+                }}
               >
                 {isPlusAdded ? 'Added' : 'Add'}
               </button>
@@ -165,7 +188,7 @@ const Checkout = () => {
                 <p className="text-xs text-gray-600">+91-6261387233</p>
               </div>
             </div>
-            <button className="text-sm text-blue-600 font-medium hover:underline">
+            <button className="text-sm font-medium hover:underline" style={{ color: '#00a6a6' }}>
               Change
             </button>
           </div>
@@ -217,7 +240,7 @@ const Checkout = () => {
           <p className="text-sm text-gray-700 mb-2">
             Free cancellations if done more than 12 hrs before the service or if a professional isn't assigned. A fee will be charged otherwise.
           </p>
-          <button className="text-sm text-blue-600 font-medium hover:underline">
+          <button className="text-sm font-medium hover:underline" style={{ color: '#00a6a6' }}>
             Read full policy
           </button>
         </div>
@@ -234,20 +257,38 @@ const Checkout = () => {
                     placeholder="Custom"
                     value={customTip}
                     onChange={(e) => handleCustomTip(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm text-center ${
-                      selectedTip === 'custom'
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300 bg-white'
-                    }`}
+                    className="w-full px-3 py-2 border rounded-lg text-sm text-center"
+                    style={selectedTip === 'custom' ? {
+                      borderColor: '#00a6a6',
+                      backgroundColor: 'rgba(0, 166, 166, 0.1)'
+                    } : {
+                      borderColor: '#d1d5db',
+                      backgroundColor: 'white'
+                    }}
                   />
                 ) : (
                   <button
                     onClick={() => handleTipSelect(amount)}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                      selectedTip === amount
-                        ? 'border-blue-600 bg-blue-50 text-blue-600'
-                        : 'border-gray-300 bg-white text-black hover:bg-gray-50'
-                    }`}
+                    className="w-full px-3 py-2 border rounded-lg text-sm font-medium transition-colors"
+                    style={selectedTip === amount ? {
+                      borderColor: '#00a6a6',
+                      backgroundColor: 'rgba(0, 166, 166, 0.1)',
+                      color: '#00a6a6'
+                    } : {
+                      borderColor: '#d1d5db',
+                      backgroundColor: 'white',
+                      color: 'black'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedTip !== amount) {
+                        e.target.style.backgroundColor = '#f9fafb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedTip !== amount) {
+                        e.target.style.backgroundColor = 'white';
+                      }
+                    }}
                   >
                     ₹{amount}
                     {amount === 75 && (
@@ -286,7 +327,10 @@ const Checkout = () => {
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
         <button
           onClick={handleProceed}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-blue-700 transition-colors"
+          className="w-full text-white py-3 rounded-lg text-base font-semibold transition-colors"
+          style={{ backgroundColor: '#00a6a6' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
         >
           Add address and slot
         </button>

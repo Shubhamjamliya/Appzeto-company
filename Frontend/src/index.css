@@ -11,7 +11,7 @@
 }
 
 .animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+  animation: slide-up 0.2s ease-out;
 }
 
 /* Slide down animation for modal close */
@@ -25,7 +25,54 @@
 }
 
 .animate-slide-down {
-  animation: slide-down 0.3s ease-in;
+  animation: slide-down 0.2s ease-in;
+}
+
+/* Slide right animation for page transition (forward) */
+@keyframes slide-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-right {
+  animation: slide-right 0.25s ease-out;
+}
+
+/* Slide left animation for page transition (backward - exit to right) */
+@keyframes slide-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.animate-slide-left {
+  animation: slide-left 0.25s ease-in forwards;
+}
+
+/* Page transition wrapper */
+.page-transition-enter {
+  transform: translateX(100%);
+}
+
+.page-transition-enter-active {
+  transform: translateX(0);
+  transition: transform 0.4s ease-out;
+}
+
+.page-transition-exit {
+  transform: translateX(0);
+}
+
+.page-transition-exit-active {
+  transform: translateX(-100%);
+  transition: transform 0.4s ease-in;
 }
 
 /* Mobile-first styles */
@@ -71,4 +118,29 @@ html {
 
 .active\:scale-98:active {
   transform: scale(0.98);
+}
+
+/* Custom brand color */
+.bg-brand {
+  background-color: #00a6a6;
+}
+
+.bg-brand-hover:hover {
+  background-color: #008a8a;
+}
+
+.text-brand {
+  color: #00a6a6;
+}
+
+.border-brand {
+  border-color: #00a6a6;
+}
+
+.bg-brand-light {
+  background-color: rgba(0, 166, 166, 0.1);
+}
+
+.hover\:bg-brand-light:hover {
+  background-color: rgba(0, 166, 166, 0.15);
 }

@@ -24,7 +24,7 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
     setTimeout(() => {
       onClose();
       setIsClosing(false);
-    }, 300); // Match animation duration
+    }, 200); // Match animation duration
   };
 
   if (!isOpen && !isClosing) return null;
@@ -43,13 +43,18 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
 
   const handleServiceClick = (service) => {
     console.log('Service clicked:', service);
-    handleClose();
-    // Navigate to AC Service page if AC is clicked
-    if (service.title === 'AC') {
-      navigate('/ac-service');
-    } else {
-      // Navigate to other service pages
-    }
+    // Close modal first, then navigate after animation
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+      // Navigate to AC Service page if AC is clicked
+      if (service.title === 'AC') {
+        navigate('/ac-service');
+      } else {
+        // Navigate to other service pages
+      }
+    }, 300); // Wait for modal slide-down animation
   };
 
   const handleNativeProductClick = () => {

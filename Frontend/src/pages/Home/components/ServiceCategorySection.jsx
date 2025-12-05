@@ -11,7 +11,8 @@ const ServiceCategorySection = ({ title, services, onSeeAllClick, onServiceClick
         </h2>
         <button
           onClick={onSeeAllClick}
-          className="text-blue-600 font-medium text-sm hover:underline"
+          className="font-medium text-sm hover:underline"
+          style={{ color: '#00a6a6' }}
         >
           See all
         </button>

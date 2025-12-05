@@ -63,7 +63,8 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
 
                 <button
                   onClick={() => onViewDetails?.(service)}
-                  className="text-blue-600 text-sm font-medium hover:underline"
+                  className="text-sm font-medium hover:underline"
+                  style={{ color: '#00a6a6' }}
                 >
                   View details
                 </button>
@@ -79,7 +80,13 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
                 </div>
                 <button
                   onClick={() => onAddClick?.(service)}
-                  className="absolute bottom-2 right-2 bg-white border border-blue-600 text-blue-600 text-xs font-semibold px-3 py-1 rounded-lg hover:bg-blue-50 active:scale-95 transition-all"
+                  className="absolute bottom-2 right-2 bg-white text-xs font-semibold px-3 py-1 rounded-lg active:scale-95 transition-all"
+                  style={{ 
+                    border: '1px solid #00a6a6',
+                    color: '#00a6a6'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                 >
                   Add
                 </button>

@@ -48,7 +48,13 @@ const ServiceCardWithAdd = ({ image, title, rating, reviews, price, onAddClick, 
               e.stopPropagation();
               onAddClick?.();
             }}
-            className="bg-white border border-blue-600 text-blue-600 text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-50 active:scale-95 transition-all"
+            className="bg-white text-xs font-semibold px-4 py-1.5 rounded-lg active:scale-95 transition-all"
+            style={{ 
+              border: '1px solid #00a6a6',
+              color: '#00a6a6'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
           >
             Add
           </button>

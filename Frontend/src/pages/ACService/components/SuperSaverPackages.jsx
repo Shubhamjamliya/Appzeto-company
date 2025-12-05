@@ -108,7 +108,8 @@ const SuperSaverPackages = ({ onViewDetails, onAddClick }) => {
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => onViewDetails?.(pkg)}
-                  className="text-blue-600 text-sm font-medium hover:underline"
+                  className="text-sm font-medium hover:underline"
+                  style={{ color: '#00a6a6' }}
                 >
                   View details
                 </button>

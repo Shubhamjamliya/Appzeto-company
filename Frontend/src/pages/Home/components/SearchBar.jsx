@@ -61,16 +61,25 @@ const SearchBar = ({ onSearch }) => {
     <form onSubmit={handleSubmit} className="sticky top-0 z-40 bg-white py-3 px-4 mb-0 flex justify-center">
       <div className="relative w-full max-w-md">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-          <FiSearch className="w-5 h-5 text-gray-700" />
+          <FiSearch className="w-5 h-5" style={{ color: '#29ad81' }} />
         </div>
         <div className="relative w-full">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white rounded-lg text-sm border border-gray-300 text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-all"
+            className="w-full pl-12 pr-4 py-3 bg-white rounded-lg text-sm border focus:outline-none transition-all"
             style={{
+              borderColor: '#29ad81',
               color: searchQuery ? '#111827' : 'transparent'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#29ad81';
+              e.target.style.boxShadow = '0 0 0 1px #29ad81';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#29ad81';
+              e.target.style.boxShadow = 'none';
             }}
           />
           {!searchQuery && (

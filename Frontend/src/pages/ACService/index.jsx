@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/layout/BottomNav';
 import ACServiceHeader from './components/ACServiceHeader';
@@ -12,9 +12,16 @@ import InstallationSection from './components/InstallationSection';
 
 const ACService = () => {
   const navigate = useNavigate();
+  const [isExiting, setIsExiting] = useState(false);
 
   const handleBack = () => {
-    navigate(-1);
+    setIsExiting(true);
+    // Preload home page content by navigating immediately but keeping exit animation
+    // Reset scroll position first
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Navigate immediately so home page starts rendering
+    navigate('/', { replace: true, state: { scrollToTop: true } });
+    // Keep exit animation visible
   };
 
   const handleSearch = () => {
@@ -42,7 +49,10 @@ const ACService = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div 
+      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      style={{ willChange: isExiting ? 'transform' : 'auto' }}
+    >
       <ACServiceHeader
         onBack={handleBack}
         onSearch={handleSearch}

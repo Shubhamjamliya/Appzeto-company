@@ -139,7 +139,7 @@ const Account = () => {
 
         {/* Refer & Earn Card */}
         <div className="px-4 mb-6">
-          <div className="relative bg-blue-50 rounded-xl overflow-hidden p-4">
+          <div className="relative rounded-xl overflow-hidden p-4" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
             {/* Gift Box Illustration */}
             <div className="absolute right-4 top-2">
               <div className="relative">
@@ -160,7 +160,10 @@ const Account = () => {
               </p>
               <button
                 onClick={() => handleMenuClick({ label: 'Refer & Earn' })}
-                className="bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-blue-700 active:scale-95 transition-all"
+                className="text-white font-semibold px-6 py-2.5 rounded-lg active:scale-95 transition-all"
+                style={{ backgroundColor: '#00a6a6' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
               >
                 Refer now
               </button>

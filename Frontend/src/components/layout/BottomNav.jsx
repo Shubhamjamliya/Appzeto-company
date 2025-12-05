@@ -40,15 +40,17 @@ const BottomNav = ({ cartCount, onCartClick }) => {
               }}
               className={`flex flex-col items-center justify-center gap-1 py-2 px-4 transition-colors relative ${
                 activeTab === item.id
-                  ? item.id === 'home' ? 'text-blue-600' : 'text-black'
+                  ? ''
                   : 'text-gray-500'
               }`}
+              style={activeTab === item.id ? { color: '#00a6a6' } : {}}
             >
               {item.isCart ? (
                 <div className="relative">
-                  <IconComponent className={`w-6 h-6 ${
-                    activeTab === item.id ? 'text-black' : 'text-gray-500'
-                  }`} />
+                  <IconComponent 
+                    className="w-6 h-6"
+                    style={activeTab === item.id ? { color: '#00a6a6' } : { color: '#6b7280' }}
+                  />
                   {cartCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
                       {cartCount > 9 ? '9+' : cartCount}
@@ -56,9 +58,10 @@ const BottomNav = ({ cartCount, onCartClick }) => {
                   )}
                 </div>
               ) : (
-                <IconComponent className={`w-6 h-6 ${
-                  activeTab === item.id && item.id === 'home' ? 'text-blue-600' : ''
-                }`} />
+                <IconComponent 
+                  className="w-6 h-6"
+                  style={activeTab === item.id ? { color: '#00a6a6' } : { color: '#6b7280' }}
+                />
               )}
               <span className="text-xs font-medium">{item.label}</span>
             </button>

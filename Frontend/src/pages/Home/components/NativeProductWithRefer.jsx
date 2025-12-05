@@ -83,7 +83,10 @@ const NativeProductWithRefer = ({ onBuyClick, onReferClick }) => {
         </div>
         <button
           onClick={onReferClick}
-          className="w-full bg-blue-600 text-white font-semibold py-3 hover:bg-blue-700 active:scale-98 transition-all"
+          className="w-full text-white font-semibold py-3 active:scale-98 transition-all"
+          style={{ backgroundColor: '#00a6a6' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
         >
           Refer Now
         </button>

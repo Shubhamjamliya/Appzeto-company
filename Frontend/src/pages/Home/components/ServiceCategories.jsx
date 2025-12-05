@@ -22,13 +22,13 @@ const ServiceCategories = ({ categories, onCategoryClick }) => {
 
   return (
     <div className="px-4 mb-6">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {serviceCategories.map((category) => {
           return (
             <CategoryCard
               key={category.id}
               title={category.title}
-              icon={<img src={category.icon} alt={category.title} className="w-10 h-10 object-contain" />}
+              icon={<img src={category.icon} alt={category.title} className="w-8 h-8 object-contain" />}
               onClick={() => onCategoryClick?.(category)}
               hasSaleBadge={category.hasSaleBadge}
             />

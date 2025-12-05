@@ -20,7 +20,7 @@ const Header = ({ location, onLocationClick }) => {
           {/* Right: Location */}
           <div className="flex flex-col items-end cursor-pointer" onClick={onLocationClick}>
             <div className="flex items-center gap-1 mb-0.5">
-              <HiLocationMarker className="w-4 h-4 text-black" />
+              <HiLocationMarker className="w-4 h-4" style={{ color: '#29ad81' }} />
               <span className="text-sm text-black font-bold">New Palasia</span>
             </div>
             <LocationSelector 

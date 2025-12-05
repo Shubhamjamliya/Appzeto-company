@@ -8,42 +8,53 @@ import spaIcon from '../../assets/images/icons/services/womens-salon-spa-icon.pn
 
 const Cart = () => {
   const navigate = useNavigate();
-  const [cartCount] = useState(3);
+  
+  // Load cart items from localStorage
+  const [cartItems, setCartItems] = useState(() => {
+    const saved = localStorage.getItem('cartItems');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    // Default sample items if localStorage is empty
+    return [
+      {
+        id: 1,
+        title: 'Washing Machine Repair',
+        icon: washingMachineIcon,
+        price: 160,
+        serviceCount: 1,
+        description: 'Semi-automatic machine check-up X 1',
+      },
+      {
+        id: 2,
+        title: 'Bathroom & Kitchen Cleaning',
+        icon: cleaningIcon,
+        price: 785,
+        serviceCount: 1,
+        description: 'Classic cleaning (2 bathrooms) X 1',
+      },
+      {
+        id: 3,
+        title: 'Spa for Women',
+        icon: spaIcon,
+        price: 999,
+        serviceCount: 1,
+        description: 'Quick Comfort Therapy X 1',
+      },
+    ];
+  });
 
-  // Sample cart items - replace with actual cart data
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      title: 'Washing Machine Repair',
-      icon: washingMachineIcon,
-      price: 160,
-      serviceCount: 1,
-      description: 'Semi-automatic machine check-up X 1',
-    },
-    {
-      id: 2,
-      title: 'Bathroom & Kitchen Cleaning',
-      icon: cleaningIcon,
-      price: 785,
-      serviceCount: 1,
-      description: 'Classic cleaning (2 bathrooms) X 1',
-    },
-    {
-      id: 3,
-      title: 'Spa for Women',
-      icon: spaIcon,
-      price: 999,
-      serviceCount: 1,
-      description: 'Quick Comfort Therapy X 1',
-    },
-  ]);
+  const cartCount = cartItems.length;
 
   const handleBack = () => {
     navigate(-1);
   };
 
   const handleDelete = (itemId) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId));
+    const updatedItems = cartItems.filter(item => item.id !== itemId);
+    setCartItems(updatedItems);
+    // Update localStorage
+    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
   };
 
   const handleAddServices = (item) => {
@@ -75,7 +86,7 @@ const Cart = () => {
               <FiArrowLeft className="w-6 h-6 text-black" />
             </button>
             <div className="flex items-center gap-2">
-              <FiShoppingCart className="w-6 h-6 text-blue-600" />
+              <FiShoppingCart className="w-6 h-6 text-brand" style={{ color: '#00a6a6' }} />
               <h1 className="text-xl font-bold text-black">Your cart</h1>
             </div>
           </div>
@@ -133,7 +144,10 @@ const Cart = () => {
                         </button>
                         <button
                           onClick={() => handleCheckout(item)}
-                          className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                          className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                          style={{ backgroundColor: '#00a6a6' }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
                         >
                           Checkout
                         </button>
