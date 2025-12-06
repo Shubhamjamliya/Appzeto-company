@@ -4,7 +4,11 @@ import { AiFillStar } from 'react-icons/ai';
 const ServiceCardWithAdd = ({ image, title, rating, reviews, price, onAddClick, onClick }) => {
   return (
     <div 
-      className="min-w-[200px] bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer active:scale-98 transition-transform"
+      className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
+      style={{
+        boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
+        border: '1px solid rgba(0, 166, 166, 0.1)'
+      }}
       onClick={onClick}
     >
       {image ? (
@@ -42,19 +46,33 @@ const ServiceCardWithAdd = ({ image, title, rating, reviews, price, onAddClick, 
           </div>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-base font-bold text-black">₹{price}</span>
+          <span 
+            className="text-base font-bold text-black"
+          >
+            ₹{price}
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onAddClick?.();
             }}
-            className="bg-white text-xs font-semibold px-4 py-1.5 rounded-lg active:scale-95 transition-all"
+            className="text-xs font-semibold px-4 py-1.5 rounded-full active:scale-95 transition-all shadow-sm"
             style={{ 
-              border: '1px solid #00a6a6',
-              color: '#00a6a6'
+              backgroundColor: '#00a6a6',
+              color: 'white',
+              border: 'none',
+              boxShadow: '0 2px 4px rgba(0, 166, 166, 0.3)'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#008a8a';
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 4px 8px rgba(0, 166, 166, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#00a6a6';
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = '0 2px 4px rgba(0, 166, 166, 0.3)';
+            }}
           >
             Add
           </button>

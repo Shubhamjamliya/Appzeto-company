@@ -2,39 +2,30 @@ import React from 'react';
 import { MdLocalOffer } from 'react-icons/md';
 
 const PaymentOffers = () => {
-  const offers = [
-    {
-      id: 1,
-      title: 'Mobikwik cashback up to ₹...',
-      subtitle: 'Via Mobikwik UPI Payment',
-      icon: '🍃',
-    },
-    {
-      id: 2,
-      title: '₹100 back - ord',
-      subtitle: 'Via Airtel Payme',
-      icon: '🍃',
-    },
-  ];
-
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 mb-6">
       <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-        {offers.map((offer) => (
-          <div
-            key={offer.id}
-            className="flex-shrink-0 bg-white border border-gray-200 rounded-lg p-3 min-w-[200px]"
-          >
-            <div className="flex items-start gap-2">
-              <div className="bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded flex items-center gap-1">
-                <span>{offer.icon}</span>
-                <span>OFFER</span>
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-black mt-2">{offer.title}</p>
-            <p className="text-xs text-gray-600 mt-1">{offer.subtitle}</p>
+        {/* Mobikwik Offer */}
+        <div className="min-w-[200px] bg-white border border-gray-200 rounded-lg p-3 flex items-start gap-2 shrink-0">
+          <MdLocalOffer className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-black mb-1">
+              Mobikwik cashback up to ₹...
+            </p>
+            <p className="text-xs text-gray-600">Via Mobikwik UPI Payment</p>
           </div>
-        ))}
+        </div>
+
+        {/* Airtel Payment Offer */}
+        <div className="min-w-[200px] bg-white border border-gray-200 rounded-lg p-3 flex items-start gap-2 shrink-0">
+          <MdLocalOffer className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-black mb-1">
+              ₹100 back - order
+            </p>
+            <p className="text-xs text-gray-600">Via Airtel Payment</p>
+          </div>
+        </div>
       </div>
     </div>
   );

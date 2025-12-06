@@ -81,25 +81,14 @@ const StressReliefSection = ({ onAddClick, onViewDetails }) => {
                     <span className="text-sm text-gray-700">{service.rating} ({service.reviews} reviews)</span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold text-black">₹{service.price}</span>
-                    {service.originalPrice && (
-                      <span className="text-sm text-gray-400 line-through">₹{service.originalPrice}</span>
-                    )}
+                    <span className="text-sm font-medium text-black">Starts at ₹{service.price}</span>
                     {service.duration && (
                       <>
                         <span className="text-sm text-gray-600">•</span>
-                        <span className="text-sm text-gray-600">{service.duration}</span>
+                        <span className="text-sm font-medium text-black">{service.duration}</span>
                       </>
                     )}
                   </div>
-                  <ul className="space-y-1 mb-3">
-                    {service.features.map((feature, index) => (
-                      <li key={index} className="text-sm text-gray-700 flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
                 <div className="ml-4 flex flex-col items-end shrink-0">
                   <button
@@ -113,6 +102,16 @@ const StressReliefSection = ({ onAddClick, onViewDetails }) => {
                   </button>
                 </div>
               </div>
+              
+              <div className="h-px bg-gray-400 mb-2 mt-2"></div>
+              <ul className="space-y-1 mb-3">
+                {service.features.map((feature, index) => (
+                  <li key={index} className="text-sm text-gray-700 flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
               <button
                 onClick={() => onViewDetails?.(service)}
                 className="text-brand text-sm font-medium hover:underline"

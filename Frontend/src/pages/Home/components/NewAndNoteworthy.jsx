@@ -33,9 +33,11 @@ const NewAndNoteworthy = ({ services, onServiceClick }) => {
   const serviceList = services || defaultServices;
 
   return (
-    <div className="mb-6 border-t-4 border-gray-300 pt-6">
-      <div className="px-4 mb-4">
-        <h2 className="text-xl font-bold text-black">
+    <div className="mb-6">
+      <div className="px-4 mb-5">
+        <h2 
+          className="text-xl font-bold text-black"
+        >
           New and noteworthy
         </h2>
       </div>

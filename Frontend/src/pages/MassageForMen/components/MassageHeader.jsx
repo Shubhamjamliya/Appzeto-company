@@ -4,9 +4,12 @@ import { FiArrowLeft, FiSearch, FiShare2 } from 'react-icons/fi';
 const MassageHeader = ({ onBack, onSearch, onShare, isVisible }) => {
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 bg-white px-4 py-3 border-b border-gray-200 z-50 shadow-sm transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 bg-white px-4 py-3 border-b border-gray-200 z-50 shadow-sm transition-all ${
+        isVisible ? 'duration-200' : 'duration-150'
+      } ease-out ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
       }`}
+      style={{ willChange: isVisible ? 'transform, opacity' : 'auto' }}
     >
       <div className="flex items-center justify-between">
         <button

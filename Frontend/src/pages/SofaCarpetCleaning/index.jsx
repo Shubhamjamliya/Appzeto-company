@@ -102,9 +102,10 @@ const SofaCarpetCleaning = () => {
   const handleBack = () => {
     setIsExiting(true);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // Delay navigation to let home page preload and render, then show it
     setTimeout(() => {
       navigate('/', { replace: true, state: { scrollToTop: true } });
-    }, 250);
+    }, 300);
   };
 
   const handleSearch = () => {

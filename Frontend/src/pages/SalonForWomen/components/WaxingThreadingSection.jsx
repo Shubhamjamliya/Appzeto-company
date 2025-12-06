@@ -91,15 +91,15 @@ const WaxingThreadingSection = ({ onAddClick, onViewDetails }) => {
                     <AiFillStar className="w-4 h-4 text-yellow-400" />
                     <span className="text-sm text-gray-700">{service.rating} ({service.reviews} reviews)</span>
                   </div>
-                  <p className="text-base font-semibold text-black mb-3">Starts at ₹{service.price}</p>
-                  <ul className="space-y-1 mb-3">
-                    {service.features.map((feature, index) => (
-                      <li key={index} className="text-sm text-gray-700 flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-black">Starts at ₹{service.price}</span>
+                    {service.duration && (
+                      <>
+                        <span className="text-sm text-gray-600">•</span>
+                        <span className="text-sm font-medium text-black">{service.duration}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="ml-4 flex flex-col items-end flex-shrink-0">
                   <p className="text-xs text-gray-600 mb-2">{service.options}</p>
@@ -114,6 +114,16 @@ const WaxingThreadingSection = ({ onAddClick, onViewDetails }) => {
                   </button>
                 </div>
               </div>
+              
+              <div className="h-px bg-gray-400 mb-2 mt-2"></div>
+              <ul className="space-y-1 mb-3">
+                {service.features.map((feature, index) => (
+                  <li key={index} className="text-sm text-gray-700 flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
               <button
                 onClick={() => onViewDetails?.(service)}
                 className="text-brand text-sm font-medium hover:underline"

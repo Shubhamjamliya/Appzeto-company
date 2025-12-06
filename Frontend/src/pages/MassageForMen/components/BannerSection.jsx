@@ -87,7 +87,13 @@ const BannerSection = ({ onBack, onSearch, onShare, showStickyNav }) => {
         {banners.map((banner) => (
           <div
             key={banner.id}
-            className="min-w-full h-full relative flex-shrink-0"
+            className="h-full relative"
+            style={{ 
+              flex: '0 0 100%',
+              width: '100%',
+              minWidth: '100%',
+              maxWidth: '100%'
+            }}
           >
             <img
               src={banner.image}
@@ -104,7 +110,7 @@ const BannerSection = ({ onBack, onSearch, onShare, showStickyNav }) => {
       </div>
 
       {/* Progress bar indicator */}
-      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full">
         <div
           className="h-full bg-white rounded-full transition-all duration-300"
           style={{ width: `${((currentIndex + 1) / banners.length) * 100}%` }}
@@ -112,7 +118,7 @@ const BannerSection = ({ onBack, onSearch, onShare, showStickyNav }) => {
       </div>
 
       {/* Indicator dots */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5">
+      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 flex gap-1.5">
         {banners.map((_, index) => (
           <button
             key={index}

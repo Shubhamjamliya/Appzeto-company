@@ -3,7 +3,11 @@ import React from 'react';
 const SimpleServiceCard = ({ image, title, onClick }) => {
   return (
     <div 
-      className="min-w-[160px] bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer active:scale-98 transition-transform"
+      className="min-w-[160px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
+      style={{
+        boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
+        border: '1px solid rgba(0, 166, 166, 0.1)'
+      }}
       onClick={onClick}
     >
       {image ? (

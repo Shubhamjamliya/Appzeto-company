@@ -4,12 +4,23 @@ import { AiFillStar } from 'react-icons/ai';
 const ServiceWithRatingCard = ({ image, title, rating, reviews, price, originalPrice, discount, onClick }) => {
   return (
     <div 
-      className="min-w-[200px] bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer active:scale-98 transition-transform"
+      className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
+      style={{
+        boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
+        border: '1px solid rgba(0, 166, 166, 0.1)'
+      }}
       onClick={onClick}
     >
       <div className="relative">
         {discount && (
-          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+          <div 
+            className="absolute top-2 left-2 text-black text-xs font-bold px-2.5 py-1 rounded-full shadow-lg z-10"
+            style={{ 
+              backgroundColor: '#fbfb00',
+              border: '1.5px solid rgba(251, 251, 0, 0.5)',
+              boxShadow: '0 2px 8px rgba(251, 251, 0, 0.4)'
+            }}
+          >
             {discount} OFF
           </div>
         )}
@@ -52,7 +63,22 @@ const ServiceWithRatingCard = ({ image, title, rating, reviews, price, originalP
           {originalPrice && (
             <span className="text-[10px] text-gray-400 line-through">₹{originalPrice}</span>
           )}
-          <span className="text-sm font-bold text-black">₹{price}</span>
+          <span 
+            className="text-base font-bold text-black"
+          >
+            ₹{price}
+          </span>
+          {discount && (
+            <span 
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+              style={{ 
+                backgroundColor: 'rgba(251, 251, 0, 0.15)',
+                color: '#29ad81'
+              }}
+            >
+              Save
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PromoCard from '../../../components/common/PromoCard';
 import promo1 from '../../../assets/images/pages/Home/promo-carousel/1764052270908-bae94c.jpg';
 import promo2 from '../../../assets/images/pages/Home/promo-carousel/1678450687690-81f922.jpg';
@@ -8,6 +8,11 @@ import promo5 from '../../../assets/images/pages/Home/promo-carousel/17627855955
 import promo6 from '../../../assets/images/pages/Home/promo-carousel/1678454437383-aa4984.jpg';
 
 const PromoCarousel = ({ promos, onPromoClick }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollContainerRef = useRef(null);
+  const intervalRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+
   // Default promotional cards if none provided
   const defaultPromos = [
     {
@@ -62,28 +67,108 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
 
   const promotionalCards = promos || defaultPromos;
 
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (isHovered || promotionalCards.length <= 1) return;
+
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % promotionalCards.length;
+        return nextIndex;
+      });
+    }, 3000); // Auto-scroll every 3 seconds
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isHovered, promotionalCards.length]);
+
+  // Scroll to current index when it changes
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const firstCard = container.querySelector('[data-promo-card]');
+    if (!firstCard) return;
+
+    const cardWidth = firstCard.offsetWidth;
+    const gap = 16; // gap-4 = 16px
+    const scrollPosition = currentIndex * (cardWidth + gap);
+
+    container.scrollTo({
+      left: scrollPosition,
+      behavior: 'smooth'
+    });
+  }, [currentIndex]);
+
+  // Sync currentIndex when user manually scrolls
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let scrollTimeout;
+    const handleScroll = () => {
+      // Debounce scroll events
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const firstCard = container.querySelector('[data-promo-card]');
+        if (!firstCard) return;
+
+        const cardWidth = firstCard.offsetWidth;
+        const gap = 16;
+        const scrollLeft = container.scrollLeft;
+        const newIndex = Math.round(scrollLeft / (cardWidth + gap));
+        
+        if (newIndex !== currentIndex && newIndex >= 0 && newIndex < promotionalCards.length) {
+          setCurrentIndex(newIndex);
+        }
+      }, 100);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [currentIndex, promotionalCards.length]);
+
+
   return (
-    <div className="mb-6 border-t-4 border-gray-300 pt-6">
-      <div className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide">
+    <div 
+      className="pb-6"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div 
+        ref={scrollContainerRef}
+        className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
+      >
         {promotionalCards.map((promo) => (
-          <PromoCard
-            key={promo.id}
-            title={promo.title}
-            subtitle={promo.subtitle}
-            buttonText={promo.buttonText}
-            image={promo.image}
-            className={promo.className}
-            onClick={() => onPromoClick?.(promo)}
-          />
+          <div key={promo.id} data-promo-card className="flex-shrink-0">
+            <PromoCard
+              title={promo.title}
+              subtitle={promo.subtitle}
+              buttonText={promo.buttonText}
+              image={promo.image}
+              className={promo.className}
+              onClick={() => onPromoClick?.(promo)}
+            />
+          </div>
         ))}
       </div>
       {/* Carousel indicator dots */}
-      <div className="flex justify-center gap-1 mt-2">
+      <div className="flex justify-center gap-1.5 mt-3 mb-4">
         {promotionalCards.map((_, index) => (
           <div
             key={index}
-            className={`w-1.5 h-1.5 rounded-full ${index === 0 ? 'bg-green-600' : 'bg-gray-300'
-              }`}
+            className={`rounded-full transition-all ${index === currentIndex ? 'w-6 h-1.5' : 'w-1.5 h-1.5'}`}
+            style={{ 
+              backgroundColor: index === currentIndex ? '#F59E0B' : 'rgba(245, 158, 11, 0.4)',
+              boxShadow: index === currentIndex ? '0 2px 6px rgba(245, 158, 11, 0.5)' : '0 1px 2px rgba(0, 0, 0, 0.2)'
+            }}
           />
         ))}
       </div>

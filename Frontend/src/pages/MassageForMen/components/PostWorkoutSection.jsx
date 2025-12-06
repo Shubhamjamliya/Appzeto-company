@@ -1,5 +1,6 @@
 import React from 'react';
 import { AiFillStar } from 'react-icons/ai';
+import { FiAward } from 'react-icons/fi';
 import postWorkoutImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/post-workout.jpg';
 
 const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
@@ -67,9 +68,12 @@ const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   {service.badge && (
-                    <span className="inline-block bg-green-500 text-white text-xs font-bold px-2 py-1 rounded mb-2">
-                      {service.badge}
-                    </span>
+                    <div className="flex items-center gap-1 mb-2">
+                      <FiAward className="w-3 h-3 text-green-600" />
+                      <span className="text-xs font-medium text-green-600">
+                        {service.badge}
+                      </span>
+                    </div>
                   )}
                   <h3 className="text-lg font-bold text-black mb-2">{service.title}</h3>
                   <div className="flex items-center gap-1 mb-2">
@@ -77,25 +81,14 @@ const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
                     <span className="text-sm text-gray-700">{service.rating} ({service.reviews} reviews)</span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold text-black">₹{service.price}</span>
-                    {service.originalPrice && (
-                      <span className="text-sm text-gray-400 line-through">₹{service.originalPrice}</span>
-                    )}
+                    <span className="text-sm font-medium text-black">Starts at ₹{service.price}</span>
                     {service.duration && (
                       <>
                         <span className="text-sm text-gray-600">•</span>
-                        <span className="text-sm text-gray-600">{service.duration}</span>
+                        <span className="text-sm font-medium text-black">{service.duration}</span>
                       </>
                     )}
                   </div>
-                  <ul className="space-y-1 mb-3">
-                    {service.features.map((feature, index) => (
-                      <li key={index} className="text-sm text-gray-700 flex items-start">
-                        <span className="mr-2">•</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
                 <div className="ml-4 flex flex-col items-end shrink-0">
                   <button
@@ -109,6 +102,16 @@ const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
                   </button>
                 </div>
               </div>
+              
+              <div className="h-px bg-gray-400 mb-2 mt-2"></div>
+              <ul className="space-y-1 mb-3">
+                {service.features.map((feature, index) => (
+                  <li key={index} className="text-sm text-gray-700 flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
               <button
                 onClick={() => onViewDetails?.(service)}
                 className="text-brand text-sm font-medium hover:underline"

@@ -107,12 +107,12 @@ const SalonForWomen = () => {
 
   const handleBack = () => {
     setIsExiting(true);
-    // Preload home page content by navigating immediately but keeping exit animation
     // Reset scroll position first
     window.scrollTo({ top: 0, behavior: 'instant' });
-    // Navigate immediately so home page starts rendering
-    navigate('/', { replace: true, state: { scrollToTop: true } });
-    // Keep exit animation visible
+    // Delay navigation to let home page preload and render, then show it
+    setTimeout(() => {
+      navigate('/', { replace: true, state: { scrollToTop: true } });
+    }, 300);
   };
 
   const handleSearch = () => {

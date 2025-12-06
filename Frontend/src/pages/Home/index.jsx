@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -9,7 +9,7 @@ import CuratedServices from './components/CuratedServices';
 import NewAndNoteworthy from './components/NewAndNoteworthy';
 import MostBookedServices from './components/MostBookedServices';
 import ServiceSectionWithRating from './components/ServiceSectionWithRating';
-import NativeProduct from './components/NativeProduct';
+import Banner from './components/Banner';
 // Salon for Women Images
 import salon1Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-1.jpg';
 import salon2Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-2.jpg';
@@ -19,7 +19,7 @@ import salon5Image from '../../assets/images/pages/Home/ServiceCategorySection/S
 import salon6Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-6.jpg';
 import ServiceCategorySection from './components/ServiceCategorySection';
 import HomeRepairSection from './components/HomeRepairSection';
-import NativeProductWithRefer from './components/NativeProductWithRefer';
+import BannerWithRefer from './components/BannerWithRefer';
 import ACApplianceModal from './components/ACApplianceModal';
 import CategoryModal from './components/CategoryModal';
 import acRepairImage from '../../assets/images/pages/Home/ServiceCategorySection/ApplianceServices/ac-repair.jpg';
@@ -40,8 +40,46 @@ const Home = () => {
   const [address] = useState('New Palasia- Indore- Madhya Pradesh...');
   const [cartCount, setCartCount] = useState(0);
   
+  // Set background immediately on mount - runs synchronously BEFORE paint
+  useLayoutEffect(() => {
+    // Set background on all elements immediately
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    
+    const bgStyle = 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)';
+    
+    html.style.backgroundColor = '#ffffff';
+    html.style.background = bgStyle;
+    body.style.backgroundColor = '#ffffff';
+    body.style.background = bgStyle;
+    if (root) {
+      root.style.backgroundColor = '#ffffff';
+      root.style.background = bgStyle;
+    }
+    
+    // Force immediate visibility
+    body.style.opacity = '1';
+    body.style.visibility = 'visible';
+  }, []);
+
   // Reset scroll position when coming back from another page
-  useEffect(() => {
+  useLayoutEffect(() => {
+    // Set background again on location change - runs before paint
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    const bgStyle = 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)';
+    
+    html.style.backgroundColor = '#ffffff';
+    html.style.background = bgStyle;
+    body.style.backgroundColor = '#ffffff';
+    body.style.background = bgStyle;
+    if (root) {
+      root.style.backgroundColor = '#ffffff';
+      root.style.background = bgStyle;
+    }
+    
     if (location.state?.scrollToTop) {
       // Immediately scroll to top before any rendering
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -51,13 +89,6 @@ const Home = () => {
       }
     }
   }, [location]);
-  
-  // Ensure page is visible immediately on mount
-  useEffect(() => {
-    // Force immediate visibility
-    document.body.style.opacity = '1';
-    document.body.style.visibility = 'visible';
-  }, []);
 
   // Load cart count from localStorage on mount and when cart changes
   useEffect(() => {
@@ -191,11 +222,16 @@ const Home = () => {
 
   return (
     <div 
-      className="min-h-screen bg-white pb-20" 
+      className="min-h-screen pb-20" 
       style={{ 
         willChange: 'auto',
         opacity: 1,
-        visibility: 'visible'
+        visibility: 'visible',
+        background: 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)',
+        backgroundColor: '#ffffff',
+        minHeight: '100vh',
+        position: 'relative',
+        zIndex: 1
       }}
     >
             <Header
@@ -204,17 +240,36 @@ const Home = () => {
             />
 
       <main className="pt-0">
-        <SearchBar 
-          onSearch={handleSearch}
-        />
+        {/* Complete Gradient Section: Header continuation, Search, Categories, and Carousel */}
+        <div 
+          className="relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 50%, #FFFFFF 100%)'
+          }}
+        >
+          {/* Gradient overlay for depth */}
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              background: 'radial-gradient(circle at top right, rgba(255, 255, 255, 0.3), transparent 70%)'
+            }}
+          />
+          
+          <div className="relative z-10">
+            <SearchBar 
+              onSearch={handleSearch}
+            />
 
-        <ServiceCategories
-          onCategoryClick={handleCategoryClick}
-        />
+            <ServiceCategories
+              onCategoryClick={handleCategoryClick}
+              onSeeAllClick={() => console.log('See all categories clicked')}
+            />
 
-        <PromoCarousel
-          onPromoClick={handlePromoClick}
-        />
+            <PromoCarousel
+              onPromoClick={handlePromoClick}
+            />
+          </div>
+        </div>
 
         <CuratedServices
           onServiceClick={handleServiceClick}
@@ -227,7 +282,6 @@ const Home = () => {
         <MostBookedServices
           onServiceClick={handleServiceClick}
         />
-
 
         <ServiceSectionWithRating
           title="Salon for Women"
@@ -296,7 +350,7 @@ const Home = () => {
           onServiceClick={handleServiceClick}
         />
 
-        <NativeProduct
+        <Banner
           onBuyClick={handleBuyClick}
         />
 
@@ -386,7 +440,7 @@ const Home = () => {
           onAddClick={handleAddClick}
         />
 
-        <NativeProductWithRefer
+        <BannerWithRefer
           onBuyClick={handleBuyClick}
           onReferClick={handleReferClick}
         />

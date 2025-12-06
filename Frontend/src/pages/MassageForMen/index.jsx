@@ -18,7 +18,6 @@ const MassageForMen = () => {
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [currentSection, setCurrentSection] = useState('');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
 
   // Refs for sections
   const painReliefRef = useRef(null);
@@ -51,7 +50,8 @@ const MassageForMen = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const scrollPosition = window.scrollY;
-          const shouldShowHeader = scrollPosition > 200;
+          // Hide header immediately at top to prevent jump
+          const shouldShowHeader = scrollPosition > 180;
           setShowStickyHeader(shouldShowHeader);
 
           if (!shouldShowHeader) {
@@ -96,9 +96,13 @@ const MassageForMen = () => {
     };
   }, []);
 
+  const [isExiting, setIsExiting] = React.useState(false);
+
   const handleBack = () => {
     setIsExiting(true);
+    // Reset scroll position first
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // Delay navigation to let home page preload and render, then show it
     setTimeout(() => {
       navigate('/', { replace: true, state: { scrollToTop: true } });
     }, 300);
@@ -182,17 +186,19 @@ const MassageForMen = () => {
 
       {/* Spacer to prevent layout shift when sticky header appears */}
       <div 
-        className={`transition-all duration-300 ease-in-out ${
+        className={`transition-all ${showStickyHeader ? 'duration-200' : 'duration-150'} ease-out ${
           showStickyHeader ? 'h-[57px]' : 'h-0'
         }`}
+        style={{ willChange: showStickyHeader ? 'height' : 'auto' }}
         aria-hidden="true"
       ></div>
 
       {/* Spacer for sticky sub-heading to prevent layout shift */}
       <div 
-        className={`transition-all duration-300 ease-in-out ${
+        className={`transition-all ${showStickyHeader && currentSection ? 'duration-200' : 'duration-150'} ease-out ${
           showStickyHeader && currentSection ? 'h-10' : 'h-0'
         }`}
+        style={{ willChange: showStickyHeader && currentSection ? 'height' : 'auto' }}
         aria-hidden="true"
       ></div>
 
