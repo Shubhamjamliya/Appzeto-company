@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { HiLocationMarker } from 'react-icons/hi';
+import { gsap } from 'gsap';
 import LocationSelector from '../common/LocationSelector';
+import { animateLogo } from '../../utils/gsapAnimations';
 
 const Header = ({ location, onLocationClick }) => {
+  const logoRef = useRef(null);
+
+  useEffect(() => {
+    if (logoRef.current) {
+      animateLogo(logoRef.current);
+    }
+  }, []);
+
   return (
     <header 
       className="relative overflow-hidden"
@@ -25,11 +35,35 @@ const Header = ({ location, onLocationClick }) => {
         {/* Top Row: Logo (Left) and Location (Right) */}
         <div className="px-4 py-3 flex items-center justify-between bg-white/5 backdrop-blur-sm">
           {/* Left: Logo */}
-          <div className="cursor-pointer">
+          <div 
+            className="cursor-pointer"
+            onMouseEnter={() => {
+              if (logoRef.current) {
+                gsap.to(logoRef.current, {
+                  scale: 1.15,
+                  filter: 'drop-shadow(0 0 16px rgba(245, 158, 11, 0.7)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2))',
+                  duration: 0.3,
+                  ease: 'power2.out',
+                });
+              }
+            }}
+            onMouseLeave={() => {
+              if (logoRef.current) {
+                gsap.to(logoRef.current, {
+                  scale: 1.03,
+                  filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.4))',
+                  duration: 0.3,
+                  ease: 'power2.out',
+                });
+              }
+            }}
+          >
             <img 
+              ref={logoRef}
               src="/Appzeto-logo.png" 
               alt="Appzeto" 
-              className="h-8 w-auto object-contain logo-animated"
+              className="h-8 w-auto object-contain"
+              style={{ opacity: 0 }}
             />
           </div>
 

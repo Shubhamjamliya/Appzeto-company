@@ -1,12 +1,43 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiArrowLeft, FiSearch, FiShare2 } from 'react-icons/fi';
 
-const SalonHeader = ({ onBack, onSearch, onShare, isVisible }) => {
-  return (
-    <header 
-      className={`fixed top-0 left-0 right-0 bg-white px-4 py-3 border-b border-gray-200 z-50 shadow-sm transition-all duration-300 ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-      }`}
+const StickyHeader = ({ 
+  title = 'Appzeto', 
+  onBack, 
+  onSearch, 
+  onShare, 
+  isVisible = false 
+}) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !isVisible) {
+    return null;
+  }
+
+  const headerContent = (
+    <header
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        backgroundColor: '#ffffff',
+        padding: '12px 16px',
+        borderBottom: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        zIndex: 9999,
+        opacity: 1,
+        transform: 'translateY(0)',
+        pointerEvents: 'auto',
+        display: 'block',
+        visibility: 'visible'
+      }}
     >
       <div className="flex items-center justify-between">
         <button
@@ -16,7 +47,7 @@ const SalonHeader = ({ onBack, onSearch, onShare, isVisible }) => {
           <FiArrowLeft className="w-6 h-6 text-gray-800" />
         </button>
 
-        <h1 className="text-base font-semibold text-black">Salon Prime</h1>
+        <h1 className="text-base font-semibold text-black">{title}</h1>
 
         <div className="flex items-center gap-2">
           <button
@@ -35,7 +66,9 @@ const SalonHeader = ({ onBack, onSearch, onShare, isVisible }) => {
       </div>
     </header>
   );
+
+  return createPortal(headerContent, document.body);
 };
 
-export default SalonHeader;
+export default StickyHeader;
 

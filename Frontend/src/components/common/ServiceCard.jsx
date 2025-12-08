@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { memo, useRef, useEffect } from 'react';
+import { gsap } from 'gsap';
 
-const ServiceCard = ({ image, title, onClick, gif, youtubeUrl }) => {
+const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
+  const cardRef = useRef(null);
   // Extract YouTube video ID from URL (supports shorts and regular videos)
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
@@ -22,9 +24,55 @@ const ServiceCard = ({ image, title, onClick, gif, youtubeUrl }) => {
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`
     : null;
 
+  // GSAP hover animations
+  useEffect(() => {
+    if (cardRef.current) {
+      const card = cardRef.current;
+      
+      const handleMouseEnter = () => {
+        gsap.to(card, {
+          scale: 1.05,
+          y: -8,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      const handleMouseLeave = () => {
+        gsap.to(card, {
+          scale: 1,
+          y: 0,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      const handleClick = () => {
+        gsap.to(card, {
+          scale: 0.98,
+          duration: 0.1,
+          yoyo: true,
+          repeat: 1,
+          ease: 'power2.out',
+        });
+      };
+      
+      card.addEventListener('mouseenter', handleMouseEnter);
+      card.addEventListener('mouseleave', handleMouseLeave);
+      card.addEventListener('click', handleClick);
+      
+      return () => {
+        card.removeEventListener('mouseenter', handleMouseEnter);
+        card.removeEventListener('mouseleave', handleMouseLeave);
+        card.removeEventListener('click', handleClick);
+      };
+    }
+  }, []);
+
   return (
     <div
-      className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer active:scale-98 transition-transform"
+      ref={cardRef}
+      className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer"
       onClick={onClick}
     >
       {youtubeUrl && embedUrl ? (
@@ -50,12 +98,16 @@ const ServiceCard = ({ image, title, onClick, gif, youtubeUrl }) => {
           src={gif}
           alt={title}
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
       ) : image ? (
         <img
           src={image}
           alt={title}
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -79,7 +131,9 @@ const ServiceCard = ({ image, title, onClick, gif, youtubeUrl }) => {
       </div>
     </div>
   );
-};
+});
+
+ServiceCard.displayName = 'ServiceCard';
 
 export default ServiceCard;
 

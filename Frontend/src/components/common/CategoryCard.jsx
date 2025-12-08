@@ -1,69 +1,110 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, memo, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { createRipple } from '../../utils/gsapAnimations';
 
-const CategoryCard = ({ icon, title, onClick, hasSaleBadge = false, index = 0 }) => {
-  const [ripples, setRipples] = useState([]);
+const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index = 0 }) => {
   const cardRef = useRef(null);
+  const iconWrapperRef = useRef(null);
+
+  // GSAP entrance animation
+  useEffect(() => {
+    if (cardRef.current) {
+      gsap.fromTo(
+        cardRef.current,
+        {
+          y: 20,
+          opacity: 0,
+          scale: 0.8,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          delay: index * 0.1,
+          ease: 'back.out(1.7)',
+        }
+      );
+    }
+  }, [index]);
+
+  // Hover animation
+  useEffect(() => {
+    if (iconWrapperRef.current) {
+      const iconWrapper = iconWrapperRef.current;
+      
+      const handleMouseEnter = () => {
+        gsap.to(iconWrapper, {
+          scale: 1.15,
+          rotation: 5,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      const handleMouseLeave = () => {
+        gsap.to(iconWrapper, {
+          scale: 1,
+          rotation: 0,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      iconWrapper.addEventListener('mouseenter', handleMouseEnter);
+      iconWrapper.addEventListener('mouseleave', handleMouseLeave);
+      
+      return () => {
+        iconWrapper.removeEventListener('mouseenter', handleMouseEnter);
+        iconWrapper.removeEventListener('mouseleave', handleMouseLeave);
+      };
+    }
+  }, []);
 
   const handleClick = (e) => {
     if (onClick) {
       onClick();
     }
     
-    // Create ripple effect
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      
-      const newRipple = {
-        id: Date.now(),
-        x,
-        y,
-      };
-      
-      setRipples([...ripples, newRipple]);
-      
-      // Remove ripple after animation
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-      }, 600);
+    // GSAP ripple effect
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      createRipple(cardRef.current, x, y);
+    }
+    
+    // Click animation
+    if (iconWrapperRef.current) {
+      gsap.to(iconWrapperRef.current, {
+        scale: 0.9,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.out',
+      });
     }
   };
 
   return (
     <div
-      className="flex flex-col items-center justify-center p-1.5 cursor-pointer relative category-card-container category-card-entrance"
+      className="flex flex-col items-center justify-center p-1.5 cursor-pointer relative category-card-container"
       onClick={handleClick}
       style={{ 
         minWidth: 'fit-content', 
         width: '70px',
-        animationDelay: `${index * 0.1}s`
       }}
       ref={cardRef}
     >
       <div 
-        className="w-14 h-14 rounded-full flex items-center justify-center mb-1.5 relative backdrop-blur-md border flex-shrink-0 category-card-icon-wrapper"
+        ref={iconWrapperRef}
+        className="w-14 h-14 rounded-full flex items-center justify-center mb-1.5 relative backdrop-blur-md border flex-shrink-0"
         style={{ 
           backgroundColor: 'rgba(255, 255, 255, 0.7)',
           borderColor: '#F59E0B',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
         }}
       >
-        {/* Ripple effects */}
-        {ripples.map((ripple) => (
-          <span
-            key={ripple.id}
-            className="category-card-ripple"
-            style={{
-              left: '50%',
-              top: '50%',
-              width: '56px',
-              height: '56px',
-              marginLeft: '-28px',
-              marginTop: '-28px',
-            }}
-          />
-        ))}
         {icon || (
           <svg
             className="w-7 h-7 text-gray-600"
@@ -97,7 +138,9 @@ const CategoryCard = ({ icon, title, onClick, hasSaleBadge = false, index = 0 })
       </span>
     </div>
   );
-};
+});
+
+CategoryCard.displayName = 'CategoryCard';
 
 export default CategoryCard;
 

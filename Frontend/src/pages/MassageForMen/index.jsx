@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MassageHeader from './components/MassageHeader';
-import StickySubHeading from './components/StickySubHeading';
-import BannerSection from './components/BannerSection';
-import RatingSection from './components/RatingSection';
-import PaymentOffers from './components/PaymentOffers';
-import ServiceCategoriesGrid from './components/ServiceCategoriesGrid';
+import StickyHeader from '../../components/common/StickyHeader';
+import StickySubHeading from '../../components/common/StickySubHeading';
+import BannerSection from '../../components/common/BannerSection';
+import RatingSection from '../../components/common/RatingSection';
+import PaymentOffers from '../../components/common/PaymentOffers';
+import ServiceCategoriesGrid from '../../components/common/ServiceCategoriesGrid';
+import MenuModal from '../../components/common/MenuModal';
 import PainReliefSection from './components/PainReliefSection';
 import StressReliefSection from './components/StressReliefSection';
 import PostWorkoutSection from './components/PostWorkoutSection';
-import MenuModal from './components/MenuModal';
+import menBanner1 from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/men-banner.jpg';
+import menBanner2 from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/men-banner-2.jpg';
+import menBanner3 from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/men-banner-3.jpg';
+import painReliefImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/pain-relief.jpg';
+import stressReliefImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/stress-relief.jpg';
+import postWorkoutImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/post-workout.jpg';
 
 const MassageForMen = () => {
   const navigate = useNavigate();
@@ -20,6 +26,7 @@ const MassageForMen = () => {
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
 
   // Refs for sections
+  const bannerRef = useRef(null);
   const painReliefRef = useRef(null);
   const stressReliefRef = useRef(null);
   const postWorkoutRef = useRef(null);
@@ -49,38 +56,48 @@ const MassageForMen = () => {
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const scrollPosition = window.scrollY;
-          // Hide header immediately at top to prevent jump
-          const shouldShowHeader = scrollPosition > 180;
+          // Check if banner is still visible on screen
+          let bannerVisible = false;
+          if (bannerRef.current) {
+            const rect = bannerRef.current.getBoundingClientRect();
+            // Banner is visible if its bottom edge is still below the top of viewport
+            bannerVisible = rect.bottom > 0;
+          }
+
+          // Show sticky header when banner is completely out of screen
+          const shouldShowHeader = !bannerVisible;
           setShowStickyHeader(shouldShowHeader);
 
-          if (!shouldShowHeader) {
-            setCurrentSection('');
-            ticking = false;
-            return;
-          }
+          // Detect sections when scrolled past banner
+          if (shouldShowHeader) {
+            const sections = [
+              { ref: painReliefRef, title: 'Pain relief' },
+              { ref: stressReliefRef, title: 'Stress relief' },
+              { ref: postWorkoutRef, title: 'Post workout' },
+            ];
 
-          const sections = [
-            { ref: painReliefRef, title: 'Pain relief' },
-            { ref: stressReliefRef, title: 'Stress relief' },
-            { ref: postWorkoutRef, title: 'Post workout' },
-          ];
+            // Find the section that's currently at the top of viewport
+            const headerOffset = 57; // Header height only (subheading is separate)
+            let activeSection = '';
 
-          let activeSection = '';
-          const headerOffset = 120;
-
-          for (let i = sections.length - 1; i >= 0; i--) {
-            const section = sections[i];
-            if (section.ref.current) {
-              const rect = section.ref.current.getBoundingClientRect();
-              if (rect.top <= headerOffset + 50) {
-                activeSection = section.title;
-                break;
+            // Check sections in reverse order (bottom to top) to get the most recent one
+            for (let i = sections.length - 1; i >= 0; i--) {
+              const section = sections[i];
+              if (section.ref.current) {
+                const sectionRect = section.ref.current.getBoundingClientRect();
+                
+                // Section is active if it has scrolled past the header position
+                if (sectionRect.top <= headerOffset + 50) {
+                  activeSection = section.title;
+                  break; // Use the first (most recent) section found
+                }
               }
             }
-          }
 
-          setCurrentSection(activeSection);
+            setCurrentSection(activeSection);
+          } else {
+            setCurrentSection('');
+          }
           ticking = false;
         });
         ticking = true;
@@ -109,19 +126,15 @@ const MassageForMen = () => {
   };
 
   const handleSearch = () => {
-    console.log('Search clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   const handleCategoryClick = (category) => {
-    console.log('Category clicked:', category);
   };
 
   const handleServiceClick = (service) => {
-    console.log('Service clicked:', service);
   };
 
   const handleAddClick = (service) => {
@@ -148,7 +161,6 @@ const MassageForMen = () => {
   };
 
   const handleViewDetails = (service) => {
-    console.log('View details clicked:', service);
   };
 
   const handleMenuClick = () => {
@@ -167,11 +179,12 @@ const MassageForMen = () => {
 
   return (
     <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
       style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       {/* Sticky Header - appears on scroll */}
-      <MassageHeader
+      <StickyHeader
+        title="Massage for Men"
         onBack={handleBack}
         onSearch={handleSearch}
         onShare={handleShare}
@@ -204,18 +217,35 @@ const MassageForMen = () => {
 
       <main>
         <BannerSection
+          banners={[
+            { id: 1, image: menBanner1, text: 'Relax and rejuvenate with professional massage' },
+            { id: 2, image: menBanner2, text: 'Experience ultimate comfort and relief' },
+            { id: 3, image: menBanner3, text: 'Expert therapists for your wellness' },
+          ]}
           onBack={handleBack}
           onSearch={handleSearch}
           onShare={handleShare}
           showStickyNav={showStickyHeader}
+          bannerRef={bannerRef}
         />
 
-        <RatingSection />
+        <RatingSection
+          title="Massage for Men"
+          rating="4.85"
+          bookings="2.5 M bookings"
+        />
 
         <PaymentOffers />
 
         <ServiceCategoriesGrid
+          categories={[
+            { id: 1, title: 'Pain relief', image: painReliefImage },
+            { id: 2, title: 'Stress relief', image: stressReliefImage },
+            { id: 3, title: 'Post workout', image: postWorkoutImage },
+            { id: 4, title: 'Add-ons', image: null },
+          ]}
           onCategoryClick={handleCategoryClick}
+          layout="grid"
         />
 
         <div ref={painReliefRef}>
@@ -284,6 +314,12 @@ const MassageForMen = () => {
         isOpen={isMenuModalOpen}
         onClose={() => setIsMenuModalOpen(false)}
         onCategoryClick={handleMenuCategoryClick}
+        categories={[
+          { id: 1, title: 'Pain relief', image: painReliefImage },
+          { id: 2, title: 'Stress relief', image: stressReliefImage },
+          { id: 3, title: 'Post workout', image: postWorkoutImage },
+          { id: 4, title: 'Add-ons', image: painReliefImage },
+        ]}
       />
     </div>
   );

@@ -30,17 +30,14 @@ const Account = () => {
   ];
 
   const handleCardClick = (cardType) => {
-    console.log(`${cardType} clicked`);
     // Navigate to respective page
   };
 
   const handleMenuClick = (item) => {
-    console.log(`${item.label} clicked`);
     // Navigate to respective page
   };
 
   const handleEditClick = () => {
-    console.log('Edit clicked');
     // Open edit modal
   };
 
@@ -175,7 +172,6 @@ const Account = () => {
         <div className="px-4 mb-4">
           <button
             onClick={() => {
-              console.log('Logout clicked');
               // Handle logout
             }}
             className="w-full bg-white border border-gray-200 text-red-600 font-semibold py-3 rounded-lg hover:bg-gray-50 active:scale-98 transition-all"

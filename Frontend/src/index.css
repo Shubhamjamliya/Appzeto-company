@@ -28,36 +28,25 @@
   animation: slide-down 0.2s ease-in;
 }
 
-/* Slide from bottom animation for page transition (forward - opening) */
-@keyframes slide-up-from-bottom {
+/* Modern fade-in page transition - smooth and fast */
+@keyframes fade-in {
   from {
-    transform: translateY(100%);
     opacity: 0;
+    transform: scale(0.98);
   }
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: scale(1);
   }
 }
 
-.animate-slide-right {
-  animation: slide-up-from-bottom 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+.animate-page-enter {
+  animation: fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Slide down to bottom animation for page transition (backward - closing) */
-@keyframes slide-down-to-bottom {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(100%);
-    opacity: 0.8;
-  }
-}
-
-.animate-slide-left {
-  animation: slide-down-to-bottom 0.3s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+/* No exit animation - instant for better UX */
+.animate-page-exit {
+  opacity: 1;
 }
 
 /* Logo Animations */

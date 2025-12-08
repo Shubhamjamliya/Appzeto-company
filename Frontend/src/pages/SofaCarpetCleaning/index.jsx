@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SofaCarpetHeader from './components/SofaCarpetHeader';
-import StickySubHeading from './components/StickySubHeading';
-import BannerSection from './components/BannerSection';
-import RatingSection from './components/RatingSection';
-import PaymentOffers from './components/PaymentOffers';
-import ServiceCategoriesGrid from './components/ServiceCategoriesGrid';
+import StickyHeader from '../../components/common/StickyHeader';
+import StickySubHeading from '../../components/common/StickySubHeading';
+import BannerSection from '../../components/common/BannerSection';
+import RatingSection from '../../components/common/RatingSection';
+import PaymentOffers from '../../components/common/PaymentOffers';
+import ServiceCategoriesGrid from '../../components/common/ServiceCategoriesGrid';
+import MenuModal from '../../components/common/MenuModal';
 import SofaCleaningSection from './components/SofaCleaningSection';
 import CarpetCleaningSection from './components/CarpetCleaningSection';
 import DiningTableSection from './components/DiningTableSection';
 import MattressSection from './components/MattressSection';
-import MenuModal from './components/MenuModal';
+import sofaCleaning from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/sofa-cleaning.jpg';
+import carpet from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/carpet.jpg';
+import cleaningBanner from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/cleaning-banner.jpg';
+import diningTable from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/dining-table.jpg';
+import mattress from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/mattress.jpg';
 
 const SofaCarpetCleaning = () => {
   const navigate = useNavigate();
@@ -22,6 +27,7 @@ const SofaCarpetCleaning = () => {
   const [isExiting, setIsExiting] = useState(false);
 
   // Refs for sections
+  const bannerRef = useRef(null);
   const sofaCleaningRef = useRef(null);
   const carpetCleaningRef = useRef(null);
   const diningTableRef = useRef(null);
@@ -48,42 +54,43 @@ const SofaCarpetCleaning = () => {
   // Handle scroll to show/hide sticky header and detect current section
   useEffect(() => {
     let ticking = false;
-
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const scrollPosition = window.scrollY;
-          const shouldShowHeader = scrollPosition > 200;
-          setShowStickyHeader(shouldShowHeader);
+          if (bannerRef.current) {
+            const rect = bannerRef.current.getBoundingClientRect();
+            const shouldShowHeader = rect.bottom <= 0;
+            
+            setShowStickyHeader(shouldShowHeader);
 
-          if (!shouldShowHeader) {
-            setCurrentSection('');
-            ticking = false;
-            return;
-          }
+            if (shouldShowHeader) {
 
-          const sections = [
-            { ref: sofaCleaningRef, title: 'Sofa cleaning' },
-            { ref: carpetCleaningRef, title: 'Carpet' },
-            { ref: diningTableRef, title: 'Dining table' },
-            { ref: mattressRef, title: 'Mattress' },
-          ];
+              const sections = [
+                { ref: sofaCleaningRef, title: 'Sofa cleaning' },
+                { ref: carpetCleaningRef, title: 'Carpet' },
+                { ref: diningTableRef, title: 'Dining table' },
+                { ref: mattressRef, title: 'Mattress' },
+              ];
 
-          let activeSection = '';
-          const headerOffset = 120;
+              const headerOffset = 57;
+              let activeSection = '';
 
-          for (let i = sections.length - 1; i >= 0; i--) {
-            const section = sections[i];
-            if (section.ref.current) {
-              const rect = section.ref.current.getBoundingClientRect();
-              if (rect.top <= headerOffset + 50) {
-                activeSection = section.title;
-                break;
+              for (let i = sections.length - 1; i >= 0; i--) {
+                const section = sections[i];
+                if (section.ref.current) {
+                  const sectionRect = section.ref.current.getBoundingClientRect();
+                  if (sectionRect.top <= headerOffset + 50) {
+                    activeSection = section.title;
+                    break;
+                  }
+                }
               }
+
+              setCurrentSection(activeSection);
+            } else {
+              setCurrentSection('');
             }
           }
-
-          setCurrentSection(activeSection);
           ticking = false;
         });
         ticking = true;
@@ -109,15 +116,12 @@ const SofaCarpetCleaning = () => {
   };
 
   const handleSearch = () => {
-    console.log('Search clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   const handleCategoryClick = (category) => {
-    console.log('Category clicked:', category);
   };
 
   const handleAddClick = (service) => {
@@ -144,7 +148,6 @@ const SofaCarpetCleaning = () => {
   };
 
   const handleViewDetails = (service) => {
-    console.log('View details clicked:', service);
   };
 
   const handleMenuClick = () => {
@@ -165,11 +168,12 @@ const SofaCarpetCleaning = () => {
 
   return (
     <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
       style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       {/* Sticky Header - appears on scroll */}
-      <SofaCarpetHeader
+      <StickyHeader
+        title="Sofa & Carpet Cleaning"
         onBack={handleBack}
         onSearch={handleSearch}
         onShare={handleShare}
@@ -200,18 +204,35 @@ const SofaCarpetCleaning = () => {
 
       <main>
         <BannerSection
+          ref={bannerRef}
+          banners={[
+            { id: 1, image: sofaCleaning, text: 'Professional sofa cleaning' },
+            { id: 2, image: carpet, text: 'Expert carpet cleaning services' },
+            { id: 3, image: cleaningBanner, text: 'Deep cleaning for your home' },
+          ]}
           onBack={handleBack}
           onSearch={handleSearch}
           onShare={handleShare}
           showStickyNav={showStickyHeader}
         />
 
-        <RatingSection />
+        <RatingSection
+          rating="4.82"
+          bookings="1.2 M bookings"
+          showBorder={true}
+        />
 
         <PaymentOffers />
 
         <ServiceCategoriesGrid
+          categories={[
+            { id: 1, title: 'Sofa cleaning', image: sofaCleaning },
+            { id: 2, title: 'Carpet', image: carpet },
+            { id: 3, title: 'Dining table', image: diningTable },
+            { id: 4, title: 'Mattress', image: mattress },
+          ]}
           onCategoryClick={handleCategoryClick}
+          layout="scroll"
         />
 
         <div ref={sofaCleaningRef}>
@@ -287,6 +308,12 @@ const SofaCarpetCleaning = () => {
         isOpen={isMenuModalOpen}
         onClose={() => setIsMenuModalOpen(false)}
         onCategoryClick={handleMenuCategoryClick}
+        categories={[
+          { id: 1, title: 'Sofa cleaning', image: sofaCleaning },
+          { id: 2, title: 'Carpet', image: carpet },
+          { id: 3, title: 'Dining table', image: diningTable },
+          { id: 4, title: 'Mattress', image: mattress },
+        ]}
       />
     </div>
   );

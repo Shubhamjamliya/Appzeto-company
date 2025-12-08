@@ -72,7 +72,6 @@ const CategoryModal = ({ isOpen, onClose, category, location, cartCount }) => {
   const subServices = getSubServices();
 
   const handleServiceClick = (service) => {
-    console.log('Sub-service clicked:', service);
     // Close modal first, then navigate after animation
     setIsClosing(true);
     setTimeout(() => {

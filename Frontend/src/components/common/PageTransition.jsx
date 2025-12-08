@@ -7,7 +7,7 @@ const PageTransition = ({ children }) => {
   return (
     <div
       key={location.pathname}
-      className="page-transition-enter-active animate-slide-right"
+      className="page-transition-enter-active animate-page-enter"
       style={{
         width: '100%',
         minHeight: '100vh',

@@ -1,10 +1,61 @@
-import React from 'react';
+import React, { memo, useRef, useEffect } from 'react';
+import { gsap } from 'gsap';
 import { AiFillStar } from 'react-icons/ai';
 
-const DetailedServiceCard = ({ image, title, rating, reviews, price, originalPrice, discount, onClick }) => {
+const DetailedServiceCard = memo(({ image, title, rating, reviews, price, originalPrice, discount, onClick }) => {
+  const cardRef = useRef(null);
+
+  // GSAP hover animations
+  useEffect(() => {
+    if (cardRef.current) {
+      const card = cardRef.current;
+      
+      const handleMouseEnter = () => {
+        gsap.to(card, {
+          y: -8,
+          scale: 1.02,
+          boxShadow: '0 12px 24px rgba(0, 166, 166, 0.15), 0 6px 12px rgba(0, 166, 166, 0.1)',
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      const handleMouseLeave = () => {
+        gsap.to(card, {
+          y: 0,
+          scale: 1,
+          boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      };
+      
+      const handleClick = () => {
+        gsap.to(card, {
+          scale: 0.95,
+          duration: 0.1,
+          yoyo: true,
+          repeat: 1,
+          ease: 'power2.out',
+        });
+      };
+      
+      card.addEventListener('mouseenter', handleMouseEnter);
+      card.addEventListener('mouseleave', handleMouseLeave);
+      card.addEventListener('click', handleClick);
+      
+      return () => {
+        card.removeEventListener('mouseenter', handleMouseEnter);
+        card.removeEventListener('mouseleave', handleMouseLeave);
+        card.removeEventListener('click', handleClick);
+      };
+    }
+  }, []);
+
   return (
     <div 
-      className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
+      ref={cardRef}
+      className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer"
       style={{
         boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
         border: '1px solid rgba(0, 166, 166, 0.1)'
@@ -29,6 +80,8 @@ const DetailedServiceCard = ({ image, title, rating, reviews, price, originalPri
             src={image} 
             alt={title} 
             className="w-full h-32 object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-32 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -83,7 +136,9 @@ const DetailedServiceCard = ({ image, title, rating, reviews, price, originalPri
       </div>
     </div>
   );
-};
+});
+
+DetailedServiceCard.displayName = 'DetailedServiceCard';
 
 export default DetailedServiceCard;
 

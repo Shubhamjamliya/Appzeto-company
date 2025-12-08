@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const PromoCard = ({ title, subtitle, buttonText, image, onClick, className = '' }) => {
+const PromoCard = memo(({ title, subtitle, buttonText, image, onClick, className = '' }) => {
   return (
     <div 
       className="relative rounded-2xl overflow-hidden min-w-[280px] h-40 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] active:scale-95"
@@ -17,6 +17,8 @@ const PromoCard = ({ title, subtitle, buttonText, image, onClick, className = ''
           src={image} 
           alt={title || 'Promo'} 
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -25,7 +27,9 @@ const PromoCard = ({ title, subtitle, buttonText, image, onClick, className = ''
       )}
     </div>
   );
-};
+});
+
+PromoCard.displayName = 'PromoCard';
 
 export default PromoCard;
 

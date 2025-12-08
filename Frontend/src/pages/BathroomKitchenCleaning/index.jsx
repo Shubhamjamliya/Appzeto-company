@@ -1,15 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CleaningHeader from './components/CleaningHeader';
-import StickySubHeading from './components/StickySubHeading';
-import BannerSection from './components/BannerSection';
-import RatingSection from './components/RatingSection';
-import PaymentOffers from './components/PaymentOffers';
-import ServiceCategoriesGrid from './components/ServiceCategoriesGrid';
+import StickyHeader from '../../components/common/StickyHeader';
+import StickySubHeading from '../../components/common/StickySubHeading';
+import BannerSection from '../../components/common/BannerSection';
+import RatingSection from '../../components/common/RatingSection';
+import PaymentOffers from '../../components/common/PaymentOffers';
+import ServiceCategoriesGrid from '../../components/common/ServiceCategoriesGrid';
+import MenuModal from '../../components/common/MenuModal';
 import CombosSection from './components/CombosSection';
 import BathroomCleaningSection from './components/BathroomCleaningSection';
 import MiniServicesSection from './components/MiniServicesSection';
-import MenuModal from './components/MenuModal';
+import cleaningBanner from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/cleaning-banner.jpg';
+import intenseBathroom2 from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/intense-bathroom-2.jpg';
+import intenseBathroom3 from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/intense-bathroom-3.jpg';
+import intenseCleaning from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/intense-cleaning.jpg';
+import bathroomCleaning from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/bathroom-cleaning.png';
+import miniServices from '../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/mini servies.jpg';
+import bathroomCleanIcon from '../../assets/images/icons/services/bathroom-clean.png';
+import sofaIcon from '../../assets/images/icons/services/sofa.png';
 
 const BathroomKitchenCleaning = () => {
   const navigate = useNavigate();
@@ -21,6 +29,7 @@ const BathroomKitchenCleaning = () => {
   const [isExiting, setIsExiting] = useState(false);
 
   // Refs for sections
+  const bannerRef = useRef(null);
   const combosRef = useRef(null);
   const bathroomCleaningRef = useRef(null);
   const miniServicesRef = useRef(null);
@@ -46,41 +55,41 @@ const BathroomKitchenCleaning = () => {
   // Handle scroll to show/hide sticky header and detect current section
   useEffect(() => {
     let ticking = false;
-
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const scrollPosition = window.scrollY;
-          const shouldShowHeader = scrollPosition > 200;
-          setShowStickyHeader(shouldShowHeader);
+          if (bannerRef.current) {
+            const rect = bannerRef.current.getBoundingClientRect();
+            const shouldShowHeader = rect.bottom <= 0;
+            
+            setShowStickyHeader(shouldShowHeader);
 
-          if (!shouldShowHeader) {
-            setCurrentSection('');
-            ticking = false;
-            return;
-          }
+            if (shouldShowHeader) {
+              const sections = [
+                { ref: combosRef, title: 'Combos' },
+                { ref: bathroomCleaningRef, title: 'Bathroom cleaning' },
+                { ref: miniServicesRef, title: 'Mini services' },
+              ];
 
-          const sections = [
-            { ref: combosRef, title: 'Combos' },
-            { ref: bathroomCleaningRef, title: 'Bathroom cleaning' },
-            { ref: miniServicesRef, title: 'Mini services' },
-          ];
+              const headerOffset = 57;
+              let activeSection = '';
 
-          let activeSection = '';
-          const headerOffset = 120;
-
-          for (let i = sections.length - 1; i >= 0; i--) {
-            const section = sections[i];
-            if (section.ref.current) {
-              const rect = section.ref.current.getBoundingClientRect();
-              if (rect.top <= headerOffset + 50) {
-                activeSection = section.title;
-                break;
+              for (let i = sections.length - 1; i >= 0; i--) {
+                const section = sections[i];
+                if (section.ref.current) {
+                  const sectionRect = section.ref.current.getBoundingClientRect();
+                  if (sectionRect.top <= headerOffset + 50) {
+                    activeSection = section.title;
+                    break;
+                  }
+                }
               }
+
+              setCurrentSection(activeSection);
+            } else {
+              setCurrentSection('');
             }
           }
-
-          setCurrentSection(activeSection);
           ticking = false;
         });
         ticking = true;
@@ -88,7 +97,9 @@ const BathroomKitchenCleaning = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    const timeoutId = setTimeout(handleScroll, 300);
+    const timeoutId = setTimeout(() => {
+      handleScroll();
+    }, 200);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -106,19 +117,15 @@ const BathroomKitchenCleaning = () => {
   };
 
   const handleSearch = () => {
-    console.log('Search clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   const handleCategoryClick = (category) => {
-    console.log('Category clicked:', category);
   };
 
   const handleServiceClick = (service) => {
-    console.log('Service clicked:', service);
   };
 
   const handleAddClick = (service) => {
@@ -145,7 +152,6 @@ const BathroomKitchenCleaning = () => {
   };
 
   const handleViewDetails = (service) => {
-    console.log('View details clicked:', service);
   };
 
   const handleMenuClick = () => {
@@ -164,11 +170,12 @@ const BathroomKitchenCleaning = () => {
 
   return (
     <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
       style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       {/* Sticky Header - appears on scroll */}
-      <CleaningHeader
+      <StickyHeader
+        title="Bathroom & Kitchen Cleaning"
         onBack={handleBack}
         onSearch={handleSearch}
         onShare={handleShare}
@@ -199,18 +206,34 @@ const BathroomKitchenCleaning = () => {
 
       <main>
         <BannerSection
+          ref={bannerRef}
+          banners={[
+            { id: 1, image: cleaningBanner, text: 'Professional cleaning services' },
+            { id: 2, image: intenseBathroom2, text: 'Deep cleaning for your home' },
+            { id: 3, image: intenseBathroom3, text: 'Expert cleaners at your service' },
+          ]}
           onBack={handleBack}
           onSearch={handleSearch}
           onShare={handleShare}
           showStickyNav={showStickyHeader}
         />
 
-        <RatingSection />
+        <RatingSection
+          rating="4.82"
+          bookings="1.2 M bookings"
+          showBorder={true}
+        />
 
         <PaymentOffers />
 
         <ServiceCategoriesGrid
+          categories={[
+            { id: 1, title: 'Combos', image: intenseCleaning, badge: 'COMBO DEALS' },
+            { id: 2, title: 'Bathroom cleaning', image: bathroomCleaning },
+            { id: 3, title: 'Mini services', image: miniServices },
+          ]}
           onCategoryClick={handleCategoryClick}
+          layout="grid"
         />
 
         <div ref={combosRef}>
@@ -279,6 +302,11 @@ const BathroomKitchenCleaning = () => {
         isOpen={isMenuModalOpen}
         onClose={() => setIsMenuModalOpen(false)}
         onCategoryClick={handleMenuCategoryClick}
+        categories={[
+          { id: 1, title: 'Combos', icon: null, badge: 'COMBO DEALS' },
+          { id: 2, title: 'Bathroom cleaning', icon: bathroomCleanIcon },
+          { id: 3, title: 'Mini services', icon: sofaIcon },
+        ]}
       />
     </div>
   );

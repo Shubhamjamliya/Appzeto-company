@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { createOptimizedScrollAnimation, createOptimizedStaggerAnimation } from '../../../utils/optimizedScrollTrigger';
 import ServiceCard from '../../../components/common/ServiceCard';
 
 const CuratedServices = ({ services, onServiceClick }) => {
+  const sectionRef = useRef(null);
+  const titleRef = useRef(null);
+  const cardsRef = useRef(null);
   // Default electrical services if none provided
   const defaultServices = [
     {
@@ -45,10 +49,52 @@ const CuratedServices = ({ services, onServiceClick }) => {
 
   const serviceList = services || defaultServices;
 
+  // Optimized GSAP scroll animations
+  useEffect(() => {
+    if (!sectionRef.current || !titleRef.current || !cardsRef.current) return;
+
+    const cards = Array.from(cardsRef.current.children);
+    if (cards.length === 0) return;
+
+    // Cleanup functions
+    const cleanupFunctions = [];
+
+    // Animate title with optimized scroll trigger
+    const titleCleanup = createOptimizedScrollAnimation(
+      titleRef.current,
+      {
+        from: { y: 30, opacity: 0 },
+        to: { y: 0, opacity: 1 },
+        duration: 0.6,
+        ease: 'power2.out',
+      },
+      { rootMargin: '100px' }
+    );
+    if (titleCleanup) cleanupFunctions.push(titleCleanup);
+
+    // Stagger animate cards with optimized scroll trigger
+    const cardsCleanup = createOptimizedStaggerAnimation(
+      cards,
+      {
+        from: { x: 50, opacity: 0, scale: 0.9 },
+        to: { x: 0, opacity: 1, scale: 1 },
+        duration: 0.5,
+        stagger: 0.1,
+        ease: 'back.out(1.7)',
+      },
+      { rootMargin: '150px' }
+    );
+    if (cardsCleanup) cleanupFunctions.push(cardsCleanup);
+
+    return () => {
+      cleanupFunctions.forEach(cleanup => cleanup?.());
+    };
+  }, [serviceList]);
+
   return (
-    <div className="mb-6">
+    <div ref={sectionRef} className="mb-6">
       {/* Title Section */}
-      <div className="px-4 mb-5">
+      <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 0 }}>
         <h2 
           className="text-xl font-bold mb-1 text-black"
         >
@@ -60,7 +106,7 @@ const CuratedServices = ({ services, onServiceClick }) => {
       </div>
 
       {/* Horizontal Scrollable Service Cards */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
         {serviceList.map((service) => (
           <ServiceCard
             key={service.id}

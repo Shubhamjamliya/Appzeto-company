@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiShoppingCart, FiTrash2, FiPlus, FiMinus } from 'react-icons/fi';
 import BottomNav from '../../components/layout/BottomNav';
-import washingMachineIcon from '../../assets/images/icons/services/washing-machine-icon.png';
-import cleaningIcon from '../../assets/images/icons/services/cleaning-icon.png';
-import spaIcon from '../../assets/images/icons/services/womens-salon-spa-icon.png';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -13,36 +10,53 @@ const Cart = () => {
   const [cartItems, setCartItems] = useState(() => {
     const saved = localStorage.getItem('cartItems');
     if (saved) {
-      return JSON.parse(saved);
+      try {
+        const items = JSON.parse(saved);
+        // Ensure all items have unitPrice calculated
+        return items.map(item => {
+          if (!item.unitPrice) {
+            item.unitPrice = item.price / (item.serviceCount || 1);
+          }
+          return item;
+        });
+      } catch (e) {
+        return [];
+      }
     }
-    // Default sample items if localStorage is empty
-    return [
-      {
-        id: 1,
-        title: 'Washing Machine Repair',
-        icon: washingMachineIcon,
-        price: 160,
-        serviceCount: 1,
-        description: 'Semi-automatic machine check-up X 1',
-      },
-      {
-        id: 2,
-        title: 'Bathroom & Kitchen Cleaning',
-        icon: cleaningIcon,
-        price: 785,
-        serviceCount: 1,
-        description: 'Classic cleaning (2 bathrooms) X 1',
-      },
-      {
-        id: 3,
-        title: 'Spa for Women',
-        icon: spaIcon,
-        price: 999,
-        serviceCount: 1,
-        description: 'Quick Comfort Therapy X 1',
-      },
-    ];
+    return [];
   });
+
+  // Sync with localStorage changes (from other tabs/components)
+  useEffect(() => {
+    const updateCart = () => {
+      const saved = localStorage.getItem('cartItems');
+      if (saved) {
+        try {
+          const items = JSON.parse(saved);
+          // Ensure all items have unitPrice calculated
+          const itemsWithUnitPrice = items.map(item => {
+            if (!item.unitPrice) {
+              item.unitPrice = item.price / (item.serviceCount || 1);
+            }
+            return item;
+          });
+          setCartItems(itemsWithUnitPrice);
+        } catch (e) {
+          setCartItems([]);
+        }
+      } else {
+        setCartItems([]);
+      }
+    };
+
+    window.addEventListener('cartUpdated', updateCart);
+    window.addEventListener('storage', updateCart);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', updateCart);
+      window.removeEventListener('storage', updateCart);
+    };
+  }, []);
 
   const cartCount = cartItems.length;
 
@@ -63,7 +77,16 @@ const Cart = () => {
     const updatedItems = cartItems.map(item => {
       if (item.id === itemId) {
         const newCount = Math.max(1, (item.serviceCount || 1) + change);
-        return { ...item, serviceCount: newCount, price: (item.originalPrice || item.price) * newCount };
+        // Calculate unit price (price per service)
+        // If unitPrice exists, use it; otherwise calculate from current price and count
+        const unitPrice = item.unitPrice || (item.price / (item.serviceCount || 1));
+        const newPrice = unitPrice * newCount;
+        return { 
+          ...item, 
+          serviceCount: newCount, 
+          price: newPrice,
+          unitPrice: unitPrice // Store unit price for future calculations
+        };
       }
       return item;
     });
@@ -73,26 +96,34 @@ const Cart = () => {
   };
 
   const handleAddServices = (item) => {
-    console.log('Add services clicked for:', item);
     // Navigate to service detail page or open modal
   };
 
-  const handleCheckout = (item) => {
-    console.log('Checkout clicked for:', item);
-    navigate('/checkout');
+  const handleCheckout = () => {
+    if (cartItems.length > 0) {
+      navigate('/checkout');
+    }
   };
 
   const handleCartClick = () => {
     // Already on cart page
   };
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + (item.price || 0), 0);
-  const totalOriginalPrice = cartItems.reduce((sum, item) => sum + ((item.originalPrice || item.price || 0) * (item.serviceCount || 1)), 0);
+  // Calculate totals
+  const totalPrice = cartItems.reduce((sum, item) => {
+    // Price is already the total for the item (unitPrice * serviceCount)
+    return sum + (item.price || 0);
+  }, 0);
+  
+  const totalOriginalPrice = cartItems.reduce((sum, item) => {
+    // If originalPrice exists, use it; otherwise use current price
+    const unitOriginalPrice = item.originalPrice || (item.unitPrice || (item.price / (item.serviceCount || 1)));
+    return sum + (unitOriginalPrice * (item.serviceCount || 1));
+  }, 0);
 
   return (
     <div 
       className="min-h-screen bg-gray-50"
-      style={{ paddingBottom: cartItems.length > 0 ? '120px' : '80px' }}
     >
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-30">
@@ -118,7 +149,7 @@ const Cart = () => {
       </header>
 
       {/* Cart Items */}
-      <main className="px-4 py-4">
+      <main className="px-4 py-4" style={{ paddingBottom: cartItems.length > 0 ? '240px' : '100px' }}>
         {cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <FiShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
@@ -230,11 +261,21 @@ const Cart = () => {
                     <span className="text-lg font-bold text-black">
                       ₹{(item.price || 0).toLocaleString('en-IN')}
                     </span>
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <div className="text-xs text-gray-400 line-through">
-                        ₹{((item.originalPrice || 0) * (item.serviceCount || 1)).toLocaleString('en-IN')}
-                      </div>
-                    )}
+                    {(() => {
+                      const unitPrice = item.unitPrice || (item.price / (item.serviceCount || 1));
+                      const unitOriginalPrice = item.originalPrice || unitPrice;
+                      const currentTotal = item.price;
+                      const originalTotal = unitOriginalPrice * (item.serviceCount || 1);
+                      
+                      if (originalTotal > currentTotal) {
+                        return (
+                          <div className="text-xs text-gray-400 line-through">
+                            ₹{originalTotal.toLocaleString('en-IN')}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 
@@ -273,10 +314,11 @@ const Cart = () => {
         {/* Order Summary - Fixed at bottom if items exist */}
         {cartItems.length > 0 && (
           <div 
-            className="fixed bottom-0 left-0 right-0 z-40 px-4 py-4 border-t border-gray-200"
+            className="fixed left-0 right-0 z-40 px-4 py-4 border-t border-gray-200"
             style={{ 
               backgroundColor: '#ffffff',
-              boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)'
+              boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)',
+              bottom: '80px' // Position above BottomNav
             }}
           >
             <div className="mb-3 pb-3 border-b border-gray-200">

@@ -55,7 +55,6 @@ const Checkout = () => {
   };
 
   const handleProceed = () => {
-    console.log('Proceed to address and slot selection');
     // Navigate to address selection page
   };
 

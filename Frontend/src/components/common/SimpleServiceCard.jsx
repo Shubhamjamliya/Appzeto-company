@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const SimpleServiceCard = ({ image, title, onClick }) => {
+const SimpleServiceCard = memo(({ image, title, onClick }) => {
   return (
     <div 
       className="min-w-[160px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
@@ -15,6 +15,8 @@ const SimpleServiceCard = ({ image, title, onClick }) => {
           src={image} 
           alt={title} 
           className="w-full h-28 object-cover"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="w-full h-28 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -38,7 +40,9 @@ const SimpleServiceCard = ({ image, title, onClick }) => {
       </div>
     </div>
   );
-};
+});
+
+SimpleServiceCard.displayName = 'SimpleServiceCard';
 
 export default SimpleServiceCard;
 

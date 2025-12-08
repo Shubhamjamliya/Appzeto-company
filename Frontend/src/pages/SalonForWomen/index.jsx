@@ -1,16 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/layout/BottomNav';
-import SalonHeader from './components/SalonHeader';
-import StickySubHeading from './components/StickySubHeading';
-import BannerSection from './components/BannerSection';
-import RatingSection from './components/RatingSection';
-import PaymentOffers from './components/PaymentOffers';
-import ServiceCategoriesGrid from './components/ServiceCategoriesGrid';
+import StickyHeader from '../../components/common/StickyHeader';
+import StickySubHeading from '../../components/common/StickySubHeading';
+import BannerSection from '../../components/common/BannerSection';
+import RatingSection from '../../components/common/RatingSection';
+import PaymentOffers from '../../components/common/PaymentOffers';
+import ServiceCategoriesGrid from '../../components/common/ServiceCategoriesGrid';
+import MenuModal from '../../components/common/MenuModal';
 import SuperSaverPackages from './components/SuperSaverPackages';
 import WaxingThreadingSection from './components/WaxingThreadingSection';
 import KoreanFacialSection from './components/KoreanFacialSection';
-import MenuModal from './components/MenuModal';
+import parlorBanner from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/parlor-banner.jpg';
+import spaBanner from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/spa-banner.jpg';
+import salon1Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-1.jpg';
+import waxingImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/waxing.jpg';
+import koreanFacialImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/koreanfacial.jpg';
+import signatureFacialImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/signature facial.jpg';
+import cleanupImage from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/cleanup.jpg';
+import salon3Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-3.jpg';
+import salon5Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-5.jpg';
+import salon6Image from '../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-6.jpg';
 
 const SalonForWomen = () => {
   const navigate = useNavigate();
@@ -21,6 +31,7 @@ const SalonForWomen = () => {
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
 
   // Refs for sections
+  const bannerRef = useRef(null);
   const superSaverRef = useRef(null);
   const waxingRef = useRef(null);
   const koreanFacialRef = useRef(null);
@@ -45,48 +56,52 @@ const SalonForWomen = () => {
 
   // Handle scroll to show/hide sticky header and detect current section
   useEffect(() => {
+    // Use scroll-based detection (simple and reliable)
     let ticking = false;
-
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const scrollPosition = window.scrollY;
-          // Show sticky header after scrolling past banner (approximately 256px)
-          const shouldShowHeader = scrollPosition > 200;
-          setShowStickyHeader(shouldShowHeader);
+          if (bannerRef.current) {
+            const rect = bannerRef.current.getBoundingClientRect();
+            // Show header when banner bottom goes above viewport top
+            // Check if banner has scrolled completely out of view
+            // Show header when banner bottom goes above viewport (even slightly)
+            const shouldShowHeader = rect.bottom <= 0;
+            
+            // Always update state immediately
+            setShowStickyHeader(shouldShowHeader);
 
-          // Detect which section is currently in view
-          if (!shouldShowHeader) {
-            setCurrentSection('');
-            ticking = false;
-            return;
-          }
+            // Detect sections when scrolled past banner
+            if (shouldShowHeader) {
+              const sections = [
+                { ref: superSaverRef, title: 'Super saver packages' },
+                { ref: waxingRef, title: 'Waxing & threading' },
+                { ref: koreanFacialRef, title: 'Korean facial' },
+              ];
 
-          const sections = [
-            { ref: superSaverRef, title: 'Super saver packages' },
-            { ref: waxingRef, title: 'Waxing & threading' },
-            { ref: koreanFacialRef, title: 'Korean facial' },
-          ];
+              // Find the section that's currently at the top of viewport
+              const headerOffset = 57; // Header height only (subheading is separate)
+              let activeSection = '';
 
-          // Find the section that's currently at the top of viewport
-          let activeSection = '';
-          const headerOffset = 120; // Navbar height + sub-heading height
-
-          // Check sections in reverse order (bottom to top) to get the most recent one
-          for (let i = sections.length - 1; i >= 0; i--) {
-            const section = sections[i];
-            if (section.ref.current) {
-              const rect = section.ref.current.getBoundingClientRect();
-              // Section is active if it has scrolled past the header position
-              // Add buffer to prevent flickering
-              if (rect.top <= headerOffset + 50) {
-                activeSection = section.title;
-                break; // Use the first (most recent) section found
+              // Check sections in reverse order (bottom to top) to get the most recent one
+              for (let i = sections.length - 1; i >= 0; i--) {
+                const section = sections[i];
+                if (section.ref.current) {
+                  const sectionRect = section.ref.current.getBoundingClientRect();
+                  
+                  // Section is active if it has scrolled past the header position
+                  if (sectionRect.top <= headerOffset + 50) {
+                    activeSection = section.title;
+                    break; // Use the first (most recent) section found
+                  }
+                }
               }
+
+              setCurrentSection(activeSection);
+            } else {
+              setCurrentSection('');
             }
           }
-
-          setCurrentSection(activeSection);
           ticking = false;
         });
         ticking = true;
@@ -94,14 +109,16 @@ const SalonForWomen = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check with delay to ensure refs are attached
-    const timeoutId = setTimeout(handleScroll, 300);
+    // Initial check - wait a bit for refs to be ready
+    const timeoutId = setTimeout(() => {
+      handleScroll();
+    }, 200);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, []); // Empty deps - only run once on mount
 
   const [isExiting, setIsExiting] = React.useState(false);
 
@@ -116,24 +133,19 @@ const SalonForWomen = () => {
   };
 
   const handleSearch = () => {
-    console.log('Search clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   const handleCategoryClick = (category) => {
-    console.log('Category clicked:', category);
     // Navigate to specific category section or page
   };
 
   const handleServiceClick = (service) => {
-    console.log('Service clicked:', service);
   };
 
   const handleAddClick = (service) => {
-    console.log('Add clicked:', service);
     
     // Get existing cart items from localStorage
     const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
@@ -169,11 +181,9 @@ const SalonForWomen = () => {
   };
 
   const handleViewDetails = (service) => {
-    console.log('View details clicked:', service);
   };
 
   const handleEditPackage = (packageId) => {
-    console.log('Edit package clicked:', packageId);
   };
 
   const handleMenuClick = () => {
@@ -181,7 +191,6 @@ const SalonForWomen = () => {
   };
 
   const handleMenuCategoryClick = (category) => {
-    console.log('Menu category clicked:', category);
     // Scroll to the section or handle navigation
     if (category.title === 'Super saver packages') {
       superSaverRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -194,22 +203,25 @@ const SalonForWomen = () => {
 
   return (
     <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      className="min-h-screen bg-white pb-20"
       style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       {/* Sticky Header - appears on scroll */}
-      <SalonHeader
+      <StickyHeader
+        title="Salon Prime"
         onBack={handleBack}
         onSearch={handleSearch}
         onShare={handleShare}
         isVisible={showStickyHeader}
       />
+      
 
       {/* Sticky Sub-heading - shows current section */}
       <StickySubHeading
         title={currentSection}
         isVisible={showStickyHeader && !!currentSection}
       />
+      
 
       {/* Spacer to prevent layout shift when sticky header appears */}
       {/* Always reserve space for header (57px) when visible */}
@@ -231,18 +243,39 @@ const SalonForWomen = () => {
 
       <main>
         <BannerSection
+          banners={[
+            { id: 1, image: parlorBanner, text: 'Parlor Services' },
+            { id: 2, image: spaBanner, text: 'Spa Services' },
+            { id: 3, image: salon1Image, text: 'Salon Services' },
+          ]}
           onBack={handleBack}
           onSearch={handleSearch}
           onShare={handleShare}
           showStickyNav={showStickyHeader}
+          bannerRef={bannerRef}
         />
 
-        <RatingSection />
+        <RatingSection
+          title="Salon Prime"
+          rating="4.85"
+          bookings="15.9 M bookings"
+        />
 
         <PaymentOffers />
 
         <ServiceCategoriesGrid
+          categories={[
+            { id: 1, title: 'Super saver packages', image: salon1Image, badge: 'Upto 25% OFF' },
+            { id: 2, title: 'Waxing & threading', image: waxingImage, badge: 'Offer' },
+            { id: 3, title: 'Korean facial', image: koreanFacialImage },
+            { id: 4, title: 'Signature facials', image: signatureFacialImage },
+            { id: 5, title: 'Ayurvedic facial', image: salon3Image },
+            { id: 6, title: 'Cleanup', image: cleanupImage },
+            { id: 7, title: 'Pedicure & manicure', image: salon5Image },
+            { id: 8, title: 'Hair, bleach & detan', image: salon6Image },
+          ]}
           onCategoryClick={handleCategoryClick}
+          layout="grid"
         />
 
         <div ref={superSaverRef}>
@@ -313,6 +346,16 @@ const SalonForWomen = () => {
         isOpen={isMenuModalOpen}
         onClose={() => setIsMenuModalOpen(false)}
         onCategoryClick={handleMenuCategoryClick}
+        categories={[
+          { id: 1, title: 'Super saver packages', image: salon1Image, badge: 'Upto 25% OFF' },
+          { id: 2, title: 'Waxing & threading', image: waxingImage, badge: 'Offer' },
+          { id: 3, title: 'Korean facial', image: koreanFacialImage },
+          { id: 4, title: 'Signature facials', image: signatureFacialImage },
+          { id: 5, title: 'Ayurvedic facial', image: salon3Image },
+          { id: 6, title: 'Cleanup', image: cleanupImage },
+          { id: 7, title: 'Pedicure & manicure', image: salon5Image },
+          { id: 8, title: 'Hair, bleach & detan', image: salon6Image },
+        ]}
       />
     </div>
   );

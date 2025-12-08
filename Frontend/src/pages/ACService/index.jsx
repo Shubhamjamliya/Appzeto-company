@@ -25,32 +25,26 @@ const ACService = () => {
   };
 
   const handleSearch = () => {
-    console.log('Search clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   const handleCategoryClick = (category) => {
-    console.log('Category clicked:', category);
   };
 
   const handleServiceClick = (service) => {
-    console.log('Service clicked:', service);
   };
 
   const handleAddClick = (service) => {
-    console.log('Add clicked:', service);
   };
 
   const handleViewDetails = (service) => {
-    console.log('View details clicked:', service);
   };
 
   return (
     <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-slide-left' : 'animate-slide-right'}`}
+      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
       style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       <ACServiceHeader

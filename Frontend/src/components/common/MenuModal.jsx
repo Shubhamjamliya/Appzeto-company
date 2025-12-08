@@ -1,77 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FiX } from 'react-icons/fi';
-import waxingImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/waxing.jpg';
-import koreanFacialImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/koreanfacial.jpg';
-import signatureFacialImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/signature facial.jpg';
-import cleanupImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/cleanup.jpg';
-import salon1Image from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-1.jpg';
-import salon3Image from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-3.jpg';
-import salon5Image from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-5.jpg';
-import salon6Image from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-6.jpg';
+import { gsap } from 'gsap';
+import { animateModalIn, animateModalOut } from '../../utils/gsapAnimations';
 
-const MenuModal = ({ isOpen, onClose, onCategoryClick }) => {
+const MenuModal = ({ isOpen, onClose, onCategoryClick, categories = [] }) => {
   const [isClosing, setIsClosing] = useState(false);
+  const modalRef = useRef(null);
+  const backdropRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) {
-      setIsClosing(false);
+    if (isOpen && modalRef.current && backdropRef.current) {
+      // Animate backdrop
+      gsap.fromTo(
+        backdropRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.2 }
+      );
+      
+      // Animate modal
+      animateModalIn(modalRef.current);
     }
   }, [isOpen]);
 
   const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      onClose();
-      setIsClosing(false);
-    }, 200); // Match animation duration
+    if (modalRef.current && backdropRef.current) {
+      setIsClosing(true);
+      
+      // Animate out
+      gsap.to(backdropRef.current, {
+        opacity: 0,
+        duration: 0.2,
+      });
+      
+      animateModalOut(modalRef.current, () => {
+        onClose();
+        setIsClosing(false);
+      });
+    }
   };
 
   if (!isOpen && !isClosing) return null;
-
-  const categories = [
-    {
-      id: 1,
-      title: 'Super saver packages',
-      image: salon1Image,
-      badge: 'Upto 25% OFF',
-    },
-    {
-      id: 2,
-      title: 'Waxing & threading',
-      image: waxingImage,
-      badge: 'Offer',
-    },
-    {
-      id: 3,
-      title: 'Korean facial',
-      image: koreanFacialImage,
-    },
-    {
-      id: 4,
-      title: 'Signature facials',
-      image: signatureFacialImage,
-    },
-    {
-      id: 5,
-      title: 'Ayurvedic facial',
-      image: salon3Image,
-    },
-    {
-      id: 6,
-      title: 'Cleanup',
-      image: cleanupImage,
-    },
-    {
-      id: 7,
-      title: 'Pedicure & manicure',
-      image: salon5Image,
-    },
-    {
-      id: 8,
-      title: 'Hair, bleach & detan',
-      image: salon6Image,
-    },
-  ];
 
   const handleCategoryClick = (category) => {
     onCategoryClick?.(category);
@@ -82,10 +50,10 @@ const MenuModal = ({ isOpen, onClose, onCategoryClick }) => {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/85 z-50 transition-opacity ${
-          isClosing ? 'opacity-0' : 'opacity-100'
-        }`}
+        ref={backdropRef}
+        className="fixed inset-0 bg-black/85 z-50"
         onClick={handleClose}
+        style={{ opacity: 0 }}
       />
 
       {/* Modal Container - Centered Card */}
@@ -93,10 +61,12 @@ const MenuModal = ({ isOpen, onClose, onCategoryClick }) => {
         <div className="flex flex-col items-center w-full max-w-sm">
           {/* Modal Card - Square */}
           <div
-            className={`bg-white rounded-3xl overflow-y-auto w-full shadow-2xl pointer-events-auto ${
-              isClosing ? 'animate-slide-down' : 'animate-slide-up'
-            }`}
-            style={{ maxHeight: 'calc(100vh - 180px)' }}
+            ref={modalRef}
+            className="bg-white rounded-3xl overflow-y-auto w-full shadow-2xl pointer-events-auto"
+            style={{ 
+              maxHeight: 'calc(100vh - 180px)',
+              transform: 'translateY(100%)'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Content */}
@@ -115,7 +85,13 @@ const MenuModal = ({ isOpen, onClose, onCategoryClick }) => {
                           src={category.image}
                           alt={category.title}
                           className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
+                      ) : category.icon ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          {category.icon}
+                        </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <span className="text-gray-400 text-[8px]">Image</span>

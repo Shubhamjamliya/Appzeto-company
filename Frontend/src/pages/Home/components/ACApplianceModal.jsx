@@ -42,7 +42,6 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
   ];
 
   const handleServiceClick = (service) => {
-    console.log('Service clicked:', service);
     // Close modal first, then navigate after animation
     setIsClosing(true);
     setTimeout(() => {
@@ -58,7 +57,6 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
   };
 
   const handleNativeProductClick = () => {
-    console.log('Native product clicked');
     handleClose();
     // Navigate to product page
   };

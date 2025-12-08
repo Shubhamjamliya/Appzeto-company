@@ -23,7 +23,6 @@ const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
   if (!isOpen && !isClosing) return null;
 
   const handleServiceDetailClick = () => {
-    console.log('Service detail clicked:', service);
     handleClose();
     // Navigate to AC Service page if AC service is clicked
     if (service?.title === 'AC Service and Repair' || service?.title?.includes('AC')) {

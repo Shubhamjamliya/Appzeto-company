@@ -5,7 +5,6 @@ import { FaWhatsapp, FaFacebookMessenger } from 'react-icons/fa';
 
 const Rewards = () => {
   const handleCopyLink = () => {
-    console.log('Copy link clicked');
     // Copy referral link to clipboard
     const referralLink = 'https://appzeto.com/refer/your-link';
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -14,14 +13,12 @@ const Rewards = () => {
   };
 
   const handleShareWhatsApp = () => {
-    console.log('Share via WhatsApp');
     const text = 'Check out this amazing electrical services app!';
     const url = 'https://appzeto.com/refer/your-link';
     window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
   };
 
   const handleShareMessenger = () => {
-    console.log('Share via Messenger');
     const url = 'https://appzeto.com/refer/your-link';
     window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=your-app-id`, '_blank');
   };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import PromoCard from '../../../components/common/PromoCard';
 import promo1 from '../../../assets/images/pages/Home/promo-carousel/1764052270908-bae94c.jpg';
 import promo2 from '../../../assets/images/pages/Home/promo-carousel/1678450687690-81f922.jpg';
@@ -11,6 +12,7 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollContainerRef = useRef(null);
   const intervalRef = useRef(null);
+  const carouselRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
 
   // Default promotional cards if none provided
@@ -134,10 +136,30 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
     };
   }, [currentIndex, promotionalCards.length]);
 
+  // GSAP entrance animation
+  useEffect(() => {
+    if (carouselRef.current) {
+      gsap.fromTo(
+        carouselRef.current,
+        {
+          y: 30,
+          opacity: 0,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.6,
+          ease: 'power2.out',
+        }
+      );
+    }
+  }, []);
 
   return (
     <div 
+      ref={carouselRef}
       className="pb-6"
+      style={{ opacity: 0 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

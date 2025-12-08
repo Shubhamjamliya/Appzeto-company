@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { createOptimizedScrollAnimation, createOptimizedStaggerAnimation } from '../../../utils/optimizedScrollTrigger';
 import DetailedServiceCard from '../../../components/common/DetailedServiceCard';
 import intenseBathroom2Image from '../../../assets/images/pages/Home/MostBookedServices/intense-bathroom-2.jpg';
 import intenseBathroom3Image from '../../../assets/images/pages/Home/MostBookedServices/intense-bathroom-3.jpg';
@@ -100,10 +101,54 @@ const MostBookedServices = ({ services, onServiceClick }) => {
   ];
 
   const serviceList = services || defaultServices;
+  const sectionRef = useRef(null);
+  const titleRef = useRef(null);
+  const cardsRef = useRef(null);
+
+  // Optimized GSAP scroll animations
+  useEffect(() => {
+    if (!sectionRef.current || !titleRef.current || !cardsRef.current) return;
+
+    const cards = Array.from(cardsRef.current.children);
+    if (cards.length === 0) return;
+
+    const cleanupFunctions = [];
+
+    // Animate title
+    const titleCleanup = createOptimizedScrollAnimation(
+      titleRef.current,
+      {
+        from: { y: 30, opacity: 0 },
+        to: { y: 0, opacity: 1 },
+        duration: 0.6,
+        ease: 'power2.out',
+      },
+      { rootMargin: '100px' }
+    );
+    if (titleCleanup) cleanupFunctions.push(titleCleanup);
+
+    // Stagger animate cards
+    const cardsCleanup = createOptimizedStaggerAnimation(
+      cards,
+      {
+        from: { x: 50, opacity: 0, scale: 0.9 },
+        to: { x: 0, opacity: 1, scale: 1 },
+        duration: 0.5,
+        stagger: 0.08,
+        ease: 'back.out(1.7)',
+      },
+      { rootMargin: '150px' }
+    );
+    if (cardsCleanup) cleanupFunctions.push(cardsCleanup);
+
+    return () => {
+      cleanupFunctions.forEach(cleanup => cleanup?.());
+    };
+  }, [serviceList]);
 
   return (
-    <div className="mb-6">
-      <div className="px-4 mb-5">
+    <div ref={sectionRef} className="mb-6">
+      <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 0 }}>
         <h2 
           className="text-xl font-bold text-black"
         >
@@ -112,7 +157,7 @@ const MostBookedServices = ({ services, onServiceClick }) => {
       </div>
 
       {/* Horizontal Scrollable Service Cards */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
         {serviceList.map((service) => (
           <DetailedServiceCard
             key={service.id}

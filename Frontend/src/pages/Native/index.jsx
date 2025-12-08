@@ -12,19 +12,15 @@ const Native = () => {
   const [cartCount] = useState(0);
 
   const handleLocationClick = () => {
-    console.log('Location selector clicked');
   };
 
   const handleCartClick = () => {
-    console.log('Cart clicked');
   };
 
   const handleKnowMoreClick = (productType) => {
-    console.log('Know more clicked for:', productType);
   };
 
   const handleFeatureClick = (feature) => {
-    console.log('Feature clicked:', feature);
   };
 
   return (
