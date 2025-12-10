@@ -4,7 +4,7 @@ This directory contains the centralized theme configuration for the entire app. 
 
 ## File Structure
 
-- `colors.js` - Main theme color definitions
+- `colors.js` - Main theme color definitions (simplified)
 - `index.js` - Theme exports and helper functions
 
 ## Usage
@@ -13,8 +13,6 @@ This directory contains the centralized theme configuration for the entire app. 
 
 ```javascript
 import { themeColors } from '../../theme';
-// or
-import theme from '../../theme';
 ```
 
 ### Using Theme Colors
@@ -22,37 +20,19 @@ import theme from '../../theme';
 #### 1. Home Page Gradient
 ```javascript
 // Background gradient
-style={{ background: themeColors.backgroundGradient.home }}
+style={{ background: themeColors.backgroundGradient }}
 ```
 
-#### 2. Button Colors
+#### 2. Button Color
 ```javascript
-// Primary button
-style={{ backgroundColor: themeColors.button.primary }}
-
-// Button with hover
-onMouseEnter={(e) => {
-  e.target.style.backgroundColor = themeColors.button.primaryHover;
-}}
+// Button color
+style={{ backgroundColor: themeColors.button }}
 ```
 
-#### 3. Icon Colors
+#### 3. Icon Color
 ```javascript
-// Primary icon color
-style={{ color: themeColors.icon.primary }}
-
-// Icon background
-style={{ backgroundColor: themeColors.iconBackground.primary }}
-```
-
-#### 4. Shadows
-```javascript
-style={{ boxShadow: `0 4px 12px ${themeColors.shadow.primary}` }}
-```
-
-#### 5. Borders
-```javascript
-style={{ border: `1px solid ${themeColors.border.primary}` }}
+// Icon color
+style={{ color: themeColors.icon }}
 ```
 
 ## Changing Theme
@@ -60,9 +40,10 @@ style={{ border: `1px solid ${themeColors.border.primary}` }}
 To change the entire app theme, simply update values in `colors.js`:
 
 ```javascript
-export const themeColors = {
-  primary: '#29ad81',  // Change this to update all primary colors
-  // ... other colors
+const themeColors = {
+  backgroundGradient: 'linear-gradient(...)',  // Homepage gradient
+  button: '#00a6a6',                           // Button color
+  icon: '#29ad81',                             // Icon color
 };
 ```
 
@@ -70,14 +51,7 @@ All components using `themeColors` will automatically update!
 
 ## Available Theme Properties
 
-- `primary` - Main theme color
-- `primaryDark` - Darker shade
-- `primaryLight` - Lighter shade
-- `secondary` - Secondary color
-- `backgroundGradient` - Background gradients (home, card, section)
-- `button` - Button colors and gradients
-- `icon` - Icon colors
-- `shadow` - Shadow colors
-- `border` - Border colors
-- `iconBackground` - Icon container backgrounds
+- `backgroundGradient` - Homepage background gradient
+- `button` - Button color (#00a6a6)
+- `icon` - Icon color (#29ad81)
 

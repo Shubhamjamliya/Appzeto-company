@@ -7,7 +7,6 @@ import geyserIcon from '../../../assets/images/icons/services/geyser-icon.png';
 import waterPurifierIcon from '../../../assets/images/icons/services/water-purifier-icon.png';
 import refrigeratorIcon from '../../../assets/images/icons/services/refrigerator-icon.png';
 import microwaveIcon from '../../../assets/images/icons/services/microwave-icon.png';
-import shoppingBagIcon from '../../../assets/images/icons/services/water-purifier-icon.png'; // Using water-purifier as placeholder for shopping bag
 
 const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
   const navigate = useNavigate();
@@ -56,10 +55,6 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
     }, 300); // Wait for modal slide-down animation
   };
 
-  const handleNativeProductClick = () => {
-    handleClose();
-    // Navigate to product page
-  };
 
   return (
     <>
@@ -135,26 +130,6 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Buy Native Products Section */}
-          <div>
-            <h2 className="text-base font-semibold text-black mb-4">Buy Native products</h2>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <div
-                onClick={handleNativeProductClick}
-                className="min-w-[120px] flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
-              >
-                <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mb-2 relative">
-                  <img src={shoppingBagIcon} alt="Shopping Bag" className="w-8 h-8 object-contain" />
-                  {/* Sale Badge */}
-                  <div className="absolute -top-1 -left-1 bg-green-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                    Sale
-                  </div>
-                </div>
-                <p className="text-xs text-black text-center font-normal">Native Water Purifier</p>
-              </div>
             </div>
           </div>
         </div>

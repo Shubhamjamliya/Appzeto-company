@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 import StickyHeader from '../../components/common/StickyHeader';
 import StickySubHeading from '../../components/common/StickySubHeading';
 import BannerSection from '../../components/common/BannerSection';
@@ -52,66 +53,73 @@ const MassageForMen = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section
+  // Handle scroll to show/hide sticky header and detect current section (optimized)
   useEffect(() => {
-    let ticking = false;
-
+    let sectionCache = null; // Cache section elements
+    
     const handleScroll = () => {
+      // Check if banner is still visible on screen
+      let bannerVisible = false;
+      if (bannerRef.current) {
+        const rect = bannerRef.current.getBoundingClientRect();
+        bannerVisible = rect.bottom > 0;
+      }
+
+      // Show sticky header when banner is completely out of screen
+      const shouldShowHeader = !bannerVisible;
+      setShowStickyHeader(shouldShowHeader);
+
+      // Detect sections when scrolled past banner (cache elements)
+      if (shouldShowHeader) {
+        // Cache section elements on first check
+        if (!sectionCache) {
+          const sectionIds = ['pain-relief', 'stress-relief', 'post-workout'];
+          sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+        }
+
+        const headerOffset = 57;
+        let activeSection = '';
+        const titleMap = {
+          'pain-relief': 'Pain relief',
+          'stress-relief': 'Stress relief',
+          'post-workout': 'Post workout',
+        };
+
+        // Check sections in reverse order (bottom to top)
+        for (let i = sectionCache.length - 1; i >= 0; i--) {
+          const element = sectionCache[i];
+          if (element) {
+            const sectionRect = element.getBoundingClientRect();
+            if (sectionRect.top <= headerOffset + 50) {
+              activeSection = titleMap[element.id] || '';
+              break;
+            }
+          }
+        }
+
+        setCurrentSection(activeSection);
+      } else {
+        setCurrentSection('');
+      }
+    };
+
+    // Optimized scroll handler with throttling
+    let ticking = false;
+    const optimizedHandler = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          // Check if banner is still visible on screen
-          let bannerVisible = false;
-          if (bannerRef.current) {
-            const rect = bannerRef.current.getBoundingClientRect();
-            // Banner is visible if its bottom edge is still below the top of viewport
-            bannerVisible = rect.bottom > 0;
-          }
-
-          // Show sticky header when banner is completely out of screen
-          const shouldShowHeader = !bannerVisible;
-          setShowStickyHeader(shouldShowHeader);
-
-          // Detect sections when scrolled past banner
-          if (shouldShowHeader) {
-            const sections = [
-              { ref: painReliefRef, title: 'Pain relief' },
-              { ref: stressReliefRef, title: 'Stress relief' },
-              { ref: postWorkoutRef, title: 'Post workout' },
-            ];
-
-            // Find the section that's currently at the top of viewport
-            const headerOffset = 57; // Header height only (subheading is separate)
-            let activeSection = '';
-
-            // Check sections in reverse order (bottom to top) to get the most recent one
-            for (let i = sections.length - 1; i >= 0; i--) {
-              const section = sections[i];
-              if (section.ref.current) {
-                const sectionRect = section.ref.current.getBoundingClientRect();
-                
-                // Section is active if it has scrolled past the header position
-                if (sectionRect.top <= headerOffset + 50) {
-                  activeSection = section.title;
-                  break; // Use the first (most recent) section found
-                }
-              }
-            }
-
-            setCurrentSection(activeSection);
-          } else {
-            setCurrentSection('');
-          }
+          handleScroll();
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', optimizedHandler, { passive: true });
     const timeoutId = setTimeout(handleScroll, 300);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', optimizedHandler);
       clearTimeout(timeoutId);
     };
   }, []);
@@ -187,6 +195,18 @@ const MassageForMen = () => {
   const handleCategoryCartClose = () => {
     setShowCategoryCartModal(false);
   };
+
+  // Show CategoryCart component when view cart is clicked
+  if (showCategoryCartModal) {
+    return (
+      <CategoryCart
+        isOpen={true}
+        onClose={handleCategoryCartClose}
+        category="Massage for Men"
+        categoryTitle="Massage for Men Cart"
+      />
+    );
+  }
 
   return (
     <div 
@@ -305,9 +325,9 @@ const MassageForMen = () => {
             <button
               onClick={handleViewCartClick}
               className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-hover transition-colors whitespace-nowrap"
-              style={{ backgroundColor: '#00a6a6' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+              style={{ backgroundColor: themeColors.button }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+              onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
             >
               View Cart
             </button>
@@ -344,13 +364,6 @@ const MassageForMen = () => {
         ]}
       />
 
-      {/* Category Cart Modal */}
-      <CategoryCart
-        isOpen={showCategoryCartModal}
-        onClose={handleCategoryCartClose}
-        category="Massage for Men"
-        categoryTitle="Massage Cart"
-      />
     </div>
   );
 };

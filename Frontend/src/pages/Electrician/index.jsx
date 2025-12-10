@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 import StickyHeader from '../../components/common/StickyHeader';
 import StickySubHeading from '../../components/common/StickySubHeading';
 import BannerSection from '../../components/common/BannerSection';
@@ -38,6 +39,7 @@ import bookConsultation from '../../assets/images/pages/Home/ServiceCategorySect
 
 const Electrician = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
@@ -49,6 +51,31 @@ const Electrician = () => {
 
   // Refs for sections
   const bannerRef = useRef(null);
+
+  // Handle scroll to section from promo banner
+  useEffect(() => {
+    const scrollToSection = location.state?.scrollToSection;
+    if (scrollToSection) {
+      // Wait for page to render, then scroll to section
+      setTimeout(() => {
+        const sectionId = scrollToSection.toLowerCase().replace(/\s+/g, '-');
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const headerOffset = 97; // 57px header + 40px subheading
+          const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+          const offsetPosition = elementPosition - headerOffset;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 500);
+      
+      // Clear the state to prevent re-scrolling on re-render
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.state?.scrollToSection]);
 
   // Load cart count and items from localStorage on mount
   useEffect(() => {
@@ -70,80 +97,108 @@ const Electrician = () => {
 
   // Handle scroll to show/hide sticky header and detect current section
   useEffect(() => {
-    // Use scroll-based detection (simple and reliable)
-    let ticking = false;
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (bannerRef.current) {
-            const rect = bannerRef.current.getBoundingClientRect();
-            // Show header when banner bottom goes above viewport top
-            // Check if banner has scrolled completely out of view
-            // Show header when banner bottom goes above viewport (even slightly)
-            const shouldShowHeader = rect.bottom <= 0;
+    let lastScrollY = window.scrollY;
+    let sectionCache = null; // Cache section elements
+    
+    const handleScroll = (currentScrollY) => {
+      const isScrollingUp = currentScrollY < lastScrollY;
+      lastScrollY = currentScrollY;
+      
+      if (bannerRef.current) {
+        const rect = bannerRef.current.getBoundingClientRect();
+        
+        // Priority 1: If scrolling up AND near top AND banner is becoming visible, hide header immediately
+        const isNearTop = currentScrollY < 150;
+        const bannerBecomingVisible = rect.top < 300;
+        
+        if (isScrollingUp && isNearTop && bannerBecomingVisible) {
+          setShowStickyHeader(false);
+          setCurrentSection('');
+          return;
+        }
+        
+        // Priority 2: Normal scrolling - show header when banner is scrolled past
+        const bannerScrolledPast = rect.bottom <= 0;
+        setShowStickyHeader(bannerScrolledPast);
 
-            // Always update state immediately
-            setShowStickyHeader(shouldShowHeader);
+        // Detect sections when scrolled past banner (only check when needed)
+        if (bannerScrolledPast) {
+          // Cache section elements on first check
+          if (!sectionCache) {
+            const sectionIds = [
+              'electrical-repair',
+              'installation',
+              'smart-home',
+              'switch-socket',
+              'fan',
+              'wall-ceiling-light',
+              'wiring',
+              'doorbell',
+              'mcb-submeter',
+              'inverter-stabiliser',
+              'appliance',
+              'book-a-consultation',
+            ];
+            sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+          }
 
-            // Detect sections when scrolled past banner
-            if (shouldShowHeader) {
-              const sectionIds = [
-                'switch-socket',
-                'fan',
-                'wall-ceiling-light',
-                'wiring',
-                'doorbell',
-                'mcb-submeter',
-                'inverter-stabiliser',
-                'appliance',
-                'book-a-consultation',
-              ];
+          const headerOffset = 57;
+          let activeSection = '';
+          const titleMap = {
+            'electrical-repair': 'Electrical Repair',
+            'installation': 'Installation',
+            'smart-home': 'Smart Home',
+            'switch-socket': 'Switch & socket',
+            'fan': 'Fan',
+            'wall-ceiling-light': 'Wall/ceiling light',
+            'wiring': 'Wiring',
+            'doorbell': 'Doorbell',
+            'mcb-submeter': 'MCB & submeter',
+            'inverter-stabiliser': 'Inverter & stabiliser',
+            'appliance': 'Appliance',
+            'book-a-consultation': 'Book a consultation',
+          };
 
-              const headerOffset = 57;
-              let activeSection = '';
-
-              // Check sections in reverse order (bottom to top)
-              for (let i = sectionIds.length - 1; i >= 0; i--) {
-                const element = document.getElementById(sectionIds[i]);
-                if (element) {
-                  const sectionRect = element.getBoundingClientRect();
-                  if (sectionRect.top <= headerOffset + 50) {
-                    const titleMap = {
-                      'switch-socket': 'Switch & socket',
-                      'fan': 'Fan',
-                      'wall-ceiling-light': 'Wall/ceiling light',
-                      'wiring': 'Wiring',
-                      'doorbell': 'Doorbell',
-                      'mcb-submeter': 'MCB & submeter',
-                      'inverter-stabiliser': 'Inverter & stabiliser',
-                      'appliance': 'Appliance',
-                      'book-a-consultation': 'Book a consultation',
-                    };
-                    activeSection = titleMap[sectionIds[i]];
-                    break;
-                  }
-                }
+          // Check sections in reverse order (bottom to top)
+          for (let i = sectionCache.length - 1; i >= 0; i--) {
+            const element = sectionCache[i];
+            if (element) {
+              const sectionRect = element.getBoundingClientRect();
+              if (sectionRect.top <= headerOffset + 50) {
+                activeSection = titleMap[element.id] || '';
+                break;
               }
-
-              setCurrentSection(activeSection);
-            } else {
-              setCurrentSection('');
             }
           }
+
+          setCurrentSection(activeSection);
+        } else {
+          setCurrentSection('');
+        }
+      }
+    };
+
+    // Optimized scroll handler with throttling
+    let ticking = false;
+    const optimizedHandler = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll(window.scrollY);
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check - wait a bit for refs to be ready
+    window.addEventListener('scroll', optimizedHandler, { passive: true });
+    
+    // Initial check - deferred
     const timeoutId = setTimeout(() => {
-      handleScroll();
+      handleScroll(window.scrollY);
     }, 200);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', optimizedHandler);
       clearTimeout(timeoutId);
     };
   }, []); // Empty deps - only run once on mount
@@ -338,6 +393,21 @@ const Electrician = () => {
           layout="grid"
         />
 
+        <ElectricalRepairSection
+          onAddClick={handleAddClick}
+          onViewDetails={handleViewDetails}
+        />
+
+        <InstallationSection
+          onAddClick={handleAddClick}
+          onViewDetails={handleViewDetails}
+        />
+
+        <SmartHomeSection
+          onAddClick={handleAddClick}
+          onViewDetails={handleViewDetails}
+        />
+
         <SwitchSocketSection
           onAddClick={handleAddClick}
           onViewDetails={handleViewDetails}
@@ -408,9 +478,9 @@ const Electrician = () => {
             <button
               onClick={handleViewCartClick}
               className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-hover transition-colors whitespace-nowrap"
-              style={{ backgroundColor: '#00a6a6' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+              style={{ backgroundColor: themeColors.button }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+              onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
             >
               View Cart
             </button>
@@ -449,16 +519,6 @@ const Electrician = () => {
           { id: 3, title: 'Smart Home', image: smartHomeSetup },
         ]}
       />
-
-      {/* Category-specific Cart Modal */}
-      {showCategoryCartModal && (
-        <CategoryCart
-          isOpen={showCategoryCartModal}
-          onClose={() => setShowCategoryCartModal(false)}
-          category="Electrician"
-          categoryTitle="Electrician Cart"
-        />
-      )}
 
       {/* Service Detail Modal */}
       <ServiceDetailModal

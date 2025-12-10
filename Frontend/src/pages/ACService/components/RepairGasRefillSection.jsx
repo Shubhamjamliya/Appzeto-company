@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColors } from '../../../theme';
 import { AiFillStar } from 'react-icons/ai';
 import { MdOutlineAcUnit, MdFlashOn, MdWarning } from 'react-icons/md';
 
@@ -37,7 +38,7 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
   ];
 
   return (
-    <div className="mb-6 border-t border-gray-200">
+    <div className="mb-6 border-t border-gray-200" id="repair-gas-refill">
       <div className="px-4 py-3">
         <h2 className="text-lg font-bold text-black">Repair & gas refill</h2>
       </div>
@@ -64,7 +65,7 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
                 <button
                   onClick={() => onViewDetails?.(service)}
                   className="text-sm font-medium hover:underline"
-                  style={{ color: '#00a6a6' }}
+                      style={{ color: themeColors.button }}
                 >
                   View details
                 </button>
@@ -82,8 +83,8 @@ const RepairGasRefillSection = ({ onViewDetails, onAddClick }) => {
                   onClick={() => onAddClick?.(service)}
                   className="absolute bottom-2 right-2 bg-white text-xs font-semibold px-3 py-1 rounded-lg active:scale-95 transition-all"
                   style={{ 
-                    border: '1px solid #00a6a6',
-                    color: '#00a6a6'
+                    border: `1px solid ${themeColors.button}`,
+                    color: themeColors.button
                   }}
                   onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}

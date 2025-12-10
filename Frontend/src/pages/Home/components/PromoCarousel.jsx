@@ -18,20 +18,13 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
   // Default promotional cards if none provided
   const defaultPromos = [
     {
-      id: 1,
-      title: 'Shine your bathroom deserves',
-      subtitle: '',
-      buttonText: 'Book now',
-      className: 'from-green-600 to-green-700',
-      image: promo1,
-    },
-    {
       id: 2,
       title: 'New Service',
       subtitle: 'Smart Home Installation - Get 20% off',
       buttonText: 'Explore',
       className: 'from-blue-600 to-blue-800',
       image: promo2,
+      route: '/electrician',
     },
     {
       id: 3,
@@ -40,6 +33,7 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
       buttonText: 'Call Now',
       className: 'from-orange-600 to-orange-800',
       image: promo3,
+      route: '/ac-service',
     },
     {
       id: 4,
@@ -48,6 +42,7 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
       buttonText: 'Book now',
       className: 'from-blue-600 to-blue-800',
       image: promo4,
+      route: '/salon-for-women',
     },
     {
       id: 5,
@@ -56,6 +51,7 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
       buttonText: 'Explore',
       className: 'from-indigo-600 to-indigo-800',
       image: promo5,
+      route: '/salon-for-women',
     },
     {
       id: 6,
@@ -64,6 +60,16 @@ const PromoCarousel = ({ promos, onPromoClick }) => {
       buttonText: 'Book now',
       className: 'from-pink-600 to-pink-800',
       image: promo6,
+      route: '/bathroom-kitchen-cleaning',
+    },
+    {
+      id: 1,
+      title: 'Shine your bathroom deserves',
+      subtitle: '',
+      buttonText: 'Book now',
+      className: 'from-green-600 to-green-700',
+      image: promo1,
+      route: '/bathroom-kitchen-cleaning',
     },
   ];
 

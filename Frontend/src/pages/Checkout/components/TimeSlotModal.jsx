@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiX } from 'react-icons/fi';
+import { themeColors } from '../../../theme';
 
 const TimeSlotModal = ({ 
   isOpen, 
@@ -115,8 +116,8 @@ const TimeSlotModal = ({
                     className="shrink-0 px-4 py-3 rounded-lg border-2 transition-all"
                     style={isSelected ? {
                       backgroundColor: 'rgba(0, 166, 166, 0.1)',
-                      borderColor: '#00a6a6',
-                      color: '#00a6a6'
+                      borderColor: themeColors.button,
+                      color: themeColors.button
                     } : {
                       backgroundColor: 'white',
                       borderColor: '#e5e7eb',
@@ -161,8 +162,8 @@ const TimeSlotModal = ({
                       className="px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all"
                       style={isSelected ? {
                         backgroundColor: 'rgba(0, 166, 166, 0.1)',
-                        borderColor: '#00a6a6',
-                        color: '#00a6a6'
+                        borderColor: themeColors.button,
+                        color: themeColors.button
                       } : {
                         backgroundColor: 'white',
                         borderColor: '#e5e7eb',
@@ -192,7 +193,7 @@ const TimeSlotModal = ({
               disabled={!selectedDate || !selectedTime}
               className="w-full py-3.5 rounded-lg text-base font-semibold transition-colors mb-4"
               style={selectedDate && selectedTime ? {
-                backgroundColor: '#00a6a6',
+                backgroundColor: themeColors.button,
                 color: 'white'
               } : {
                 backgroundColor: '#e5e7eb',
@@ -201,12 +202,12 @@ const TimeSlotModal = ({
               }}
               onMouseEnter={(e) => {
                 if (selectedDate && selectedTime) {
-                  e.target.style.backgroundColor = '#008a8a';
+                  e.target.style.backgroundColor = themeColors.button;
                 }
               }}
               onMouseLeave={(e) => {
                 if (selectedDate && selectedTime) {
-                  e.target.style.backgroundColor = '#00a6a6';
+                  e.target.style.backgroundColor = themeColors.button;
                 }
               }}
             >

@@ -1,15 +1,63 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FiHome, FiGift, FiShoppingCart, FiUser } from 'react-icons/fi';
 import { HiHome, HiGift, HiShoppingCart, HiUser } from 'react-icons/hi';
 import { gsap } from 'gsap';
+import { themeColors } from '../../theme';
 
-const BottomNav = ({ cartCount, onCartClick }) => {
+const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const iconRefs = useRef({});
   const activeAnimations = useRef({});
   const [iconTransitions, setIconTransitions] = React.useState({});
+  const [cartCount, setCartCount] = useState(0);
+
+  // Load cart count from localStorage on mount and when cart changes (optimized)
+  useEffect(() => {
+    let updateTimeout = null;
+    let lastCount = 0;
+    
+    const updateCartCount = () => {
+      // Debounce rapid updates
+      if (updateTimeout) clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(() => {
+        try {
+          const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+          const newCount = cartItems.length;
+          // Only update if count changed
+          if (newCount !== lastCount) {
+            lastCount = newCount;
+            setCartCount(newCount);
+          }
+        } catch (error) {
+          console.error('Error reading cart:', error);
+        }
+      }, 50);
+    };
+
+    // Initial load
+    updateCartCount();
+
+    // Listen for storage changes (when cart is updated from other tabs/pages)
+    window.addEventListener('storage', updateCartCount);
+
+    // Custom event for same-tab updates
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    // Also listen for focus to update when user returns to tab
+    const handleFocus = () => {
+      updateCartCount();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener('focus', handleFocus);
+      if (updateTimeout) clearTimeout(updateTimeout);
+    };
+  }, []);
 
   // Cleanup animations on unmount
   useEffect(() => {
@@ -38,9 +86,34 @@ const BottomNav = ({ cartCount, onCartClick }) => {
   };
 
   const activeTab = getActiveTab();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Mark initial load as complete after first render
+  useEffect(() => {
+    // Use requestIdleCallback or setTimeout to defer after page load
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Smooth icon transition when active state changes - slow fade
+  // Only run animations after initial load to avoid blocking page render
   useEffect(() => {
+    // Skip animation on initial load
+    if (isInitialLoad) {
+      // Set initial state without animation
+      navItems.forEach((item) => {
+        const isActive = activeTab === item.id;
+        setIconTransitions(prev => ({
+          ...prev,
+          [item.id]: { isActive, opacity: 1 }
+        }));
+      });
+      return;
+    }
+
+    // Run animation only on route changes (not initial load)
     navItems.forEach((item) => {
       const isActive = activeTab === item.id;
       setIconTransitions(prev => ({
@@ -56,7 +129,7 @@ const BottomNav = ({ cartCount, onCartClick }) => {
         }));
       }, 200);
     });
-  }, [activeTab]);
+  }, [activeTab, isInitialLoad]);
 
   const handleTabClick = (path, itemId) => {
     // Animate icon on click - get ref immediately
@@ -67,45 +140,44 @@ const BottomNav = ({ cartCount, onCartClick }) => {
       let animation;
       switch (itemId) {
         case 'rewards':
-          // Gift opening animation - scale and rotate - make it more visible
+          // Rotation animation - spinning gift icon
           gsap.killTweensOf(iconRef);
           // Reset to initial state first
           gsap.set(iconRef, { scale: 1, rotation: 0, x: 0, y: 0 });
           // Start animation immediately
-          // Create timeline for better control over exit animation
+          // Create timeline for smooth rotation
           const tl = gsap.timeline({
             onStart: () => {
               iconRef.style.willChange = 'transform';
             },
             onComplete: () => {
-              gsap.set(iconRef, { scale: 1, rotation: 0 });
+              gsap.set(iconRef, { rotation: 0 });
               iconRef.style.willChange = 'auto';
               delete activeAnimations.current[itemId];
             }
           });
           
-          // Forward animation - fast
+          // Rotation animation - spin 360 degrees with bounce
           tl.to(iconRef, {
-            scale: 1.5,
-            rotation: 25,
-            duration: 1.0,
-            ease: 'power2.out',
+            rotation: 360,
+            scale: 1.2,
+            duration: 0.8,
+            ease: 'back.out(1.7)',
           })
-          // Exit animation - slow
+          // Return to normal
           .to(iconRef, {
             scale: 1,
-            rotation: 0,
-            duration: 2.0,
-            ease: 'power1.inOut',
+            duration: 0.3,
+            ease: 'power2.out',
           });
           
           animation = tl;
           activeAnimations.current[itemId] = animation;
           
-          // Delay navigation significantly to let animation be visible and continue
+          // Delay navigation to let animation be visible
           setTimeout(() => {
             navigate(path);
-          }, 800);
+          }, 600);
           return; // Return early to prevent double navigation
           break;
         case 'cart':
@@ -163,30 +235,50 @@ const BottomNav = ({ cartCount, onCartClick }) => {
           return;
           break;
         case 'home':
-          // Bounce animation - slow and visible
+          // Pulse with scale and glow effect - different from bounce
           gsap.killTweensOf(iconRef);
           gsap.set(iconRef, { scale: 1, rotation: 0, x: 0, y: 0 });
-          animation = gsap.to(iconRef, {
-            y: -10,
-            duration: 1.2,
-            yoyo: true,
-            repeat: 1,
-            ease: 'power2.out',
+          // Create timeline for multi-step animation
+          const homeTl = gsap.timeline({
             onStart: () => {
               iconRef.style.willChange = 'transform';
             },
             onComplete: () => {
-              gsap.set(iconRef, { y: 0 });
+              gsap.set(iconRef, { scale: 1, rotation: 0 });
               iconRef.style.willChange = 'auto';
               delete activeAnimations.current[itemId];
             }
           });
+          
+          // Quick scale up with slight rotation
+          homeTl.to(iconRef, {
+            scale: 1.4,
+            rotation: -15,
+            duration: 0.3,
+            ease: 'power2.out',
+          })
+          // Quick bounce back with opposite rotation
+          .to(iconRef, {
+            scale: 1.1,
+            rotation: 10,
+            duration: 0.2,
+            ease: 'power2.inOut',
+          })
+          // Final settle
+          .to(iconRef, {
+            scale: 1,
+            rotation: 0,
+            duration: 0.3,
+            ease: 'power2.out',
+          });
+          
+          animation = homeTl;
           activeAnimations.current[itemId] = animation;
           
           // Delay navigation to let animation be visible
           setTimeout(() => {
             navigate(path);
-          }, 800);
+          }, 600);
           return;
           break;
         default:
@@ -267,11 +359,11 @@ const BottomNav = ({ cartCount, onCartClick }) => {
                   <IconComponent 
                     className="w-5 h-5"
                     style={{ 
-                      color: isActive ? '#00a6a6' : '#6b7280',
+                      color: isActive ? themeColors.button : '#6b7280',
                       transition: 'opacity 2s ease-in-out, color 2s ease-in-out',
                       transform: 'scale(1)',
                       opacity: iconTransitions[item.id]?.opacity !== undefined ? iconTransitions[item.id].opacity : 1,
-                      filter: isActive ? 'drop-shadow(0 2px 4px rgba(0, 166, 166, 0.3))' : 'none'
+                      filter: isActive ? `drop-shadow(0 2px 4px rgba(0, 166, 166, 0.3))` : 'none'
                     }}
                   />
                   {cartCount > 0 && (
@@ -298,18 +390,18 @@ const BottomNav = ({ cartCount, onCartClick }) => {
                   <IconComponent 
                     className="w-5 h-5"
                     style={{ 
-                      color: isActive ? '#00a6a6' : '#6b7280',
+                      color: isActive ? themeColors.button : '#6b7280',
                       transition: 'opacity 2s ease-in-out, color 2s ease-in-out',
                       transform: 'scale(1)',
                       opacity: iconTransitions[item.id]?.opacity !== undefined ? iconTransitions[item.id].opacity : 1,
-                      filter: isActive ? 'drop-shadow(0 2px 4px rgba(0, 166, 166, 0.3))' : 'none'
+                      filter: isActive ? `drop-shadow(0 2px 4px rgba(0, 166, 166, 0.3))` : 'none'
                     }}
                   />
                 </div>
               )}
               <span 
                 className={`text-[10px] font-semibold transition-all duration-300 ${
-                  isActive ? 'text-[#00a6a6]' : 'text-gray-500'
+                  isActive ? 'text-gray-500' : 'text-gray-500'
                 }`}
                 style={{
                   textShadow: isActive ? '0 1px 2px rgba(0, 166, 166, 0.2)' : 'none'
@@ -323,8 +415,8 @@ const BottomNav = ({ cartCount, onCartClick }) => {
                 <div 
                   className="absolute -bottom-0.5 w-1 h-1 rounded-full"
                   style={{
-                    background: 'linear-gradient(135deg, #00a6a6 0%, #29ad81 100%)',
-                    boxShadow: '0 0 6px rgba(0, 166, 166, 0.6)',
+                    background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
+                    boxShadow: `0 0 6px rgba(0, 166, 166, 0.6)`,
                   }}
                 />
               )}

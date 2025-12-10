@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 import StickyHeader from '../../components/common/StickyHeader';
 import StickySubHeading from '../../components/common/StickySubHeading';
@@ -57,68 +58,69 @@ const SalonForWomen = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section
+  // Handle scroll to show/hide sticky header and detect current section (optimized)
   useEffect(() => {
-    // Use scroll-based detection (simple and reliable)
-    let ticking = false;
+    let sectionCache = null; // Cache section elements
+    
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (bannerRef.current) {
-            const rect = bannerRef.current.getBoundingClientRect();
-            // Show header when banner bottom goes above viewport top
-            // Check if banner has scrolled completely out of view
-            // Show header when banner bottom goes above viewport (even slightly)
-            const shouldShowHeader = rect.bottom <= 0;
-            
-            // Always update state immediately
-            setShowStickyHeader(shouldShowHeader);
+      if (bannerRef.current) {
+        const rect = bannerRef.current.getBoundingClientRect();
+        const shouldShowHeader = rect.bottom <= 0;
+        
+        setShowStickyHeader(shouldShowHeader);
 
-            // Detect sections when scrolled past banner
-            if (shouldShowHeader) {
-              const sections = [
-                { ref: superSaverRef, title: 'Super saver packages' },
-                { ref: waxingRef, title: 'Waxing & threading' },
-                { ref: koreanFacialRef, title: 'Korean facial' },
-              ];
+        // Detect sections when scrolled past banner (cache elements)
+        if (shouldShowHeader) {
+          // Cache section elements on first check
+          if (!sectionCache) {
+            const sectionIds = ['super-saver-packages', 'waxing-threading', 'korean-facial'];
+            sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+          }
 
-              // Find the section that's currently at the top of viewport
-              const headerOffset = 57; // Header height only (subheading is separate)
-              let activeSection = '';
+          const headerOffset = 57;
+          let activeSection = '';
+          const titleMap = {
+            'super-saver-packages': 'Super saver packages',
+            'waxing-threading': 'Waxing & threading',
+            'korean-facial': 'Korean facial',
+          };
 
-              // Check sections in reverse order (bottom to top) to get the most recent one
-              for (let i = sections.length - 1; i >= 0; i--) {
-                const section = sections[i];
-                if (section.ref.current) {
-                  const sectionRect = section.ref.current.getBoundingClientRect();
-                  
-                  // Section is active if it has scrolled past the header position
-                  if (sectionRect.top <= headerOffset + 50) {
-                    activeSection = section.title;
-                    break; // Use the first (most recent) section found
-                  }
-                }
+          // Check sections in reverse order (bottom to top)
+          for (let i = sectionCache.length - 1; i >= 0; i--) {
+            const element = sectionCache[i];
+            if (element) {
+              const sectionRect = element.getBoundingClientRect();
+              if (sectionRect.top <= headerOffset + 50) {
+                activeSection = titleMap[element.id] || '';
+                break;
               }
-
-              setCurrentSection(activeSection);
-            } else {
-              setCurrentSection('');
             }
           }
+
+          setCurrentSection(activeSection);
+        } else {
+          setCurrentSection('');
+        }
+      }
+    };
+
+    // Optimized scroll handler with throttling
+    let ticking = false;
+    const optimizedHandler = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check - wait a bit for refs to be ready
-    const timeoutId = setTimeout(() => {
-      handleScroll();
-    }, 200);
+    window.addEventListener('scroll', optimizedHandler, { passive: true });
+    const timeoutId = setTimeout(handleScroll, 200);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', optimizedHandler);
       clearTimeout(timeoutId);
     };
   }, []); // Empty deps - only run once on mount
@@ -211,6 +213,18 @@ const SalonForWomen = () => {
   const handleCategoryCartClose = () => {
     setShowCategoryCartModal(false);
   };
+
+  // Show CategoryCart component when view cart is clicked
+  if (showCategoryCartModal) {
+    return (
+      <CategoryCart
+        isOpen={true}
+        onClose={handleCategoryCartClose}
+        category="Salon for Women"
+        categoryTitle="Salon for Women Cart"
+      />
+    );
+  }
 
   return (
     <div 
@@ -335,9 +349,9 @@ const SalonForWomen = () => {
             <button
               onClick={handleViewCartClick}
               className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-hover transition-colors whitespace-nowrap"
-              style={{ backgroundColor: '#00a6a6' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+              style={{ backgroundColor: themeColors.button }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+              onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
             >
               View Cart
             </button>

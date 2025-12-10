@@ -1,6 +1,7 @@
 import React, { memo, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { AiFillStar } from 'react-icons/ai';
+import { themeColors } from '../../theme';
 
 const DetailedServiceCard = memo(({ image, title, rating, reviews, price, originalPrice, discount, onClick }) => {
   const cardRef = useRef(null);
@@ -24,7 +25,7 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
         gsap.to(card, {
           y: 0,
           scale: 1,
-          boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
+          boxShadow: '0 8px 16px -2px rgba(0, 166, 166, 0.15), 0 4px 8px -1px rgba(0, 166, 166, 0.1)',
           duration: 0.3,
           ease: 'power2.out',
         });
@@ -57,8 +58,8 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
       ref={cardRef}
       className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer"
       style={{
-        boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
-        border: '1px solid rgba(0, 166, 166, 0.1)'
+        boxShadow: '0 8px 16px -2px rgba(0, 166, 166, 0.15), 0 4px 8px -1px rgba(0, 166, 166, 0.1)',
+        border: '1px solid rgba(0, 166, 166, 0.15)'
       }}
       onClick={onClick}
     >
@@ -126,7 +127,7 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
               className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
               style={{ 
                 backgroundColor: 'rgba(251, 251, 0, 0.15)',
-                color: '#29ad81'
+                color: themeColors.icon
               }}
             >
               Save

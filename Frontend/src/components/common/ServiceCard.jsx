@@ -73,6 +73,10 @@ const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
     <div
       ref={cardRef}
       className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer"
+      style={{
+        boxShadow: '0 8px 16px -2px rgba(0, 0, 0, 0.15), 0 4px 8px -1px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(0, 0, 0, 0.08)'
+      }}
       onClick={onClick}
     >
       {youtubeUrl && embedUrl ? (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { themeColors } from '../../theme';
 import { 
   FiArrowLeft, 
   FiMapPin, 
@@ -93,7 +94,7 @@ const BookingDetails = () => {
           <button
             onClick={() => navigate('/my-bookings')}
             className="mt-4 px-4 py-2 bg-brand text-white rounded-lg"
-            style={{ backgroundColor: '#00a6a6' }}
+            style={{ backgroundColor: themeColors.button }}
           >
             Go to My Bookings
           </button>
@@ -153,7 +154,7 @@ const BookingDetails = () => {
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiMapPin className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                <FiMapPin className="w-4 h-4" style={{ color: themeColors.button }} />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Address</p>
@@ -162,7 +163,7 @@ const BookingDetails = () => {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiCalendar className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                <FiCalendar className="w-4 h-4" style={{ color: themeColors.button }} />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Date & Time</p>
@@ -182,7 +183,7 @@ const BookingDetails = () => {
             {booking.items.map((item, index) => (
               <div key={item.id || index} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiPackage className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                  <FiPackage className="w-4 h-4" style={{ color: themeColors.button }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-black mb-1">{item.title}</p>
@@ -251,6 +252,40 @@ const BookingDetails = () => {
             </div>
           </div>
         </div>
+
+        {/* Cancel Button - Only show if booking is not cancelled or completed */}
+        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <button
+              onClick={() => {
+                // Update booking status to cancelled
+                const saved = localStorage.getItem('bookings');
+                if (saved) {
+                  try {
+                    const bookings = JSON.parse(saved);
+                    const updatedBookings = bookings.map(b => 
+                      b.id === booking.id ? { ...b, status: 'cancelled' } : b
+                    );
+                    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+                    setBooking({ ...booking, status: 'cancelled' });
+                    alert('Booking cancelled successfully');
+                  } catch (e) {
+                    console.error('Error cancelling booking:', e);
+                    alert('Failed to cancel booking');
+                  }
+                }
+              }}
+              className="w-full py-3.5 rounded-lg text-base font-semibold text-white transition-colors"
+              style={{
+                backgroundColor: '#ef4444',
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+            >
+              Cancel Booking
+            </button>
+          </div>
+        )}
 
         {/* Support Card */}
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 import StickyHeader from '../../components/common/StickyHeader';
 import StickySubHeading from '../../components/common/StickySubHeading';
 import BannerSection from '../../components/common/BannerSection';
@@ -56,34 +57,59 @@ const SofaCarpetCleaning = () => {
 
   // Handle scroll to show/hide sticky header and detect current section
   useEffect(() => {
+    // Use scroll-based detection (simple and reliable)
     let ticking = false;
+    let lastScrollY = window.scrollY;
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          const isScrollingUp = currentScrollY < lastScrollY;
+          lastScrollY = currentScrollY;
+          
           if (bannerRef.current) {
             const rect = bannerRef.current.getBoundingClientRect();
-            const shouldShowHeader = rect.bottom <= 0;
             
-            setShowStickyHeader(shouldShowHeader);
+            // Priority 1: If scrolling up AND near top AND banner is becoming visible, hide header immediately
+            const isNearTop = currentScrollY < 150;
+            const bannerBecomingVisible = rect.top < 300; // Banner is close to or in viewport
+            
+            if (isScrollingUp && isNearTop && bannerBecomingVisible) {
+              setShowStickyHeader(false);
+              setCurrentSection('');
+              ticking = false;
+              return;
+            }
+            
+            // Priority 2: Normal scrolling - show header when banner is scrolled past
+            const bannerScrolledPast = rect.bottom <= 0;
+            setShowStickyHeader(bannerScrolledPast);
 
-            if (shouldShowHeader) {
-
-              const sections = [
-                { ref: sofaCleaningRef, title: 'Sofa cleaning' },
-                { ref: carpetCleaningRef, title: 'Carpet' },
-                { ref: diningTableRef, title: 'Dining table' },
-                { ref: mattressRef, title: 'Mattress' },
+            // Detect sections when scrolled past banner
+            if (bannerScrolledPast) {
+              const sectionIds = [
+                'sofa-cleaning',
+                'carpet',
+                'dining-table',
+                'mattress',
               ];
 
               const headerOffset = 57;
               let activeSection = '';
 
-              for (let i = sections.length - 1; i >= 0; i--) {
-                const section = sections[i];
-                if (section.ref.current) {
-                  const sectionRect = section.ref.current.getBoundingClientRect();
+              // Check sections in reverse order (bottom to top)
+              for (let i = sectionIds.length - 1; i >= 0; i--) {
+                const element = document.getElementById(sectionIds[i]);
+                if (element) {
+                  const sectionRect = element.getBoundingClientRect();
                   if (sectionRect.top <= headerOffset + 50) {
-                    activeSection = section.title;
+                    const titleMap = {
+                      'sofa-cleaning': 'Sofa cleaning',
+                      'carpet': 'Carpet',
+                      'dining-table': 'Dining table',
+                      'mattress': 'Mattress',
+                    };
+                    activeSection = titleMap[sectionIds[i]];
                     break;
                   }
                 }
@@ -101,7 +127,10 @@ const SofaCarpetCleaning = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    const timeoutId = setTimeout(handleScroll, 300);
+    // Initial check - wait a bit for refs to be ready
+    const timeoutId = setTimeout(() => {
+      handleScroll();
+    }, 200);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -177,6 +206,18 @@ const SofaCarpetCleaning = () => {
     setShowCategoryCartModal(false);
   };
 
+  // Show CategoryCart component when view cart is clicked
+  if (showCategoryCartModal) {
+    return (
+      <CategoryCart
+        isOpen={true}
+        onClose={handleCategoryCartClose}
+        category="Sofa & Carpet Cleaning"
+        categoryTitle="Sofa & Carpet Cleaning Cart"
+      />
+    );
+  }
+
   return (
     <div 
       className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
@@ -215,7 +256,7 @@ const SofaCarpetCleaning = () => {
 
       <main>
         <BannerSection
-          ref={bannerRef}
+          bannerRef={bannerRef}
           banners={[
             { id: 1, image: sofaCleaning, text: 'Professional sofa cleaning' },
             { id: 2, image: carpet, text: 'Expert carpet cleaning services' },
@@ -299,9 +340,9 @@ const SofaCarpetCleaning = () => {
             <button
               onClick={handleViewCartClick}
               className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-hover transition-colors whitespace-nowrap"
-              style={{ backgroundColor: '#00a6a6' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+              style={{ backgroundColor: themeColors.button }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+              onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
             >
               View Cart
             </button>
@@ -337,14 +378,6 @@ const SofaCarpetCleaning = () => {
           { id: 3, title: 'Dining table', image: diningTable },
           { id: 4, title: 'Mattress', image: mattress },
         ]}
-      />
-
-      {/* Category Cart Modal */}
-      <CategoryCart
-        isOpen={showCategoryCartModal}
-        onClose={handleCategoryCartClose}
-        category="Sofa & Carpet Cleaning"
-        categoryTitle="Sofa & Carpet Cart"
       />
     </div>
   );

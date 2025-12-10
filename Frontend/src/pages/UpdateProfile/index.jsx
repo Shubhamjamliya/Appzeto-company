@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 
 const UpdateProfile = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const UpdateProfile = () => {
             <div className="relative">
               <div 
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                style={{ color: '#00a6a6' }}
+                style={{ color: themeColors.button }}
               >
                 <FiUser className="w-5 h-5" />
               </div>
@@ -68,10 +69,10 @@ const UpdateProfile = () => {
                 onChange={handleInputChange}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 style={{
-                  focusRingColor: '#00a6a6',
+                  focusRingColor: themeColors.button,
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#00a6a6';
+                  e.target.style.borderColor = themeColors.button;
                   e.target.style.boxShadow = '0 0 0 3px rgba(0, 166, 166, 0.1)';
                 }}
                 onBlur={(e) => {
@@ -91,7 +92,7 @@ const UpdateProfile = () => {
             <div className="relative">
               <div 
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                style={{ color: '#00a6a6' }}
+                style={{ color: themeColors.button }}
               >
                 <FiMail className="w-5 h-5" />
               </div>
@@ -102,7 +103,7 @@ const UpdateProfile = () => {
                 onChange={handleInputChange}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#00a6a6';
+                  e.target.style.borderColor = themeColors.button;
                   e.target.style.boxShadow = '0 0 0 3px rgba(0, 166, 166, 0.1)';
                 }}
                 onBlur={(e) => {
@@ -122,7 +123,7 @@ const UpdateProfile = () => {
             <div className="relative">
               <div 
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
-                style={{ color: '#00a6a6' }}
+                style={{ color: themeColors.button }}
               >
                 <FiPhone className="w-5 h-5" />
               </div>
@@ -133,7 +134,7 @@ const UpdateProfile = () => {
                 onChange={handleInputChange}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#00a6a6';
+                  e.target.style.borderColor = themeColors.button;
                   e.target.style.boxShadow = '0 0 0 3px rgba(0, 166, 166, 0.1)';
                 }}
                 onBlur={(e) => {
@@ -152,7 +153,7 @@ const UpdateProfile = () => {
             onClick={handleSave}
             className="w-full text-white font-bold py-3.5 rounded-xl active:scale-98 transition-all shadow-lg"
             style={{
-              background: 'linear-gradient(135deg, #00a6a6 0%, #29ad81 100%)',
+              background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
               boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)',
             }}
             onMouseEnter={(e) => {

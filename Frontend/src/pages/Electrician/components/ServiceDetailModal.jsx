@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiShare2, FiChevronDown, FiChevronUp, FiShield, FiAward, FiUmbrella, FiInfo } from 'react-icons/fi';
 import { AiFillStar } from 'react-icons/ai';
 import { MdBuild } from 'react-icons/md';
+import { themeColors } from '../../../theme';
 import bookConsultation from '../../../assets/images/pages/Home/ServiceCategorySection/ElectricalServices/book.jpg';
 
 const ServiceDetailModal = ({ isOpen, onClose, service }) => {
@@ -166,10 +167,10 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                     onClick={handleAddToCart}
                     className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
                     style={{
-                      backgroundColor: '#00a6a6',
+                      backgroundColor: themeColors.button,
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
                   >
                     Add
                   </button>
@@ -188,7 +189,7 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                   ].map((step, index) => (
                     <div key={index} className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#00a6a6', color: 'white' }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'themeColors.button', color: 'white' }}>
                           <span className="text-sm font-bold">{step.number}</span>
                         </div>
                         {index < 3 && (
@@ -214,7 +215,7 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                   ].map((note, index) => (
                     <div key={index} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                        <FiInfo className="w-3 h-3" style={{ color: '#00a6a6' }} />
+                        <FiInfo className="w-3 h-3" style={{ color: 'themeColors.button' }} />
                       </div>
                       <p className="text-sm text-gray-700 flex-1">{note}</p>
                     </div>
@@ -226,7 +227,7 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
               <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-black">Top technicians</h3>
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 border-2" style={{ borderColor: '#00a6a6' }}>
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 border-2" style={{ borderColor: themeColors.button }}>
                     <img
                       src={bookConsultation}
                       alt="Technician"
@@ -239,9 +240,9 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { icon: <FiShield className="w-5 h-5" style={{ color: '#00a6a6' }} />, text: 'Background verified' },
-                    { icon: <MdBuild className="w-5 h-5" style={{ color: '#00a6a6' }} />, text: 'Trained across all major brands' },
-                    { icon: <FiAward className="w-5 h-5" style={{ color: '#00a6a6' }} />, text: 'Certified under Skill India Programme' },
+                    { icon: <FiShield className="w-5 h-5" style={{ color: themeColors.button }} />, text: 'Background verified' },
+                    { icon: <MdBuild className="w-5 h-5" style={{ color: themeColors.button }} />, text: 'Trained across all major brands' },
+                    { icon: <FiAward className="w-5 h-5" style={{ color: themeColors.button }} />, text: 'Certified under Skill India Programme' },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
@@ -256,15 +257,15 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
               {/* Appzeto Cover Promise Section */}
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: '#00a6a6' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: themeColors.button }}>
                     <span className="text-white text-sm font-bold">✓</span>
                   </div>
                   <h3 className="text-lg font-bold text-black">Appzeto cover promise</h3>
                 </div>
                 <div className="space-y-3">
                   {[
-                    { icon: <FiShield className="w-5 h-5" style={{ color: '#00a6a6' }} />, text: 'Up to 30 days of warranty' },
-                    { icon: <FiUmbrella className="w-5 h-5" style={{ color: '#00a6a6' }} />, text: 'Up to ₹10,000 damage cover' },
+                    { icon: <FiShield className="w-5 h-5" style={{ color: themeColors.button }} />, text: 'Up to 30 days of warranty' },
+                    { icon: <FiUmbrella className="w-5 h-5" style={{ color: themeColors.button }} />, text: 'Up to ₹10,000 damage cover' },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center gap-3 bg-white/60 rounded-lg p-2.5">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
@@ -306,9 +307,9 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                 <p className="text-sm text-gray-700 mb-3">Share this service with your loved ones</p>
                 <button
                   className="w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white"
-                  style={{ backgroundColor: '#00a6a6' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                  style={{ backgroundColor: themeColors.button }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
                 >
                   <FiShare2 className="w-4 h-4" />
                   Share
@@ -348,7 +349,7 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-bold text-black">All reviews</h3>
-                  <button className="text-sm font-medium" style={{ color: '#00a6a6' }}>
+                  <button className="text-sm font-medium" style={{ color: 'themeColors.button' }}>
                     Filter
                   </button>
                 </div>
@@ -362,9 +363,9 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                         index === 0 ? 'border-2' : 'border'
                       }`}
                       style={index === 0 ? {
-                        borderColor: '#00a6a6',
+                        borderColor: themeColors.button,
                         backgroundColor: 'rgba(0, 166, 166, 0.1)',
-                        color: '#00a6a6'
+                        color: themeColors.button
                       } : {
                         borderColor: '#e5e7eb',
                         backgroundColor: 'white',
@@ -418,7 +419,7 @@ const ServiceDetailModal = ({ isOpen, onClose, service }) => {
                       <p className="text-sm text-gray-700">
                         {review.review}
                         {review.showReadMore && (
-                          <button className="text-sm font-medium ml-1" style={{ color: '#00a6a6' }}>
+                          <button className="text-sm font-medium ml-1" style={{ color: 'themeColors.button' }}>
                             read more
                           </button>
                         )}

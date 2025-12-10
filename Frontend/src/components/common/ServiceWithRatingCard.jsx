@@ -1,13 +1,14 @@
 import React, { memo } from 'react';
 import { AiFillStar } from 'react-icons/ai';
+import { themeColors } from '../../theme';
 
 const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, originalPrice, discount, onClick }) => {
   return (
     <div 
       className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
       style={{
-        boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.1), 0 2px 4px -1px rgba(0, 166, 166, 0.06)',
-        border: '1px solid rgba(0, 166, 166, 0.1)'
+        boxShadow: '0 8px 16px -2px rgba(0, 166, 166, 0.15), 0 4px 8px -1px rgba(0, 166, 166, 0.1)',
+        border: '1px solid rgba(0, 166, 166, 0.15)'
       }}
       onClick={onClick}
     >
@@ -75,7 +76,7 @@ const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, orig
               className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
               style={{ 
                 backgroundColor: 'rgba(251, 251, 0, 0.15)',
-                color: '#29ad81'
+                color: themeColors.icon
               }}
             >
               Save

@@ -1,5 +1,6 @@
 import React from 'react';
 import ServiceCardWithAdd from '../../../components/common/ServiceCardWithAdd';
+import { themeColors } from '../../../theme';
 import drillHangImage from '../../../assets/images/pages/Home/HomeRepairSection/drill&hang.jpg';
 import tapRepairImage from '../../../assets/images/pages/Home/HomeRepairSection/tap-repair.jpg';
 import fanRepairImage from '../../../assets/images/pages/Home/HomeRepairSection/fan-repair.jpg';
@@ -57,13 +58,13 @@ const HomeRepairSection = ({ services, onSeeAllClick, onServiceClick, onAddClick
           onClick={onSeeAllClick}
           className="font-semibold text-sm px-4 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
           style={{ 
-            color: '#00a6a6',
+            color: themeColors.button,
             backgroundColor: 'rgba(0, 166, 166, 0.08)',
             border: '1.5px solid rgba(0, 166, 166, 0.25)'
           }}
           onMouseEnter={(e) => {
             e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.12)';
-            e.target.style.borderColor = '#00a6a6';
+            e.target.style.borderColor = themeColors.button;
           }}
           onMouseLeave={(e) => {
             e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.08)';

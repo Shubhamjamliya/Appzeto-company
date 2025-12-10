@@ -6,22 +6,44 @@ const SearchBar = ({ onSearch }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+  const [animationStarted, setAnimationStarted] = useState(false);
 
   // Only 3 service names
   const serviceNames = ['facial', 'kitchen cleaning', 'AC service'];
 
+  // Defer animation start until after page load to avoid blocking initial render
   useEffect(() => {
+    // Start animation after page is loaded (defer to avoid blocking initial render)
+    const startAnimation = () => {
+      setAnimationStarted(true);
+    };
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(startAnimation, { timeout: 500 });
+    } else {
+      setTimeout(startAnimation, 300);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Don't start animation until page is loaded
+    if (!animationStarted) return;
+
     const currentService = serviceNames[currentServiceIndex];
     let timeoutId;
 
     if (isTyping) {
-      // Typing animation - forward direction
+      // Typing animation - forward direction (slower to reduce CPU usage)
       let currentCharIndex = 0;
       const typeNextChar = () => {
         if (currentCharIndex <= currentService.length) {
           setDisplayedText(currentService.slice(0, currentCharIndex));
           currentCharIndex++;
-          timeoutId = setTimeout(typeNextChar, 100); // Typing speed
+          // Use requestAnimationFrame for better performance
+          timeoutId = requestAnimationFrame(() => {
+            setTimeout(() => typeNextChar(), 150); // Slower typing speed
+          });
         } else {
           // Wait after typing complete
           setTimeout(() => {
@@ -31,13 +53,16 @@ const SearchBar = ({ onSearch }) => {
       };
       typeNextChar();
     } else {
-      // Erasing animation - backward direction (same as typing but reverse)
+      // Erasing animation - backward direction (slower to reduce CPU usage)
       let currentCharIndex = currentService.length;
       const eraseNextChar = () => {
         if (currentCharIndex >= 0) {
           setDisplayedText(currentService.slice(0, currentCharIndex));
           currentCharIndex--;
-          timeoutId = setTimeout(eraseNextChar, 100); // Same speed as typing
+          // Use requestAnimationFrame for better performance
+          timeoutId = requestAnimationFrame(() => {
+            setTimeout(() => eraseNextChar(), 150); // Slower erasing speed
+          });
         } else {
           // Move to next service
           setCurrentServiceIndex((prev) => (prev + 1) % serviceNames.length);
@@ -48,9 +73,15 @@ const SearchBar = ({ onSearch }) => {
     }
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId) {
+        if (typeof timeoutId === 'number') {
+          clearTimeout(timeoutId);
+        } else {
+          cancelAnimationFrame(timeoutId);
+        }
+      }
     };
-  }, [currentServiceIndex, isTyping]);
+  }, [currentServiceIndex, isTyping, animationStarted]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

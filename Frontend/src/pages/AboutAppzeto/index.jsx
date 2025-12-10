@@ -1,28 +1,29 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheckCircle, FiUsers, FiShield, FiClock, FiAward, FiHeart } from 'react-icons/fi';
+import { themeColors } from '../../theme';
 
 const AboutAppzeto = () => {
   const navigate = useNavigate();
 
   const features = [
     {
-      icon: <FiUsers className="w-6 h-6" style={{ color: '#00a6a6' }} />,
+      icon: <FiUsers className="w-6 h-6" style={{ color: themeColors.button }} />,
       title: 'Expert Service Providers',
       description: 'Verified and trained professionals for all your service needs'
     },
     {
-      icon: <FiShield className="w-6 h-6" style={{ color: '#00a6a6' }} />,
+      icon: <FiShield className="w-6 h-6" style={{ color: themeColors.button }} />,
       title: 'Safe & Secure',
       description: 'Your safety and security is our top priority'
     },
     {
-      icon: <FiClock className="w-6 h-6" style={{ color: '#00a6a6' }} />,
+      icon: <FiClock className="w-6 h-6" style={{ color: themeColors.button }} />,
       title: 'On-Time Service',
       description: 'Punctual service delivery at your convenience'
     },
     {
-      icon: <FiAward className="w-6 h-6" style={{ color: '#00a6a6' }} />,
+      icon: <FiAward className="w-6 h-6" style={{ color: themeColors.button }} />,
       title: 'Quality Assured',
       description: 'High-quality service with satisfaction guarantee'
     }
@@ -69,7 +70,7 @@ const AboutAppzeto = () => {
         <div className="text-center mb-8">
           <div className="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" 
             style={{ 
-              background: 'linear-gradient(135deg, #00a6a6 0%, #29ad81 100%)',
+              background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
               boxShadow: '0 4px 20px rgba(0, 166, 166, 0.3)'
             }}>
             <span className="text-4xl font-bold text-white">A</span>
@@ -130,7 +131,7 @@ const AboutAppzeto = () => {
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
-                  style={{ backgroundColor: '#00a6a6' }}>
+                  style={{ backgroundColor: themeColors.button }}>
                   <span className="text-white text-sm font-bold">1</span>
                 </div>
                 <div>
@@ -140,7 +141,7 @@ const AboutAppzeto = () => {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
-                  style={{ backgroundColor: '#00a6a6' }}>
+                  style={{ backgroundColor: themeColors.button }}>
                   <span className="text-white text-sm font-bold">2</span>
                 </div>
                 <div>
@@ -150,7 +151,7 @@ const AboutAppzeto = () => {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
-                  style={{ backgroundColor: '#00a6a6' }}>
+                  style={{ backgroundColor: themeColors.button }}>
                   <span className="text-white text-sm font-bold">3</span>
                 </div>
                 <div>
@@ -160,7 +161,7 @@ const AboutAppzeto = () => {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
-                  style={{ backgroundColor: '#00a6a6' }}>
+                  style={{ backgroundColor: themeColors.button }}>
                   <span className="text-white text-sm font-bold">4</span>
                 </div>
                 <div>
@@ -179,7 +180,7 @@ const AboutAppzeto = () => {
             <div className="space-y-3">
               {values.map((value, index) => (
                 <div key={index} className="flex items-center gap-3">
-                  <FiHeart className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                  <FiHeart className="w-5 h-5" style={{ color: themeColors.button }} />
                   <span className="text-sm text-gray-700">{value}</span>
                 </div>
               ))}

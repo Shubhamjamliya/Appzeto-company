@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiShoppingCart, FiTrash2, FiPlus, FiMinus } from 'react-icons/fi';
+import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 import electricianIcon from '../../assets/images/icons/services/electrician.png';
 import womensSalonIcon from '../../assets/images/icons/services/womens-salon-spa-icon.png';
@@ -182,7 +183,7 @@ const Cart = () => {
               <FiArrowLeft className="w-5 h-5 text-black" />
             </button>
             <div className="flex items-center gap-2">
-              <FiShoppingCart className="w-5 h-5" style={{ color: '#00a6a6' }} />
+              <FiShoppingCart className="w-5 h-5" style={{ color: themeColors.button }} />
               <h1 className="text-xl font-bold text-black">Your cart</h1>
               {cartCount > 0 && (
                 <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -248,7 +249,7 @@ const Cart = () => {
                             display: 'none'
                           }}
                         >
-                          <FiShoppingCart className="w-8 h-8" style={{ color: '#00a6a6' }} />
+                          <FiShoppingCart className="w-8 h-8" style={{ color: themeColors.button }} />
                         </div>
                       </div>
 
@@ -309,15 +310,15 @@ const Cart = () => {
                       onClick={() => handleCategoryCheckout(category)}
                       className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 shadow-md"
                       style={{ 
-                        backgroundColor: '#00a6a6',
+                        backgroundColor: themeColors.button,
                         boxShadow: '0 2px 6px rgba(0, 166, 166, 0.3)'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#008a8a';
+                        e.target.style.backgroundColor = themeColors.button;
                         e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#00a6a6';
+                        e.target.style.backgroundColor = themeColors.button;
                         e.target.style.boxShadow = '0 2px 6px rgba(0, 166, 166, 0.3)';
                       }}
                     >
@@ -331,10 +332,7 @@ const Cart = () => {
         )}
       </main>
 
-      <BottomNav
-        cartCount={cartCount}
-        onCartClick={handleCartClick}
-      />
+      <BottomNav />
     </div>
   );
 };

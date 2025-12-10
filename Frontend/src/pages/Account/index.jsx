@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
@@ -65,133 +65,109 @@ const Account = () => {
     navigate('/update-profile');
   };
 
-  // Set background gradient like home page
-  useLayoutEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-    const bgStyle = themeColors.backgroundGradient.home;
-
-    // Set background on all elements
-    const elements = [html, body, root].filter(Boolean);
-    elements.forEach(el => {
-      el.style.backgroundColor = '#ffffff';
-      el.style.background = bgStyle;
-      el.style.backgroundAttachment = 'fixed';
-    });
-
-    return () => {
-      // Cleanup on unmount
-      elements.forEach(el => {
-        el.style.backgroundColor = '';
-        el.style.background = '';
-        el.style.backgroundAttachment = '';
-      });
-    };
-  }, []);
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient.home }}>
+    <div className="min-h-screen pb-20 bg-white">
       <main>
-        {/* Top Section - Customer Info with Gradient */}
-        <div
-          className="px-4 pt-4 pb-5 mb-3"
-          style={{
-            background: themeColors.backgroundGradient.section,
-          }}
-        >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base"
-                  style={{
-                    backgroundColor: themeColors.primary,
-                    boxShadow: `0 4px 12px ${themeColors.shadow.primary}`,
-                  }}
-                >
-                  {phoneNumber.slice(-2)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold text-black">
-                      Verified Customer
-                    </h1>
-                    <div
-                      className="w-4 h-4 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
-                    >
-                      <div
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: '#22c55e' }}
-                      />
-                    </div>
+        {/* Top Section with Homepage Gradient - User Profile + Three Tabs */}
+        <div style={{
+          background: themeColors.gradient,
+        }}>
+          {/* Top Section - Customer Info */}
+          <div className="px-4 pt-4 pb-5 mb-3">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base"
+                    style={{
+                      backgroundColor: themeColors.button,
+                      boxShadow: `0 4px 12px rgba(0, 166, 166, 0.3)`,
+                    }}
+                  >
+                    {phoneNumber.slice(-2)}
                   </div>
-                  <p className="text-sm text-gray-600 mt-0.5">
-                    {phoneNumber}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-xl font-bold text-black">
+                        Verified Customer
+                      </h1>
+                      <div
+                        className="w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
+                      >
+                        <div
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: '#22c55e' }}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {phoneNumber}
+                    </p>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={handleEditClick}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiEdit3 className="w-4 h-4" style={{ color: themeColors.button }} />
+              </button>
             </div>
-            <button
-              onClick={handleEditClick}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <FiEdit3 className="w-4 h-4" style={{ color: themeColors.icon.primary }} />
-            </button>
           </div>
-        </div>
 
-        {/* Three Cards Section with Modern Design */}
-        <div className="px-4 mb-3">
-          <div className="grid grid-cols-3 gap-2">
-            {/* My Bookings */}
-            <button
-              onClick={() => handleCardClick('bookings')}
-              className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                style={{ backgroundColor: themeColors.iconBackground.primary }}
+          {/* Three Cards Section with Modern Design */}
+          <div className="px-4 mb-3 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {/* My Bookings */}
+              <button
+                onClick={() => handleCardClick('bookings')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
               >
-                <FiClipboard className="w-4 h-4" style={{ color: themeColors.icon.primary }} />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                My bookings
-              </span>
-            </button>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
+                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
+                >
+                  <FiClipboard className="w-4 h-4" style={{ color: themeColors.button }} />
+                </div>
+                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
+                  My bookings
+                </span>
+              </button>
 
-            {/* Wallet */}
-            <button
-              onClick={() => handleCardClick('wallet')}
-              className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                style={{ backgroundColor: themeColors.iconBackground.primary }}
+              {/* Wallet */}
+              <button
+                onClick={() => handleCardClick('wallet')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
               >
-                <MdAccountBalanceWallet className="w-4 h-4" style={{ color: themeColors.icon.primary }} />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                Wallet
-              </span>
-            </button>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
+                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
+                >
+                  <MdAccountBalanceWallet className="w-4 h-4" style={{ color: themeColors.button }} />
+                </div>
+                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
+                  Wallet
+                </span>
+              </button>
 
-            {/* Help & Support */}
-            <button
-              onClick={() => handleCardClick('support')}
-              className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                style={{ backgroundColor: themeColors.iconBackground.primary }}
+              {/* Help & Support */}
+              <button
+                onClick={() => handleCardClick('support')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
               >
-                <FiHeadphones className="w-4 h-4" style={{ color: themeColors.icon.primary }} />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                Help & support
-              </span>
-            </button>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
+                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
+                >
+                  <FiHeadphones className="w-4 h-4" style={{ color: themeColors.button }} />
+                </div>
+                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
+                  Help & support
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -201,8 +177,8 @@ const Account = () => {
             className="rounded-2xl overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-              boxShadow: `0 4px 12px ${themeColors.shadow.primaryLight}, 0 2px 4px ${themeColors.shadow.card}`,
-              border: `1px solid ${themeColors.border.primaryLight}`,
+              boxShadow: '0 4px 12px rgba(41, 173, 129, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(41, 173, 129, 0.1)',
             }}
           >
             {menuItems.map((item, index) => {
@@ -219,19 +195,19 @@ const Account = () => {
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                         style={{
-                          backgroundColor: themeColors.iconBackground.primaryLight,
-                          border: `2px solid ${themeColors.border.primary}`,
+                          backgroundColor: 'rgba(0, 166, 166, 0.15)',
+                          border: '2px solid rgba(0, 166, 166, 0.2)',
                         }}
                       >
-                        <span className="text-[10px] font-bold" style={{ color: themeColors.icon.primary }}>A</span>
+                        <span className="text-[10px] font-bold" style={{ color: themeColors.button }}>A</span>
                       </div>
                     ) : (
                       IconComponent && (
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: themeColors.iconBackground.primary }}
+                          style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
                         >
-                          <IconComponent className="w-4 h-4" style={{ color: themeColors.icon.primary }} />
+                          <IconComponent className="w-4 h-4" style={{ color: themeColors.button }} />
                         </div>
                       )
                     )}
@@ -252,19 +228,19 @@ const Account = () => {
             className="relative rounded-xl overflow-hidden p-4"
             style={{
               background: `linear-gradient(135deg, rgba(41, 173, 129, 0.12) 0%, rgba(0, 166, 166, 0.08) 50%, rgba(41, 173, 129, 0.12) 100%)`,
-              boxShadow: `0 4px 16px ${themeColors.shadow.primaryMedium}, 0 2px 8px ${themeColors.shadow.card}`,
-              border: `1px solid ${themeColors.border.primary}`,
+              boxShadow: '0 4px 16px rgba(41, 173, 129, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+              border: '1px solid rgba(41, 173, 129, 0.2)',
             }}
           >
             {/* Decorative Elements */}
             <div className="absolute top-0 right-0 w-24 h-24 opacity-10">
               <div
                 className="absolute top-2 right-2 w-16 h-16 rounded-full"
-                style={{ background: themeColors.button.primaryGradient }}
+                style={{ background: `linear-gradient(135deg, ${themeColors.icon} 0%, ${themeColors.button} 100%)` }}
               />
               <div
                 className="absolute top-4 right-4 w-10 h-10 rounded-full"
-                style={{ background: themeColors.button.primaryGradient }}
+                style={{ background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)` }}
               />
             </div>
 
@@ -308,17 +284,17 @@ const Account = () => {
                 onClick={() => handleMenuClick({ label: 'Refer & Earn' })}
                 className="text-white font-bold px-5 py-2 rounded-lg active:scale-95 transition-all shadow-lg"
                 style={{
-                  backgroundColor: themeColors.button.primary,
-                  boxShadow: `0 4px 12px ${themeColors.shadow.primary}`,
+                  backgroundColor: themeColors.button,
+                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)',
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.boxShadow = `0 6px 16px ${themeColors.shadow.primary}`;
-                  e.target.style.backgroundColor = themeColors.button.primaryHover;
+                  e.target.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.5)';
+                  e.target.style.backgroundColor = '#008a8a';
                   e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.boxShadow = `0 4px 12px ${themeColors.shadow.primary}`;
-                  e.target.style.backgroundColor = themeColors.button.primary;
+                  e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
+                  e.target.style.backgroundColor = themeColors.button;
                   e.target.style.transform = 'translateY(0)';
                 }}
               >

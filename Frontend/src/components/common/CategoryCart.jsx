@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiX, FiShoppingCart, FiTrash2, FiPlus, FiMinus } from 'react-icons/fi';
+import { themeColors } from '../../theme';
 import BottomNav from '../layout/BottomNav';
 
 const CategoryCart = ({
@@ -167,7 +168,7 @@ const CategoryCart = ({
                         display: item.icon ? 'none' : 'flex'
                       }}
                     >
-                      <FiShoppingCart className="w-8 h-8" style={{ color: '#00a6a6' }} />
+                      <FiShoppingCart className="w-8 h-8" style={{ color: themeColors.button }} />
                     </div>
                   </div>
 
@@ -274,15 +275,15 @@ const CategoryCart = ({
               onClick={handleCheckout}
               className="w-full py-3.5 rounded-xl text-base font-bold text-white transition-all active:scale-98 shadow-lg"
               style={{
-                backgroundColor: '#00a6a6',
+                backgroundColor: themeColors.button,
                 boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#008a8a';
+                e.target.style.backgroundColor = themeColors.button;
                 e.target.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.5)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#00a6a6';
+                e.target.style.backgroundColor = themeColors.button;
                 e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
               }}
             >

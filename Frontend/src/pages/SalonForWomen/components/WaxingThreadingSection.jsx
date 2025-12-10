@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColors } from '../../../theme';
 import { AiFillStar } from 'react-icons/ai';
 import { MdLocalOffer } from 'react-icons/md';
 import salon1Image from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForWomen/salon-1.jpg';
@@ -43,7 +44,7 @@ const WaxingThreadingSection = ({ onAddClick, onViewDetails }) => {
   ];
 
   return (
-    <div className="mb-6 border-t-4 border-gray-300 pt-6">
+    <div className="mb-6 border-t-4 border-gray-300 pt-6" id="waxing-threading">
       <div className="px-4 mb-4">
         <p className="text-sm text-gray-600 mb-1">Waxing & threading</p>
         <h2 className="text-xl font-bold text-black">Waxing & threading</h2>
@@ -106,9 +107,9 @@ const WaxingThreadingSection = ({ onAddClick, onViewDetails }) => {
                   <button
                     onClick={() => onAddClick?.(service)}
                     className="bg-brand text-white text-sm font-semibold px-6 py-2 rounded-lg hover:bg-brand-hover active:scale-95 transition-all whitespace-nowrap"
-                    style={{ backgroundColor: '#00a6a6' }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                    style={{ backgroundColor: themeColors.button }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
                   >
                     Add
                   </button>

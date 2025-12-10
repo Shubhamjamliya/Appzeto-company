@@ -6,25 +6,37 @@ const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index =
   const cardRef = useRef(null);
   const iconWrapperRef = useRef(null);
 
-  // GSAP entrance animation
+  // GSAP entrance animation - deferred to avoid blocking initial render
   useEffect(() => {
-    if (cardRef.current) {
-      gsap.fromTo(
-        cardRef.current,
-        {
-          y: 20,
-          opacity: 0,
-          scale: 0.8,
-        },
-        {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.5,
-          delay: index * 0.1,
-          ease: 'back.out(1.7)',
-        }
-      );
+    if (!cardRef.current) return;
+    
+    // Defer animation until after initial render
+    const startAnimation = () => {
+      if (cardRef.current) {
+        gsap.fromTo(
+          cardRef.current,
+          {
+            y: 20,
+            opacity: 0,
+            scale: 0.8,
+          },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.5,
+            delay: index * 0.1,
+            ease: 'back.out(1.7)',
+          }
+        );
+      }
+    };
+
+    // Use requestIdleCallback or setTimeout to defer
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(startAnimation, { timeout: 1000 });
+    } else {
+      setTimeout(startAnimation, 200 + index * 50);
     }
   }, [index]);
 
@@ -102,7 +114,7 @@ const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index =
         style={{ 
           backgroundColor: 'rgba(255, 255, 255, 0.7)',
           borderColor: '#F59E0B',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1)'
         }}
       >
         {icon || (

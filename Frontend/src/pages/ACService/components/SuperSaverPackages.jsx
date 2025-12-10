@@ -46,7 +46,7 @@ const SuperSaverPackages = ({ onViewDetails, onAddClick }) => {
   ];
 
   return (
-    <div className="mb-6">
+    <div className="mb-6" id="super-saver-packages">
       <div className="px-4 mb-4">
         <h2 className="text-lg font-bold text-black">Super saver packages</h2>
       </div>

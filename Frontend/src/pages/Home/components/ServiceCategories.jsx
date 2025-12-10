@@ -6,7 +6,6 @@ import massageMenIcon from '../../../assets/images/icons/services/massage-men-ic
 import cleaningIcon from '../../../assets/images/icons/services/cleaning-icon.png';
 import electricianPlumberIcon from '../../../assets/images/icons/services/electrician-plumber-carpenter-icon.png';
 import acApplianceRepairIcon from '../../../assets/images/icons/services/ac-appliance-repair-icon.png';
-import nativeWaterPurifierIcon from '../../../assets/images/icons/services/water-purifier-icon.png';
 
 const ServiceCategories = ({ categories, onCategoryClick, onSeeAllClick }) => {
   // Urban Company service categories
@@ -17,7 +16,6 @@ const ServiceCategories = ({ categories, onCategoryClick, onSeeAllClick }) => {
     { id: 3, title: 'Cleaning', icon: cleaningIcon },
     { id: 4, title: 'Electrician, Plumber & Carpenter', icon: electricianPlumberIcon },
     { id: 5, title: 'AC & Appliance Repair', icon: acApplianceRepairIcon },
-    { id: 6, title: 'Native Water Purifier', icon: nativeWaterPurifierIcon, hasSaleBadge: true },
   ];
 
   const serviceCategories = categories || defaultCategories;

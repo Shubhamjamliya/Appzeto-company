@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiX } from 'react-icons/fi';
+import { themeColors } from '../../../theme';
 
 const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseNumberChange, onSave }) => {
   const [isClosing, setIsClosing] = useState(false);
@@ -84,7 +85,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
             {/* Map Placeholder */}
             <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: '#00a6a6' }}>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: themeColors.button }}>
                   <div className="w-8 h-8 bg-white rounded-full"></div>
                 </div>
                 <p className="text-sm text-gray-600 font-medium">Map View</p>
@@ -121,9 +122,9 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
                 </div>
                 <button
                   className="px-4 py-1.5 rounded-lg text-sm font-medium text-white"
-                  style={{ backgroundColor: '#00a6a6' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                  style={{ backgroundColor: themeColors.button }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
                 >
                   Change
                 </button>
@@ -139,7 +140,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
                 onChange={(e) => onHouseNumberChange(e.target.value)}
                 className="w-full px-4 py-3 border-2 rounded-lg text-sm focus:outline-none transition-colors"
                 style={{ borderColor: '#e5e7eb' }}
-                onFocus={(e) => e.target.style.borderColor = '#00a6a6'}
+                onFocus={(e) => e.target.style.borderColor = themeColors.button}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               />
             </div>
@@ -150,7 +151,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
               disabled={!houseNumber.trim()}
               className="w-full py-3.5 rounded-lg text-base font-semibold transition-colors"
               style={houseNumber.trim() ? {
-                backgroundColor: '#00a6a6',
+                backgroundColor: themeColors.button,
                 color: 'white'
               } : {
                 backgroundColor: '#e5e7eb',
@@ -159,12 +160,12 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
               }}
               onMouseEnter={(e) => {
                 if (houseNumber.trim()) {
-                  e.target.style.backgroundColor = '#008a8a';
+                  e.target.style.backgroundColor = themeColors.button;
                 }
               }}
               onMouseLeave={(e) => {
                 if (houseNumber.trim()) {
-                  e.target.style.backgroundColor = '#00a6a6';
+                  e.target.style.backgroundColor = themeColors.button;
                 }
               }}
             >

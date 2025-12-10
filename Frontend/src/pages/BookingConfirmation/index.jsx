@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { themeColors } from '../../theme';
 import { 
   FiCheckCircle, 
   FiMapPin, 
@@ -44,7 +45,7 @@ const BookingConfirmation = () => {
           <button
             onClick={() => navigate('/my-bookings')}
             className="mt-4 px-4 py-2 rounded-lg text-white"
-            style={{ backgroundColor: '#00a6a6' }}
+            style={{ backgroundColor: themeColors.button }}
           >
             Go to My Bookings
           </button>
@@ -94,7 +95,7 @@ const BookingConfirmation = () => {
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiMapPin className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                <FiMapPin className="w-4 h-4" style={{ color: themeColors.button }} />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Service Address</p>
@@ -103,7 +104,7 @@ const BookingConfirmation = () => {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiCalendar className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                <FiCalendar className="w-4 h-4" style={{ color: themeColors.button }} />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Date & Time</p>
@@ -177,9 +178,9 @@ const BookingConfirmation = () => {
           <button
             onClick={handleViewDetails}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-lg text-base font-semibold text-white transition-all"
-            style={{ backgroundColor: '#00a6a6' }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+            style={{ backgroundColor: themeColors.button }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+            onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
           >
             View Full Details
             <FiArrowRight className="w-5 h-5" />

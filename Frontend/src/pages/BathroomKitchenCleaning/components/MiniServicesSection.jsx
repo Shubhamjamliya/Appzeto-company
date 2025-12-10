@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColors } from '../../../theme';
 import { AiFillStar } from 'react-icons/ai';
 import fanCleaning from '../../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/fan-cleaning.jpg';
 import balconyClean from '../../../assets/images/pages/Home/ServiceCategorySection/CleaningEssentials/balcony-clean.jpg';
@@ -100,7 +101,7 @@ const MiniServicesSection = ({ onAddClick, onViewDetails }) => {
               <button
                 onClick={() => onViewDetails?.(service)}
                 className="text-brand text-sm font-medium hover:underline"
-                style={{ color: '#00a6a6' }}
+                      style={{ color: themeColors.button }}
               >
                 View details
               </button>
@@ -118,7 +119,7 @@ const MiniServicesSection = ({ onAddClick, onViewDetails }) => {
                   <button
                     onClick={() => onAddClick?.(service)}
                     className="absolute bottom-2 right-2 bg-white text-brand px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-50 active:scale-95 transition-all"
-                    style={{ color: '#00a6a6' }}
+                      style={{ color: themeColors.button }}
                     onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = '#ffffff'}
                   >

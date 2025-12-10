@@ -1,5 +1,6 @@
 import React from 'react';
 import SimpleServiceCard from '../../../components/common/SimpleServiceCard';
+import { themeColors } from '../../../theme';
 
 const ServiceCategorySection = ({ title, services, onSeeAllClick, onServiceClick }) => {
   return (
@@ -15,13 +16,13 @@ const ServiceCategorySection = ({ title, services, onSeeAllClick, onServiceClick
           onClick={onSeeAllClick}
           className="font-semibold text-sm px-4 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
           style={{ 
-            color: '#00a6a6',
+            color: themeColors.button,
             backgroundColor: 'rgba(0, 166, 166, 0.08)',
             border: '1.5px solid rgba(0, 166, 166, 0.25)'
           }}
           onMouseEnter={(e) => {
             e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.12)';
-            e.target.style.borderColor = '#00a6a6';
+            e.target.style.borderColor = themeColors.button;
           }}
           onMouseLeave={(e) => {
             e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.08)';

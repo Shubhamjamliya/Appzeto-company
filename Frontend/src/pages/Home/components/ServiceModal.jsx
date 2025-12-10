@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
+import { themeColors } from '../../../theme';
 
 const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
   const navigate = useNavigate();
@@ -107,9 +108,9 @@ const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
               <button
                 onClick={handleServiceDetailClick}
                 className="w-full text-white font-semibold py-3 rounded-lg active:scale-98 transition-all"
-                style={{ backgroundColor: '#00a6a6' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                style={{ backgroundColor: themeColors.button }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
               >
                 Book Now
               </button>

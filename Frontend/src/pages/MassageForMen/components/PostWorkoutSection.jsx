@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColors } from '../../../theme';
 import { AiFillStar } from 'react-icons/ai';
 import { FiAward } from 'react-icons/fi';
 import postWorkoutImage from '../../../assets/images/pages/Home/ServiceCategorySection/SalonForMen/post-workout.jpg';
@@ -93,10 +94,10 @@ const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
                 <div className="ml-4 flex flex-col items-end shrink-0">
                   <button
                     onClick={() => onAddClick?.(service)}
-                    className="bg-[#00a6a6] text-white text-sm font-semibold px-6 py-2 rounded-lg hover:bg-[#008a8a] active:scale-95 transition-all whitespace-nowrap"
-                    style={{ backgroundColor: '#00a6a6' }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+                    className="text-white text-sm font-semibold px-6 py-2 rounded-lg active:scale-95 transition-all whitespace-nowrap"
+                    style={{ backgroundColor: themeColors.button }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
                   >
                     Add
                   </button>
@@ -115,7 +116,7 @@ const PostWorkoutSection = ({ onAddClick, onViewDetails }) => {
               <button
                 onClick={() => onViewDetails?.(service)}
                 className="text-brand text-sm font-medium hover:underline"
-                style={{ color: '#00a6a6' }}
+                style={{ color: themeColors.button }}
               >
                 View details
               </button>

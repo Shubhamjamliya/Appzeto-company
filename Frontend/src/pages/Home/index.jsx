@@ -42,22 +42,27 @@ const Home = () => {
   const [cartCount, setCartCount] = useState(0);
 
   // Combined useLayoutEffect - Set background and handle scroll on mount and location change
+  // Optimized to only run when needed
   useLayoutEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const root = document.getElementById('root');
-    const bgStyle = themeColors.backgroundGradient.home;
+    const bgStyle = themeColors.backgroundGradient;
 
-    // Set background on all elements
+    // Set background on all elements (only if not already set)
     const elements = [html, body, root].filter(Boolean);
     elements.forEach(el => {
-      el.style.backgroundColor = '#ffffff';
-      el.style.background = bgStyle;
+      if (el.style.background !== bgStyle) {
+        el.style.backgroundColor = '#ffffff';
+        el.style.background = bgStyle;
+      }
     });
 
-    // Force immediate visibility
-    body.style.opacity = '1';
-    body.style.visibility = 'visible';
+    // Force immediate visibility (only if needed)
+    if (body.style.opacity !== '1') {
+      body.style.opacity = '1';
+      body.style.visibility = 'visible';
+    }
 
     // Handle scroll to top if needed
     if (location.state?.scrollToTop) {
@@ -134,12 +139,41 @@ const Home = () => {
   };
 
   const handlePromoClick = (promo) => {
-    // Navigate to promo page or booking
+    if (promo.route) {
+      if (promo.scrollToSection) {
+        // Navigate to page and scroll to specific section
+        navigate(promo.route, { 
+          state: { scrollToSection: promo.scrollToSection } 
+        });
+      } else {
+        // Navigate to page
+        navigate(promo.route);
+      }
+    }
   };
 
   const handleServiceClick = (service) => {
-    // Navigate to service detail page if needed
-    // No modal popup
+    if (!service || !service.title) return;
+    
+    const title = service.title.toLowerCase();
+    
+    // Map services to their respective pages
+    if (title.includes('bathroom') || title.includes('kitchen cleaning') || title.includes('intense cleaning')) {
+      navigate('/bathroom-kitchen-cleaning');
+    } else if (title.includes('salon') || title.includes('spa') || title.includes('waxing') || title.includes('facial') || title.includes('cleanup') || title.includes('pedicure') || title.includes('mani pedi') || title.includes('hair studio')) {
+      navigate('/salon-for-women');
+    } else if (title.includes('massage')) {
+      navigate('/massage-for-men');
+    } else if (title.includes('sofa') || title.includes('carpet') || title.includes('professional sofa')) {
+      navigate('/sofa-carpet-cleaning');
+    } else if (title.includes('ac') || title.includes('appliance') || title.includes('water purifier') || title.includes('native')) {
+      navigate('/ac-service');
+    } else if (title.includes('drill') || title.includes('hang') || title.includes('tap repair') || title.includes('fan repair') || title.includes('switch') || title.includes('socket') || title.includes('electrical') || title.includes('wiring') || title.includes('doorbell') || title.includes('mcb') || title.includes('inverter') || title.includes('appliance')) {
+      navigate('/electrician');
+    } else {
+      // Default: stay on home or navigate to a general page
+      // You can add more specific routes as needed
+    }
   };
 
 
@@ -148,7 +182,19 @@ const Home = () => {
   };
 
   const handleSeeAllClick = (category) => {
-    // Navigate to category page
+    // Navigate to category page based on category identifier
+    const categoryRoutes = {
+      'salon-women': '/salon-for-women',
+      'cleaning-essentials': '/bathroom-kitchen-cleaning',
+      'electrical': '/electrician',
+      'appliance': '/ac-service',
+      'home-repair': '/electrician',
+    };
+    
+    const route = categoryRoutes[category];
+    if (route) {
+      navigate(route);
+    }
   };
 
   const handleAddClick = (service) => {
@@ -234,7 +280,7 @@ const Home = () => {
         <div
           className="relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 50%, #FFFFFF 100%)'
+            background: themeColors.gradient
           }}
         >
           {/* Gradient overlay for depth */}
@@ -436,10 +482,7 @@ const Home = () => {
         />
       </main>
 
-      <BottomNav
-        cartCount={cartCount}
-        onCartClick={handleCartClick}
-      />
+      <BottomNav />
 
       {/* AC & Appliance Repair Modal */}
       <ACApplianceModal

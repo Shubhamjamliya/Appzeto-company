@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FiArrowLeft, FiShoppingCart, FiTrash2, FiMinus, FiPlus, FiPhone, FiHome, FiClock, FiEdit2 } from 'react-icons/fi';
 import { MdStar } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
+import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 import AddressSelectionModal from './components/AddressSelectionModal';
 import TimeSlotModal from './components/TimeSlotModal';
@@ -22,17 +23,24 @@ const Checkout = () => {
   const [houseNumber, setHouseNumber] = useState('');
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
-  // Check if Razorpay is loaded
+  // Check if Razorpay is loaded (defer to avoid blocking initial render)
   useEffect(() => {
+    // Defer Razorpay check until after page load
     const checkRazorpay = () => {
       if (window.Razorpay) {
         setRazorpayLoaded(true);
       } else {
-        // Retry after a short delay
+        // Retry after a short delay (non-blocking)
         setTimeout(checkRazorpay, 100);
       }
     };
-    checkRazorpay();
+    
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(checkRazorpay, { timeout: 200 });
+    } else {
+      setTimeout(checkRazorpay, 100);
+    }
   }, []);
 
   // Load cart items from localStorage and filter by category if provided
@@ -215,7 +223,7 @@ const Checkout = () => {
         category: category || 'All',
       },
       theme: {
-        color: '#00a6a6',
+        color: themeColors.button,
       },
       modal: {
         ondismiss: function () {
@@ -334,7 +342,7 @@ const Checkout = () => {
             <p className="text-gray-400 text-sm mt-2">Add services to get started</p>
           </div>
         </main>
-        <BottomNav cartCount={0} onCartClick={handleCartClick} />
+        <BottomNav />
       </div>
     );
   }
@@ -383,14 +391,14 @@ const Checkout = () => {
                     <p className="text-sm text-gray-600">{item.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: '#00a6a6' }}>
+                <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: themeColors.button }}>
                   <button
                     onClick={() => handleQuantityChange(item.id, -1)}
                     className="p-2 transition-colors"
                     onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
-                    <FiMinus className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                    <FiMinus className="w-4 h-4" style={{ color: themeColors.button }} />
                   </button>
                   <span className="px-3 py-1 text-sm font-medium text-black">{item.serviceCount || 1}</span>
                   <button
@@ -399,7 +407,7 @@ const Checkout = () => {
                     onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
-                    <FiPlus className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                    <FiPlus className="w-4 h-4" style={{ color: themeColors.button }} />
                   </button>
                 </div>
               </div>
@@ -428,7 +436,7 @@ const Checkout = () => {
         <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-start gap-3 flex-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#00a6a6' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: themeColors.button }}>
                 <MdStar className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
@@ -437,7 +445,7 @@ const Checkout = () => {
                 <p className="text-xs text-gray-600 mb-2">
                   Get 10% off on all bookings, upto ₹100.
                 </p>
-                <button className="text-xs font-medium hover:underline" style={{ color: '#00a6a6' }}>
+                <button className="text-xs font-medium hover:underline" style={{ color: themeColors.button }}>
                   View all benefits
                 </button>
               </div>
@@ -447,25 +455,25 @@ const Checkout = () => {
                 onClick={handleAddPlus}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={isPlusAdded ? {
-                  backgroundColor: '#00a6a6',
+                  backgroundColor: themeColors.button,
                   color: 'white'
                 } : {
                   backgroundColor: 'white',
-                  border: '1px solid #00a6a6',
-                  color: '#00a6a6'
+                  border: `1px solid ${themeColors.button}`,
+                  color: themeColors.button
                 }}
                 onMouseEnter={(e) => {
                   if (!isPlusAdded) {
                     e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)';
                   } else {
-                    e.target.style.backgroundColor = '#008a8a';
+                    e.target.style.backgroundColor = themeColors.button;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isPlusAdded) {
                     e.target.style.backgroundColor = 'white';
                   } else {
-                    e.target.style.backgroundColor = '#00a6a6';
+                    e.target.style.backgroundColor = themeColors.button;
                   }
                 }}
               >
@@ -489,7 +497,7 @@ const Checkout = () => {
                 <p className="text-xs text-gray-600">+91-6261387233</p>
               </div>
             </div>
-            <button className="text-sm font-medium hover:underline" style={{ color: '#00a6a6' }}>
+            <button className="text-sm font-medium hover:underline" style={{ color: themeColors.button }}>
               Change
             </button>
           </div>
@@ -549,7 +557,7 @@ const Checkout = () => {
           <p className="text-sm text-gray-700 mb-2">
             Free cancellations if done more than 12 hrs before the service or if a professional isn't assigned. A fee will be charged otherwise.
           </p>
-          <button className="text-sm font-medium hover:underline" style={{ color: '#00a6a6' }}>
+          <button className="text-sm font-medium hover:underline" style={{ color: themeColors.button }}>
             Read full policy
           </button>
         </div>
@@ -568,7 +576,7 @@ const Checkout = () => {
                     onChange={(e) => handleCustomTip(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg text-sm text-center"
                     style={selectedTip === 'custom' ? {
-                      borderColor: '#00a6a6',
+                      borderColor: themeColors.button,
                       backgroundColor: 'rgba(0, 166, 166, 0.1)'
                     } : {
                       borderColor: '#d1d5db',
@@ -580,9 +588,9 @@ const Checkout = () => {
                     onClick={() => handleTipSelect(amount)}
                     className="w-full px-3 py-2 border rounded-lg text-sm font-medium transition-colors"
                     style={selectedTip === amount ? {
-                      borderColor: '#00a6a6',
+                      borderColor: themeColors.button,
                       backgroundColor: 'rgba(0, 166, 166, 0.1)',
-                      color: '#00a6a6'
+                      color: themeColors.button
                     } : {
                       borderColor: '#d1d5db',
                       backgroundColor: 'white',
@@ -641,7 +649,7 @@ const Checkout = () => {
               {/* Address */}
               <div className="flex items-start gap-2.5">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiHome className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                  <FiHome className="w-4 h-4" style={{ color: themeColors.button }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-600 mb-0.5">Address</p>
@@ -659,7 +667,7 @@ const Checkout = () => {
               {/* Time Slot */}
               <div className="flex items-start gap-2.5">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiClock className="w-4 h-4" style={{ color: '#00a6a6' }} />
+                  <FiClock className="w-4 h-4" style={{ color: themeColors.button }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-600 mb-0.5">Time Slot</p>
@@ -691,19 +699,16 @@ const Checkout = () => {
           <button
             onClick={selectedDate && selectedTime && houseNumber ? handlePayment : handleProceed}
             className="w-full text-white py-3 rounded-lg text-base font-semibold transition-colors"
-            style={{ backgroundColor: '#00a6a6' }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#008a8a'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#00a6a6'}
+            style={{ backgroundColor: themeColors.button }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.button}
+            onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
           >
             {selectedDate && selectedTime && houseNumber ? 'Proceed to pay' : 'Add address and slot'}
           </button>
         </div>
       </div>
 
-      <BottomNav
-        cartCount={cartCount}
-        onCartClick={handleCartClick}
-      />
+      <BottomNav />
 
       {/* Address Selection Modal */}
       <AddressSelectionModal

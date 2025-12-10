@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiBell, FiMail, FiPhone, FiMessageCircle, FiShield, FiChevronRight } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
+import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 
 const Settings = () => {
@@ -86,7 +87,7 @@ const Settings = () => {
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiBell className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                  <FiBell className="w-5 h-5" style={{ color: themeColors.button }} />
                 </div>
                 <span className="text-sm font-medium text-black">Push Notifications</span>
               </div>
@@ -109,7 +110,7 @@ const Settings = () => {
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiMail className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                  <FiMail className="w-5 h-5" style={{ color: themeColors.button }} />
                 </div>
                 <span className="text-sm font-medium text-black">Email</span>
               </div>
@@ -132,7 +133,7 @@ const Settings = () => {
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiMessageCircle className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                  <FiMessageCircle className="w-5 h-5" style={{ color: themeColors.button }} />
                 </div>
                 <span className="text-sm font-medium text-black">SMS</span>
               </div>
@@ -155,7 +156,7 @@ const Settings = () => {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                  <FiPhone className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                  <FiPhone className="w-5 h-5" style={{ color: themeColors.button }} />
                 </div>
                 <span className="text-sm font-medium text-black">Voice calls</span>
               </div>
@@ -184,7 +185,7 @@ const Settings = () => {
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiShield className="w-5 h-5" style={{ color: '#00a6a6' }} />
+                <FiShield className="w-5 h-5" style={{ color: themeColors.button }} />
               </div>
               <span className="text-sm font-medium text-black">Privacy & data</span>
             </div>

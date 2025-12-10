@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock, FiMapPin, FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
+import { themeColors } from '../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 
 const MyBookings = () => {
@@ -132,7 +133,7 @@ const MyBookings = () => {
                   ? 'bg-brand text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
-              style={filter === tab.id ? { backgroundColor: '#00a6a6' } : {}}
+              style={filter === tab.id ? { backgroundColor: themeColors.button } : {}}
             >
               {tab.label}
             </button>
