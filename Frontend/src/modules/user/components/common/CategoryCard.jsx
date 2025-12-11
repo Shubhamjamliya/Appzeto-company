@@ -82,22 +82,22 @@ const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index =
     // GSAP ripple effect - run asynchronously
     if (cardRef.current) {
       requestAnimationFrame(() => {
-        const rect = cardRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        createRipple(cardRef.current, x, y);
+      const rect = cardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      createRipple(cardRef.current, x, y);
       });
     }
     
     // Click animation - run asynchronously
     if (iconWrapperRef.current) {
       requestAnimationFrame(() => {
-        gsap.to(iconWrapperRef.current, {
-          scale: 0.9,
-          duration: 0.1,
-          yoyo: true,
-          repeat: 1,
-          ease: 'power2.out',
+      gsap.to(iconWrapperRef.current, {
+        scale: 0.9,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.out',
         });
       });
     }

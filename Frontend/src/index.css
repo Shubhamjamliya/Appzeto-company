@@ -33,19 +33,31 @@
 @keyframes fade-in {
   from {
     opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
   }
 }
 
 .animate-page-enter {
-  animation: fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* No exit animation - instant for better UX */
 .animate-page-exit {
-  opacity: 1;
+  animation: fade-out 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Logo Animations */
