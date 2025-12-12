@@ -1,22 +1,25 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Import module routes
 import UserRoutes from '../modules/user/routes';
 import VendorRoutes from '../modules/vendor/routes';
-// import AdminRoutes from '../modules/admin/routes';
+import AdminRoutes from '../modules/admin/routes';
 
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Default route - redirect to user */}
+      <Route path="/" element={<Navigate to="/user" replace />} />
+
       {/* User Routes */}
-      <Route path="/*" element={<UserRoutes />} />
+      <Route path="/user/*" element={<UserRoutes />} />
 
       {/* Vendor Routes */}
       <Route path="/vendor/*" element={<VendorRoutes />} />
 
-      {/* Admin Routes - will be uncommented when ready */}
-      {/* <Route path="/admin/*" element={<AdminRoutes />} /> */}
+      {/* Admin Routes */}
+      <Route path="/admin/*" element={<AdminRoutes />} />
     </Routes>
   );
 };

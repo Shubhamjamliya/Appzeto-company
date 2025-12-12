@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load admin pages for code splitting
 const Dashboard = lazy(() => import('../pages/Dashboard'));
@@ -18,6 +18,7 @@ const AdminRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
+        <Route path="/" element={<Navigate to="dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Add more admin routes here as pages are created */}
       </Routes>
