@@ -253,7 +253,7 @@ const Checkout = () => {
   };
 
   const handleCartClick = () => {
-    navigate('/cart');
+    navigate('/user/cart');
   };
 
   // Calculate totals

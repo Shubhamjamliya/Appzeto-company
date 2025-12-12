@@ -47,7 +47,7 @@ const ACApplianceModal = ({ isOpen, onClose, location, cartCount }) => {
     
     // Navigate immediately without delay
     if (service.title === 'AC') {
-      navigate('/ac-service');
+      navigate('/user/ac-service');
     } else {
       // Navigate to other service pages
     }

@@ -1,19 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState, cloneElement } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const PageTransition = ({ children }) => {
   const location = useLocation();
+  const [displayLocation, setDisplayLocation] = useState(location);
+  const [transitionStage, setTransitionStage] = useState('entering');
+
+  useEffect(() => {
+    if (location.pathname !== displayLocation.pathname) {
+      setTransitionStage('exiting');
+    }
+  }, [location.pathname, displayLocation.pathname]);
+
+  useEffect(() => {
+    if (transitionStage === 'exiting') {
+      const timer = setTimeout(() => {
+        setDisplayLocation(location);
+        setTransitionStage('entering');
+      }, 200); // Match exit animation duration
+
+      return () => clearTimeout(timer);
+    }
+  }, [transitionStage, location]);
 
   return (
     <div
-      key={location.pathname}
-      className="page-transition-enter-active animate-page-enter"
+      className={`min-h-screen ${
+        transitionStage === 'entering'
+          ? 'animate-page-enter'
+          : 'animate-page-exit'
+      }`}
       style={{
-        width: '100%',
-        minHeight: '100vh',
+        animationFillMode: 'both',
+        position: 'relative',
+        isolation: 'isolate',
       }}
     >
-      {children}
+      {cloneElement(children, { location: displayLocation })}
     </div>
   );
 };

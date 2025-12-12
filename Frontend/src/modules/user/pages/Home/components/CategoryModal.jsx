@@ -78,17 +78,17 @@ const CategoryModal = ({ isOpen, onClose, category, location, cartCount }) => {
     
     // Navigate immediately without delay
     if (service.title === 'Salon for Women') {
-      navigate('/salon-for-women');
+      navigate('/user/salon-for-women');
     } else if (service.title === 'Spa for Women') {
       // Navigate to spa page if exists
     } else if (service.title === 'Hair Studio for Women') {
       // Navigate to hair studio page if exists
     } else if (service.title === 'Bathroom & Kitchen Cleaning') {
-      navigate('/bathroom-kitchen-cleaning');
+      navigate('/user/bathroom-kitchen-cleaning');
     } else if (service.title === 'Sofa & Carpet Cleaning') {
-      navigate('/sofa-carpet-cleaning');
+      navigate('/user/sofa-carpet-cleaning');
     } else if (service.title === 'Electrical Repair') {
-      navigate('/electrician');
+      navigate('/user/electrician');
     } else {
       // Navigate to other service pages
     }

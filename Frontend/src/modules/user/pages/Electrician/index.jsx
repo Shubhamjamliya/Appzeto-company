@@ -95,35 +95,30 @@ const Electrician = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section
+  // Optimized header visibility using IntersectionObserver
   useEffect(() => {
-    let lastScrollY = window.scrollY;
-    let sectionCache = null; // Cache section elements
-    
-    const handleScroll = (currentScrollY) => {
-      const isScrollingUp = currentScrollY < lastScrollY;
-      lastScrollY = currentScrollY;
-      
-      if (bannerRef.current) {
-        const rect = bannerRef.current.getBoundingClientRect();
-        
-        // Priority 1: If scrolling up AND near top AND banner is becoming visible, hide header immediately
-        const isNearTop = currentScrollY < 150;
-        const bannerBecomingVisible = rect.top < 300;
-        
-        if (isScrollingUp && isNearTop && bannerBecomingVisible) {
-          setShowStickyHeader(false);
-          setCurrentSection('');
-          return;
-        }
-        
-        // Priority 2: Normal scrolling - show header when banner is scrolled past
-        const bannerScrolledPast = rect.bottom <= 0;
-        setShowStickyHeader(bannerScrolledPast);
+    if (!bannerRef.current) return;
 
-        // Detect sections when scrolled past banner (only check when needed)
-        if (bannerScrolledPast) {
-          // Cache section elements on first check
+    const bannerObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setShowStickyHeader(!entry.isIntersecting);
+        if (entry.isIntersecting) {
+          setCurrentSection('');
+        }
+      },
+      { threshold: 0, rootMargin: '0px' }
+    );
+
+    bannerObserver.observe(bannerRef.current);
+
+    // Section detection only when header is visible (throttled)
+    let sectionCache = null;
+    let ticking = false;
+    
+    const detectSection = () => {
+      if (!ticking && showStickyHeader) {
+        window.requestAnimationFrame(() => {
           if (!sectionCache) {
             const sectionIds = [
               'electrical-repair',
@@ -159,7 +154,6 @@ const Electrician = () => {
             'book-a-consultation': 'Book a consultation',
           };
 
-          // Check sections in reverse order (bottom to top)
           for (let i = sectionCache.length - 1; i >= 0; i--) {
             const element = sectionCache[i];
             if (element) {
@@ -172,45 +166,31 @@ const Electrician = () => {
           }
 
           setCurrentSection(activeSection);
-        } else {
-          setCurrentSection('');
-        }
-      }
-    };
-
-    // Optimized scroll handler with throttling
-    let ticking = false;
-    const optimizedHandler = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll(window.scrollY);
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', optimizedHandler, { passive: true });
-    
-    // Initial check - deferred
-    const timeoutId = setTimeout(() => {
-      handleScroll(window.scrollY);
-    }, 200);
-
-    return () => {
-      window.removeEventListener('scroll', optimizedHandler);
-      clearTimeout(timeoutId);
+    const scrollHandler = () => {
+      if (showStickyHeader) {
+        detectSection();
+      }
     };
-  }, []); // Empty deps - only run once on mount
 
-  const [isExiting, setIsExiting] = React.useState(false);
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    
+    return () => {
+      bannerObserver.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
+    };
+  }, [showStickyHeader]);
 
   const handleBack = () => {
-    setIsExiting(true);
     // Reset scroll position first
     window.scrollTo({ top: 0, behavior: 'instant' });
     // Navigate immediately
-    navigate('/', { replace: true, state: { scrollToTop: true } });
+    navigate('/user', { replace: true, state: { scrollToTop: true } });
   };
 
   const handleSearch = () => {
@@ -319,7 +299,6 @@ const Electrician = () => {
   return (
     <div
       className="min-h-screen bg-white pb-20"
-      style={{ willChange: isExiting ? 'transform' : 'auto' }}
     >
       {/* Sticky Header - appears on scroll */}
       <StickyHeader

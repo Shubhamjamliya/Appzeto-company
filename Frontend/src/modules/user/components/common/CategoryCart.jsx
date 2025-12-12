@@ -66,7 +66,7 @@ const CategoryCart = ({
   };
 
   const handleCheckout = () => {
-    navigate('/checkout', { state: { category: category } });
+    navigate('/user/checkout', { state: { category: category } });
   };
 
   const handleCartClick = () => {

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import PageTransition from '../components/common/PageTransition';
 
 // Lazy load all user pages for code splitting
 const Home = lazy(() => import('../pages/Home'));
@@ -40,32 +41,34 @@ const LoadingFallback = () => (
 const UserRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/rewards" element={<Rewards />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/native" element={<Native />} />
-        <Route path="/ac-service" element={<ACService />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/salon-for-women" element={<SalonForWomen />} />
-        <Route path="/massage-for-men" element={<MassageForMen />} />
-        <Route path="/bathroom-kitchen-cleaning" element={<BathroomKitchenCleaning />} />
-        <Route path="/sofa-carpet-cleaning" element={<SofaCarpetCleaning />} />
-        <Route path="/electrician" element={<Electrician />} />
-        <Route path="/my-bookings" element={<MyBookings />} />
-        <Route path="/booking/:id" element={<BookingDetails />} />
-        <Route path="/booking-confirmation/:id" element={<BookingConfirmation />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/manage-payment-methods" element={<ManagePaymentMethods />} />
-        <Route path="/manage-addresses" element={<ManageAddresses />} />
-        <Route path="/my-subscription" element={<MySubscription />} />
-        <Route path="/wallet" element={<Wallet />} />
-        <Route path="/my-plan" element={<MyPlan />} />
-        <Route path="/my-rating" element={<MyRating />} />
-        <Route path="/about-appzeto" element={<AboutAppzeto />} />
-        <Route path="/update-profile" element={<UpdateProfile />} />
-      </Routes>
+      <PageTransition>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/native" element={<Native />} />
+          <Route path="/ac-service" element={<ACService />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/salon-for-women" element={<SalonForWomen />} />
+          <Route path="/massage-for-men" element={<MassageForMen />} />
+          <Route path="/bathroom-kitchen-cleaning" element={<BathroomKitchenCleaning />} />
+          <Route path="/sofa-carpet-cleaning" element={<SofaCarpetCleaning />} />
+          <Route path="/electrician" element={<Electrician />} />
+          <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/booking/:id" element={<BookingDetails />} />
+          <Route path="/booking-confirmation/:id" element={<BookingConfirmation />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/manage-payment-methods" element={<ManagePaymentMethods />} />
+          <Route path="/manage-addresses" element={<ManageAddresses />} />
+          <Route path="/my-subscription" element={<MySubscription />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/my-plan" element={<MyPlan />} />
+          <Route path="/my-rating" element={<MyRating />} />
+          <Route path="/about-appzeto" element={<AboutAppzeto />} />
+          <Route path="/update-profile" element={<UpdateProfile />} />
+        </Routes>
+      </PageTransition>
     </Suspense>
   );
 };

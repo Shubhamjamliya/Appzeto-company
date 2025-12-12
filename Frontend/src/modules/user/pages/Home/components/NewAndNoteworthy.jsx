@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { createOptimizedScrollAnimation, createOptimizedStaggerAnimation } from '../../../../../utils/optimizedScrollTrigger';
 import SimpleServiceCard from '../../../components/common/SimpleServiceCard';
 import waterPurifierImage from '../../../../../assets/images/pages/Home/NewAndNoteworthy/water-purifiers.png';
@@ -94,7 +94,7 @@ const NewAndNoteworthy = React.memo(({ services, onServiceClick }) => {
             key={service.id}
             title={service.title}
             image={service.image}
-            onClick={() => onServiceClick?.(service)}
+            onClick={() => handleServiceClick(service)}
           />
         ))}
       </div>

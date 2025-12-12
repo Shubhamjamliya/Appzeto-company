@@ -1,5 +1,4 @@
-import React, { memo, useRef, useEffect } from 'react';
-import { gsap } from 'gsap';
+import React, { memo, useRef } from 'react';
 
 const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
   const cardRef = useRef(null);
@@ -24,58 +23,19 @@ const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`
     : null;
 
-  // GSAP hover animations
-  useEffect(() => {
-    if (cardRef.current) {
-      const card = cardRef.current;
-      
-      const handleMouseEnter = () => {
-        gsap.to(card, {
-          scale: 1.05,
-          y: -8,
-          duration: 0.3,
-          ease: 'power2.out',
-        });
-      };
-      
-      const handleMouseLeave = () => {
-        gsap.to(card, {
-          scale: 1,
-          y: 0,
-          duration: 0.3,
-          ease: 'power2.out',
-        });
-      };
-      
-      const handleClick = () => {
-        gsap.to(card, {
-          scale: 0.98,
-          duration: 0.1,
-          yoyo: true,
-          repeat: 1,
-          ease: 'power2.out',
-        });
-      };
-      
-      card.addEventListener('mouseenter', handleMouseEnter);
-      card.addEventListener('mouseleave', handleMouseLeave);
-      card.addEventListener('click', handleClick);
-      
-      return () => {
-        card.removeEventListener('mouseenter', handleMouseEnter);
-        card.removeEventListener('mouseleave', handleMouseLeave);
-        card.removeEventListener('click', handleClick);
-      };
-    }
-  }, []);
+  // CSS-based hover animations (better performance than GSAP)
+  // No useEffect needed - using CSS transitions
 
   return (
     <div
       ref={cardRef}
-      className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer"
+      className="relative min-w-[160px] h-80 rounded-xl overflow-hidden cursor-pointer transition-transform duration-300 ease-out hover:scale-[1.05] hover:-translate-y-2 active:scale-[0.98]"
       style={{
         boxShadow: '0 8px 16px -2px rgba(0, 0, 0, 0.15), 0 4px 8px -1px rgba(0, 0, 0, 0.1)',
-        border: '1px solid rgba(0, 0, 0, 0.08)'
+        border: '1px solid rgba(0, 0, 0, 0.08)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
       }}
       onClick={onClick}
     >

@@ -27,7 +27,7 @@ const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
     handleClose();
     // Navigate to AC Service page if AC service is clicked
     if (service?.title === 'AC Service and Repair' || service?.title?.includes('AC')) {
-      navigate('/ac-service');
+      navigate('/user/ac-service');
     } else {
       // Navigate to other service detail pages
       // navigate(`/service/${service?.id}`);

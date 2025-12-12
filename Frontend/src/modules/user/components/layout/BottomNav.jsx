@@ -71,17 +71,17 @@ const BottomNav = () => {
   }, []);
 
   const navItems = [
-    { id: 'home', label: 'Appzeto', icon: FiHome, filledIcon: HiHome, path: '/' },
-    { id: 'rewards', label: 'Rewards', icon: FiGift, filledIcon: HiGift, path: '/rewards' },
-    { id: 'cart', label: 'Cart', icon: FiShoppingCart, filledIcon: HiShoppingCart, path: '/cart', isCart: true },
-    { id: 'account', label: 'Account', icon: FiUser, filledIcon: HiUser, path: '/account' },
+    { id: 'home', label: 'Appzeto', icon: FiHome, filledIcon: HiHome, path: '/user' },
+    { id: 'rewards', label: 'Rewards', icon: FiGift, filledIcon: HiGift, path: '/user/rewards' },
+    { id: 'cart', label: 'Cart', icon: FiShoppingCart, filledIcon: HiShoppingCart, path: '/user/cart', isCart: true },
+    { id: 'account', label: 'Account', icon: FiUser, filledIcon: HiUser, path: '/user/account' },
   ];
 
   const getActiveTab = () => {
-    if (location.pathname === '/') return 'home';
-    if (location.pathname === '/rewards') return 'rewards';
-    if (location.pathname === '/cart') return 'cart';
-    if (location.pathname === '/account') return 'account';
+    if (location.pathname === '/user' || location.pathname === '/user/') return 'home';
+    if (location.pathname === '/user/rewards') return 'rewards';
+    if (location.pathname === '/user/cart') return 'cart';
+    if (location.pathname === '/user/account') return 'account';
     return 'home';
   };
 
@@ -174,10 +174,8 @@ const BottomNav = () => {
           animation = tl;
           activeAnimations.current[itemId] = animation;
           
-          // Delay navigation to let animation be visible
-          setTimeout(() => {
-            navigate(path);
-          }, 600);
+          // Navigate immediately - animation runs in background
+          navigate(path);
           return; // Return early to prevent double navigation
           break;
         case 'cart':
@@ -201,10 +199,8 @@ const BottomNav = () => {
           });
           activeAnimations.current[itemId] = animation;
           
-          // Delay navigation to let animation be visible
-          setTimeout(() => {
-            navigate(path);
-          }, 600);
+          // Navigate immediately - animation runs in background
+          navigate(path);
           return;
           break;
         case 'account':
@@ -228,10 +224,8 @@ const BottomNav = () => {
           });
           activeAnimations.current[itemId] = animation;
           
-          // Delay navigation to let animation be visible
-          setTimeout(() => {
-            navigate(path);
-          }, 800);
+          // Navigate immediately - animation runs in background
+          navigate(path);
           return;
           break;
         case 'home':
@@ -275,10 +269,8 @@ const BottomNav = () => {
           animation = homeTl;
           activeAnimations.current[itemId] = animation;
           
-          // Delay navigation to let animation be visible
-          setTimeout(() => {
-            navigate(path);
-          }, 600);
+          // Navigate immediately - animation runs in background
+          navigate(path);
           return;
           break;
         default:
@@ -301,9 +293,7 @@ const BottomNav = () => {
     }
     
     // Default navigation (should not reach here for rewards, cart, account, home)
-    setTimeout(() => {
-      navigate(path);
-    }, 100);
+    navigate(path);
   };
 
   return (

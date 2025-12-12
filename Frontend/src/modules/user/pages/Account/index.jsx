@@ -33,36 +33,36 @@ const Account = () => {
 
   const handleCardClick = (cardType) => {
     if (cardType === 'bookings') {
-      navigate('/my-bookings');
+      navigate('/user/my-bookings');
     } else if (cardType === 'wallet') {
-      navigate('/wallet');
+      navigate('/user/wallet');
     }
     // Navigate to respective page
   };
 
   const handleMenuClick = (item) => {
     if (item.label === 'Settings') {
-      navigate('/settings');
+      navigate('/user/settings');
     } else if (item.label === 'Manage payment methods') {
-      navigate('/manage-payment-methods');
+      navigate('/user/manage-payment-methods');
     } else if (item.label === 'Manage addresses') {
-      navigate('/manage-addresses');
+      navigate('/user/manage-addresses');
     } else if (item.label === 'My Plans') {
-      navigate('/my-plan');
+      navigate('/user/my-plan');
     } else if (item.label === 'Wallet') {
-      navigate('/wallet');
+      navigate('/user/wallet');
     } else if (item.label === 'Plus membership') {
-      navigate('/my-subscription');
+      navigate('/user/my-subscription');
     } else if (item.label === 'My rating') {
-      navigate('/my-rating');
+      navigate('/user/my-rating');
     } else if (item.label === 'About Appzeto') {
-      navigate('/about-appzeto');
+      navigate('/user/about-appzeto');
     }
     // Navigate to respective page
   };
 
   const handleEditClick = () => {
-    navigate('/update-profile');
+    navigate('/user/update-profile');
   };
 
 

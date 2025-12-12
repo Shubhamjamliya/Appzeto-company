@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { createOptimizedScrollAnimation, createOptimizedStaggerAnimation } from '../../../../../utils/optimizedScrollTrigger';
 import DetailedServiceCard from '../../../components/common/DetailedServiceCard';
 import intenseBathroom2Image from '../../../../../assets/images/pages/Home/MostBookedServices/intense-bathroom-2.jpg';
@@ -168,7 +168,7 @@ const MostBookedServices = React.memo(({ services, onServiceClick }) => {
             originalPrice={service.originalPrice}
             discount={service.discount}
             image={service.image}
-            onClick={() => onServiceClick?.(service)}
+            onClick={() => handleServiceClick(service)}
           />
         ))}
       </div>

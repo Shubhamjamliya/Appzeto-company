@@ -30,7 +30,6 @@ const BathroomKitchenCleaning = () => {
   const [currentSection, setCurrentSection] = useState('');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [showCategoryCartModal, setShowCategoryCartModal] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
 
   // Refs for sections
   const bannerRef = useRef(null);
@@ -66,35 +65,30 @@ const BathroomKitchenCleaning = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section (optimized)
+  // Optimized header visibility using IntersectionObserver
   useEffect(() => {
-    let lastScrollY = window.scrollY;
-    let sectionCache = null; // Cache section elements
+    if (!bannerRef.current) return;
 
-    const handleScroll = (currentScrollY) => {
-      const isScrollingUp = currentScrollY < lastScrollY;
-      lastScrollY = currentScrollY;
-
-      if (bannerRef.current) {
-        const rect = bannerRef.current.getBoundingClientRect();
-
-        // Priority 1: If scrolling up AND near top AND banner is becoming visible, hide header immediately
-        const isNearTop = currentScrollY < 150;
-        const bannerBecomingVisible = rect.top < 300;
-
-        if (isScrollingUp && isNearTop && bannerBecomingVisible) {
-          setShowStickyHeader(false);
+    const bannerObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setShowStickyHeader(!entry.isIntersecting);
+        if (entry.isIntersecting) {
           setCurrentSection('');
-          return;
         }
+      },
+      { threshold: 0, rootMargin: '0px' }
+    );
 
-        // Priority 2: Normal scrolling - show header when banner is scrolled past
-        const bannerScrolledPast = rect.bottom <= 0;
-        setShowStickyHeader(bannerScrolledPast);
+    bannerObserver.observe(bannerRef.current);
 
-        // Detect sections when scrolled past banner (cache elements)
-        if (bannerScrolledPast) {
-          // Cache section elements on first check
+    // Section detection only when header is visible (throttled)
+    let sectionCache = null;
+    let ticking = false;
+    
+    const detectSection = () => {
+      if (!ticking && showStickyHeader) {
+        window.requestAnimationFrame(() => {
           if (!sectionCache) {
             const sectionIds = ['combos', 'bathroom-cleaning', 'mini-services'];
             sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
@@ -108,7 +102,6 @@ const BathroomKitchenCleaning = () => {
             'mini-services': 'Mini services',
           };
 
-          // Check sections in reverse order (bottom to top)
           for (let i = sectionCache.length - 1; i >= 0; i--) {
             const element = sectionCache[i];
             if (element) {
@@ -121,40 +114,30 @@ const BathroomKitchenCleaning = () => {
           }
 
           setCurrentSection(activeSection);
-        } else {
-          setCurrentSection('');
-        }
-      }
-    };
-
-    // Optimized scroll handler with throttling
-    let ticking = false;
-    const optimizedHandler = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll(window.scrollY);
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', optimizedHandler, { passive: true });
-    const timeoutId = setTimeout(() => {
-      handleScroll(window.scrollY);
-    }, 200);
-
-    return () => {
-      window.removeEventListener('scroll', optimizedHandler);
-      clearTimeout(timeoutId);
+    const scrollHandler = () => {
+      if (showStickyHeader) {
+        detectSection();
+      }
     };
-  }, []);
+
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    
+    return () => {
+      bannerObserver.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
+    };
+  }, [showStickyHeader]);
 
   const handleBack = () => {
-    setIsExiting(true);
     window.scrollTo({ top: 0, behavior: 'instant' });
     // Navigate immediately
-    navigate('/', { replace: true, state: { scrollToTop: true } });
+    navigate('/user', { replace: true, state: { scrollToTop: true } });
   };
 
   const handleSearch = () => {
@@ -230,10 +213,7 @@ const BathroomKitchenCleaning = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
-      style={{ willChange: isExiting ? 'transform' : 'auto' }}
-    >
+    <div className="min-h-screen bg-white pb-20">
       {/* Sticky Header - appears on scroll */}
       <StickyHeader
         title="Bathroom & Kitchen Cleaning"
@@ -385,4 +365,5 @@ const BathroomKitchenCleaning = () => {
 };
 
 export default BathroomKitchenCleaning;
+
 

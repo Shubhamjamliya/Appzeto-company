@@ -92,7 +92,7 @@ const BookingDetails = () => {
         <div className="text-center">
           <p className="text-gray-500">Booking not found</p>
           <button
-            onClick={() => navigate('/my-bookings')}
+            onClick={() => navigate('/user/my-bookings')}
             className="mt-4 px-4 py-2 bg-brand text-white rounded-lg"
             style={{ backgroundColor: themeColors.button }}
           >

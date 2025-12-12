@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { gsap } from 'gsap';
 import PromoCard from '../../../components/common/PromoCard';
 import promo1 from '../../../../../assets/images/pages/Home/promo-carousel/1764052270908-bae94c.jpg';
 import promo2 from '../../../../../assets/images/pages/Home/promo-carousel/1678450687690-81f922.jpg';
@@ -117,13 +116,15 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
     if (!container) return;
 
     let scrollTimeout;
+    let ticking = false;
     const handleScroll = () => {
-      // Debounce scroll events
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        requestAnimationFrame(() => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
           const firstCard = container.querySelector('[data-promo-card]');
-          if (!firstCard) return;
+          if (!firstCard) {
+            ticking = false;
+            return;
+          }
 
           const cardWidth = firstCard.offsetWidth;
           const gap = 16;
@@ -133,8 +134,10 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
           if (newIndex !== currentIndex && newIndex >= 0 && newIndex < promotionalCards.length) {
             setCurrentIndex(newIndex);
           }
+          ticking = false;
         });
-      }, 150); // Increased debounce delay for better performance
+        ticking = true;
+      }
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
@@ -144,34 +147,11 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
     };
   }, [currentIndex, promotionalCards.length]);
 
-  // GSAP entrance animation (only once)
-  useEffect(() => {
-    if (carouselRef.current) {
-      const animation = gsap.fromTo(
-        carouselRef.current,
-        {
-          y: 30,
-          opacity: 0,
-        },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.6,
-          ease: 'power2.out',
-        }
-      );
-      
-      return () => {
-        animation.kill(); // Clean up animation on unmount
-      };
-    }
-  }, []);
-
+  // Removed GSAP entrance animation for better performance - use CSS instead
   return (
     <div 
       ref={carouselRef}
-      className="pb-6"
-      style={{ opacity: 0 }}
+      className="pb-6 animate-fade-in"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

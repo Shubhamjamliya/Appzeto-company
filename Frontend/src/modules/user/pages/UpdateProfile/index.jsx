@@ -23,11 +23,11 @@ const UpdateProfile = () => {
   const handleSave = () => {
     // Save profile data (can be extended to save to localStorage or API)
     toast.success('Profile updated successfully!');
-    navigate('/account');
+    navigate('/user/account');
   };
 
   const handleBack = () => {
-    navigate('/account');
+    navigate('/user/account');
   };
 
   return (

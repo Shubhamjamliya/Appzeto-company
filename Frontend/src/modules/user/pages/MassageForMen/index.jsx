@@ -53,85 +53,82 @@ const MassageForMen = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section (optimized)
+  // Optimized header visibility using IntersectionObserver (better performance than scroll listener)
   useEffect(() => {
-    let sectionCache = null; // Cache section elements
-    
-    const handleScroll = () => {
-      // Check if banner is still visible on screen
-      let bannerVisible = false;
-      if (bannerRef.current) {
-        const rect = bannerRef.current.getBoundingClientRect();
-        bannerVisible = rect.bottom > 0;
-      }
+    if (!bannerRef.current) return;
 
-      // Show sticky header when banner is completely out of screen
-      const shouldShowHeader = !bannerVisible;
-      setShowStickyHeader(shouldShowHeader);
-
-      // Detect sections when scrolled past banner (cache elements)
-      if (shouldShowHeader) {
-        // Cache section elements on first check
-        if (!sectionCache) {
-          const sectionIds = ['pain-relief', 'stress-relief', 'post-workout'];
-          sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+    // Use IntersectionObserver for banner visibility (more efficient)
+    const bannerObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setShowStickyHeader(!entry.isIntersecting);
+        if (entry.isIntersecting) {
+          setCurrentSection('');
         }
+      },
+      { threshold: 0, rootMargin: '0px' }
+    );
 
-        const headerOffset = 57;
-        let activeSection = '';
-        const titleMap = {
-          'pain-relief': 'Pain relief',
-          'stress-relief': 'Stress relief',
-          'post-workout': 'Post workout',
-        };
+    bannerObserver.observe(bannerRef.current);
 
-        // Check sections in reverse order (bottom to top)
-        for (let i = sectionCache.length - 1; i >= 0; i--) {
-          const element = sectionCache[i];
-          if (element) {
-            const sectionRect = element.getBoundingClientRect();
-            if (sectionRect.top <= headerOffset + 50) {
-              activeSection = titleMap[element.id] || '';
-              break;
+    // Section detection only when header is visible (throttled)
+    let sectionCache = null;
+    let ticking = false;
+    
+    const detectSection = () => {
+      if (!ticking && showStickyHeader) {
+        window.requestAnimationFrame(() => {
+          if (!sectionCache) {
+            const sectionIds = ['pain-relief', 'stress-relief', 'post-workout'];
+            sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+          }
+
+          const headerOffset = 57;
+          let activeSection = '';
+          const titleMap = {
+            'pain-relief': 'Pain relief',
+            'stress-relief': 'Stress relief',
+            'post-workout': 'Post workout',
+          };
+
+          for (let i = sectionCache.length - 1; i >= 0; i--) {
+            const element = sectionCache[i];
+            if (element) {
+              const sectionRect = element.getBoundingClientRect();
+              if (sectionRect.top <= headerOffset + 50) {
+                activeSection = titleMap[element.id] || '';
+                break;
+              }
             }
           }
-        }
 
-        setCurrentSection(activeSection);
-      } else {
-        setCurrentSection('');
-      }
-    };
-
-    // Optimized scroll handler with throttling
-    let ticking = false;
-    const optimizedHandler = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
+          setCurrentSection(activeSection);
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', optimizedHandler, { passive: true });
-    const timeoutId = setTimeout(handleScroll, 400); // Increased delay for better performance
+    // Throttled scroll listener only for section detection
+    const scrollHandler = () => {
+      if (showStickyHeader) {
+        detectSection();
+      }
+    };
+
+    window.addEventListener('scroll', scrollHandler, { passive: true });
     
     return () => {
-      window.removeEventListener('scroll', optimizedHandler);
-      clearTimeout(timeoutId);
+      bannerObserver.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
     };
-  }, []);
-
-  const [isExiting, setIsExiting] = React.useState(false);
+  }, [showStickyHeader]);
 
   const handleBack = () => {
-    setIsExiting(true);
     // Reset scroll position first
     window.scrollTo({ top: 0, behavior: 'instant' });
     // Navigate immediately
-    navigate('/', { replace: true, state: { scrollToTop: true } });
+    navigate('/user', { replace: true, state: { scrollToTop: true } });
   };
 
   const handleSearch = () => {
@@ -207,10 +204,7 @@ const MassageForMen = () => {
   }
 
   return (
-    <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
-      style={{ willChange: isExiting ? 'transform' : 'auto' }}
-    >
+    <div className="min-h-screen bg-white pb-20">
       {/* Sticky Header - appears on scroll */}
       <StickyHeader
         title="Massage for Men"
@@ -367,4 +361,5 @@ const MassageForMen = () => {
 };
 
 export default MassageForMen;
+
 

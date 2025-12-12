@@ -58,20 +58,30 @@ const SalonForWomen = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section (optimized)
+  // Optimized header visibility using IntersectionObserver
   useEffect(() => {
-    let sectionCache = null; // Cache section elements
-    
-    const handleScroll = () => {
-      if (bannerRef.current) {
-        const rect = bannerRef.current.getBoundingClientRect();
-        const shouldShowHeader = rect.bottom <= 0;
-        
-        setShowStickyHeader(shouldShowHeader);
+    if (!bannerRef.current) return;
 
-        // Detect sections when scrolled past banner (cache elements)
-        if (shouldShowHeader) {
-          // Cache section elements on first check
+    const bannerObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setShowStickyHeader(!entry.isIntersecting);
+        if (entry.isIntersecting) {
+          setCurrentSection('');
+        }
+      },
+      { threshold: 0, rootMargin: '0px' }
+    );
+
+    bannerObserver.observe(bannerRef.current);
+
+    // Section detection only when header is visible (throttled)
+    let sectionCache = null;
+    let ticking = false;
+    
+    const detectSection = () => {
+      if (!ticking && showStickyHeader) {
+        window.requestAnimationFrame(() => {
           if (!sectionCache) {
             const sectionIds = ['super-saver-packages', 'waxing-threading', 'korean-facial'];
             sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
@@ -85,7 +95,6 @@ const SalonForWomen = () => {
             'korean-facial': 'Korean facial',
           };
 
-          // Check sections in reverse order (bottom to top)
           for (let i = sectionCache.length - 1; i >= 0; i--) {
             const element = sectionCache[i];
             if (element) {
@@ -98,41 +107,31 @@ const SalonForWomen = () => {
           }
 
           setCurrentSection(activeSection);
-        } else {
-          setCurrentSection('');
-        }
-      }
-    };
-
-    // Optimized scroll handler with throttling
-    let ticking = false;
-    const optimizedHandler = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', optimizedHandler, { passive: true });
-    const timeoutId = setTimeout(handleScroll, 300); // Increased delay for better performance
+    const scrollHandler = () => {
+      if (showStickyHeader) {
+        detectSection();
+      }
+    };
+
+    window.addEventListener('scroll', scrollHandler, { passive: true });
     
     return () => {
-      window.removeEventListener('scroll', optimizedHandler);
-      clearTimeout(timeoutId);
+      bannerObserver.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
     };
-  }, []); // Empty deps - only run once on mount
-
-  const [isExiting, setIsExiting] = React.useState(false);
+  }, [showStickyHeader]);
 
   const handleBack = () => {
-    setIsExiting(true);
     // Reset scroll position first
     window.scrollTo({ top: 0, behavior: 'instant' });
     // Navigate immediately
-    navigate('/', { replace: true, state: { scrollToTop: true } });
+    navigate('/user', { replace: true, state: { scrollToTop: true } });
   };
 
   const handleSearch = () => {
@@ -225,10 +224,7 @@ const SalonForWomen = () => {
   }
 
   return (
-    <div 
-      className="min-h-screen bg-white pb-20"
-      style={{ willChange: isExiting ? 'transform' : 'auto' }}
-    >
+    <div className="min-h-screen bg-white pb-20">
       {/* Sticky Header - appears on scroll */}
       <StickyHeader
         title="Salon Prime"
@@ -398,4 +394,5 @@ const SalonForWomen = () => {
 };
 
 export default SalonForWomen;
+
 

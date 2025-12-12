@@ -28,7 +28,6 @@ const SofaCarpetCleaning = () => {
   const [currentSection, setCurrentSection] = useState('');
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [showCategoryCartModal, setShowCategoryCartModal] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
 
   // Refs for sections
   const bannerRef = useRef(null);
@@ -55,94 +54,85 @@ const SofaCarpetCleaning = () => {
     };
   }, []);
 
-  // Handle scroll to show/hide sticky header and detect current section
+  // Optimized header visibility using IntersectionObserver
   useEffect(() => {
-    // Use scroll-based detection (simple and reliable)
+    if (!bannerRef.current) return;
+
+    const bannerObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setShowStickyHeader(!entry.isIntersecting);
+        if (entry.isIntersecting) {
+          setCurrentSection('');
+        }
+      },
+      { threshold: 0, rootMargin: '0px' }
+    );
+
+    bannerObserver.observe(bannerRef.current);
+
+    // Section detection only when header is visible (throttled)
+    let sectionCache = null;
     let ticking = false;
-    let lastScrollY = window.scrollY;
-    const handleScroll = () => {
-      if (!ticking) {
+    
+    const detectSection = () => {
+      if (!ticking && showStickyHeader) {
         window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-          const isScrollingUp = currentScrollY < lastScrollY;
-          lastScrollY = currentScrollY;
-          
-          if (bannerRef.current) {
-            const rect = bannerRef.current.getBoundingClientRect();
-            
-            // Priority 1: If scrolling up AND near top AND banner is becoming visible, hide header immediately
-            const isNearTop = currentScrollY < 150;
-            const bannerBecomingVisible = rect.top < 300; // Banner is close to or in viewport
-            
-            if (isScrollingUp && isNearTop && bannerBecomingVisible) {
-              setShowStickyHeader(false);
-              setCurrentSection('');
-              ticking = false;
-              return;
-            }
-            
-            // Priority 2: Normal scrolling - show header when banner is scrolled past
-            const bannerScrolledPast = rect.bottom <= 0;
-            setShowStickyHeader(bannerScrolledPast);
+          if (!sectionCache) {
+            const sectionIds = [
+              'sofa-cleaning',
+              'carpet',
+              'dining-table',
+              'mattress',
+            ];
+            sectionCache = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+          }
 
-            // Detect sections when scrolled past banner
-            if (bannerScrolledPast) {
-              const sectionIds = [
-                'sofa-cleaning',
-                'carpet',
-                'dining-table',
-                'mattress',
-              ];
+          const headerOffset = 57;
+          let activeSection = '';
+          const titleMap = {
+            'sofa-cleaning': 'Sofa cleaning',
+            'carpet': 'Carpet',
+            'dining-table': 'Dining table',
+            'mattress': 'Mattress',
+          };
 
-              const headerOffset = 57;
-              let activeSection = '';
-
-              // Check sections in reverse order (bottom to top)
-              for (let i = sectionIds.length - 1; i >= 0; i--) {
-                const element = document.getElementById(sectionIds[i]);
-                if (element) {
-                  const sectionRect = element.getBoundingClientRect();
-                  if (sectionRect.top <= headerOffset + 50) {
-                    const titleMap = {
-                      'sofa-cleaning': 'Sofa cleaning',
-                      'carpet': 'Carpet',
-                      'dining-table': 'Dining table',
-                      'mattress': 'Mattress',
-                    };
-                    activeSection = titleMap[sectionIds[i]];
-                    break;
-                  }
-                }
+          for (let i = sectionCache.length - 1; i >= 0; i--) {
+            const element = sectionCache[i];
+            if (element) {
+              const sectionRect = element.getBoundingClientRect();
+              if (sectionRect.top <= headerOffset + 50) {
+                activeSection = titleMap[element.id] || '';
+                break;
               }
-
-              setCurrentSection(activeSection);
-            } else {
-              setCurrentSection('');
             }
           }
+
+          setCurrentSection(activeSection);
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check - wait a bit for refs to be ready
-    const timeoutId = setTimeout(() => {
-      handleScroll();
-    }, 200);
+    const scrollHandler = () => {
+      if (showStickyHeader) {
+        detectSection();
+      }
+    };
+
+    window.addEventListener('scroll', scrollHandler, { passive: true });
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timeoutId);
+      bannerObserver.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
     };
-  }, []);
+  }, [showStickyHeader]);
 
   const handleBack = () => {
-    setIsExiting(true);
     window.scrollTo({ top: 0, behavior: 'instant' });
     // Navigate immediately
-    navigate('/', { replace: true, state: { scrollToTop: true } });
+    navigate('/user', { replace: true, state: { scrollToTop: true } });
   };
 
   const handleSearch = () => {
@@ -217,10 +207,7 @@ const SofaCarpetCleaning = () => {
   }
 
   return (
-    <div 
-      className={`min-h-screen bg-white pb-20 ${isExiting ? 'animate-page-exit' : 'animate-page-enter'}`}
-      style={{ willChange: isExiting ? 'transform' : 'auto' }}
-    >
+    <div className="min-h-screen bg-white pb-20">
       {/* Sticky Header - appears on scroll */}
       <StickyHeader
         title="Sofa & Carpet Cleaning"

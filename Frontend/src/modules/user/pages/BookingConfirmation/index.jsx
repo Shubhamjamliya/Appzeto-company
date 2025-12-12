@@ -43,7 +43,7 @@ const BookingConfirmation = () => {
         <div className="text-center">
           <p className="text-gray-500">Booking not found</p>
           <button
-            onClick={() => navigate('/my-bookings')}
+            onClick={() => navigate('/user/my-bookings')}
             className="mt-4 px-4 py-2 rounded-lg text-white"
             style={{ backgroundColor: themeColors.button }}
           >
@@ -55,11 +55,11 @@ const BookingConfirmation = () => {
   }
 
   const handleViewDetails = () => {
-    navigate(`/booking/${booking.id}`, { state: { booking } });
+    navigate(`/user/booking/${booking.id}`, { state: { booking } });
   };
 
   const handleGoHome = () => {
-    navigate('/', { replace: true });
+    navigate('/user', { replace: true });
   };
 
   return (
