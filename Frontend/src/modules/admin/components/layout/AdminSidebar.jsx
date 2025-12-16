@@ -24,7 +24,7 @@ const iconMap = {
   Vendors: FiBriefcase,
   Workers: FiUser,
   Bookings: FiShoppingBag,
-  "Service Categories": FiGrid,
+  "Service Catalog": FiGrid,
   Payments: FiDollarSign,
   Reports: FiFileText,
   Notifications: FiBell,
@@ -57,10 +57,11 @@ const getChildRoute = (parentRoute, childName) => {
       "Completed Bookings": "/admin/bookings/completed",
       "Booking Analytics": "/admin/bookings/analytics",
     },
-    "/admin/services": {
-      "Manage Categories": "/admin/services/categories",
-      "Category Settings": "/admin/services/settings",
-      "Skills Management": "/admin/services/skills",
+    "/admin/user-categories": {
+      "Home": "/admin/user-categories/home",
+      "Manage Categories": "/admin/user-categories/categories",
+      "Manage Services": "/admin/user-categories/services",
+      "Manage Sections": "/admin/user-categories/sections",
     },
     "/admin/payments": {
       "Payment Overview": "/admin/payments/overview",
@@ -188,10 +189,9 @@ const AdminSidebar = ({ isOpen, onClose }) => {
         <div
           className={`
             flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 cursor-pointer
-            ${
-              active
-                ? "bg-primary-600 text-white shadow-sm"
-                : "text-gray-300 hover:bg-slate-700"
+            ${active
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-300 hover:bg-slate-700"
             }
           `}
           onClick={() => {
@@ -202,11 +202,10 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             }
           }}>
           <Icon
-            className={`text-xl flex-shrink-0 ${
-              active ? "text-white" : "text-gray-400"
-            }`}
+            className={`text-xl flex-shrink-0 ${active ? "text-white" : "text-gray-400"
+              }`}
           />
-          <span className="font-semibold flex-1 text-[15px]">{item.title}</span>
+          <span className="font-semibold flex-1 text-base">{item.title}</span>
           {hasChildren && (
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -240,11 +239,10 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                         handleMenuItemClick(childRoute, item.title)
                       }
                       className={`
-                        px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer
-                        ${
-                          isChildActive
-                            ? "bg-primary-50 text-white font-medium"
-                            : "text-gray-400 hover:bg-slate-700"
+                        px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer
+                        ${isChildActive
+                          ? "bg-primary-50 text-white font-medium"
+                          : "text-gray-400 hover:bg-slate-700"
                         }
                       `}>
                       {child}
@@ -261,7 +259,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
   // Sidebar content
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-slate-800 shadow-xl">
+    <div className="h-full flex flex-col bg-slate-800">
       {/* Header Section */}
       <div className="p-4 border-b border-slate-700 bg-slate-900">
         <div className="flex items-center justify-between gap-3">
@@ -275,7 +273,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               <FiUser className="text-white text-xl" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-white text-sm truncate">
+              <h2 className="font-semibold text-white text-base truncate">
                 Admin User
               </h2>
               <p className="text-xs text-gray-400 truncate">
@@ -283,7 +281,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               </p>
             </div>
           </div>
-          
+
           {/* Close Button - Mobile Only */}
           <button
             onClick={onClose}

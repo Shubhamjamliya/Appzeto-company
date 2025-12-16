@@ -31,6 +31,8 @@ const lazyLoad = (importFunc) => {
   });
 };
 
+const Login = lazyLoad(() => import('../pages/login'));
+const Signup = lazyLoad(() => import('../pages/signup'));
 const Dashboard = lazyLoad(() => import('../pages/Dashboard'));
 const AssignedJobs = lazyLoad(() => import('../pages/AssignedJobs'));
 const JobDetails = lazyLoad(() => import('../pages/JobDetails'));
@@ -71,6 +73,8 @@ const WorkerRoutes = () => {
       <Suspense fallback={<LoadingFallback />}>
         <PageTransition>
           <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<Navigate to="dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/jobs" element={<AssignedJobs />} />

@@ -44,12 +44,13 @@
     ]
   },
   {
-    "title": "Service Categories",
-    "route": "/admin/services",
+    "title": "Service Catalog",
+    "route": "/admin/user-categories",
     "children": [
+      "Home",
       "Manage Categories",
-      "Category Settings",
-      "Skills Management"
+      "Manage Services",
+      "Manage Sections"
     ]
   },
   {
@@ -92,4 +93,3 @@
     ]
   }
 ]
-

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import BottomNav from '../../components/layout/BottomNav';
 import {
@@ -63,6 +64,16 @@ const Account = () => {
 
   const handleEditClick = () => {
     navigate('/user/update-profile');
+  };
+
+  const handleLogout = () => {
+    // Clear user auth data
+    localStorage.removeItem('userAuth');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userData');
+    // Clear any other user-related data
+    toast.success('Logged out successfully');
+    navigate('/user/login');
   };
 
 
@@ -307,23 +318,19 @@ const Account = () => {
         {/* Logout Button with Modern Design */}
         <div className="px-4 mb-3">
           <button
-            onClick={() => {
-              // Handle logout
-            }}
-            className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all"
+            onClick={handleLogout}
+            className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all text-white"
             style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-              border: '2px solid rgba(239, 68, 68, 0.2)',
-              color: '#ef4444',
-              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.1)',
+              backgroundColor: '#2874F0',
+              boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)',
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
-              e.target.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+              e.target.style.backgroundColor = '#1e5fd4';
+              e.target.style.boxShadow = '0 6px 16px rgba(40, 116, 240, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)';
-              e.target.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+              e.target.style.backgroundColor = '#2874F0';
+              e.target.style.boxShadow = '0 4px 12px rgba(40, 116, 240, 0.3)';
             }}
           >
             Logout

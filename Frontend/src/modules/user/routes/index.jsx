@@ -56,6 +56,8 @@ const MyPlan = lazyLoad(() => import('../pages/MyPlan'));
 const MyRating = lazyLoad(() => import('../pages/MyRating'));
 const AboutAppzeto = lazyLoad(() => import('../pages/AboutAppzeto'));
 const UpdateProfile = lazyLoad(() => import('../pages/UpdateProfile'));
+const Login = lazyLoad(() => import('../pages/login'));
+const Signup = lazyLoad(() => import('../pages/signup'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -103,6 +105,8 @@ const UserRoutes = () => {
             <Route path="/my-rating" element={<MyRating />} />
             <Route path="/about-appzeto" element={<AboutAppzeto />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
           </Routes>
         </PageTransition>
       </Suspense>

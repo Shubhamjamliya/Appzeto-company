@@ -2,10 +2,13 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
 
+// Login page (not lazy loaded for faster initial access)
+import Login from '../pages/login';
+
 // Lazy load admin pages for code splitting
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Settings = lazy(() => import('../pages/Settings'));
-const Services = lazy(() => import('../pages/Services'));
+const UserCategories = lazy(() => import('../pages/UserCategories'));
 const Users = lazy(() => import('../pages/Users'));
 const Vendors = lazy(() => import('../pages/Vendors'));
 const Workers = lazy(() => import('../pages/Workers'));
@@ -28,6 +31,10 @@ const AdminRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
+        {/* Login route - outside of layout */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Protected routes - inside layout */}
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
@@ -35,7 +42,7 @@ const AdminRoutes = () => {
           <Route path="vendors/*" element={<Vendors />} />
           <Route path="workers/*" element={<Workers />} />
           <Route path="bookings/*" element={<Bookings />} />
-          <Route path="services/*" element={<Services />} />
+          <Route path="user-categories/*" element={<UserCategories />} />
           <Route path="payments/*" element={<Payments />} />
           <Route path="reports/*" element={<Reports />} />
           <Route path="notifications/*" element={<Notifications />} />

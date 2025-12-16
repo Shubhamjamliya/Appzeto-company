@@ -23,6 +23,7 @@ const AdminHeader = ({ onMenuClick }) => {
 
   // Get page name from pathname
   const getPageName = (pathname) => {
+    if (pathname.startsWith('/admin/user-categories')) return 'Service Catalog';
     const path = pathname.split('/').pop() || 'dashboard';
     const pageNames = {
       dashboard: 'Dashboard',
@@ -30,7 +31,7 @@ const AdminHeader = ({ onMenuClick }) => {
       vendors: 'Vendors',
       workers: 'Workers',
       bookings: 'Bookings',
-      services: 'Service Categories',
+      'user-categories': 'Service Catalog',
       payments: 'Payments',
       reports: 'Reports',
       notifications: 'Notifications',
@@ -42,8 +43,8 @@ const AdminHeader = ({ onMenuClick }) => {
   const pageName = getPageName(location.pathname);
 
   return (
-    <header 
-      className="bg-white border-b border-gray-200 fixed top-0 left-0 lg:left-64 right-0 z-30"
+    <header
+      className="bg-white fixed top-0 left-0 lg:left-64 right-0 z-30"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
@@ -57,11 +58,11 @@ const AdminHeader = ({ onMenuClick }) => {
             className="lg:hidden text-gray-700"
             icon={FiMenu}
           />
-          
+
           {/* Page Heading - Desktop Only */}
           <div className="hidden lg:block">
             <h1 className="text-2xl font-bold text-gray-800 mb-1">{pageName}</h1>
-            <p className="text-sm text-gray-600">Welcome back! Here's your business overview.</p>
+            <p className="text-base text-gray-600">Welcome back! Here's your business overview.</p>
           </div>
         </div>
 

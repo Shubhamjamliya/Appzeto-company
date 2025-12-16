@@ -34,6 +34,8 @@ const lazyLoad = (importFunc) => {
   });
 };
 
+const Login = lazyLoad(() => import('../pages/login'));
+const Signup = lazyLoad(() => import('../pages/signup'));
 const Dashboard = lazyLoad(() => import('../pages/Dashboard'));
 const BookingAlert = lazyLoad(() => import('../pages/BookingAlert'));
 const BookingDetails = lazyLoad(() => import('../pages/BookingDetails'));
@@ -84,6 +86,8 @@ const VendorRoutes = () => {
       <Suspense fallback={<LoadingFallback />}>
         <PageTransition>
           <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<Navigate to="dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/booking-alert/:id" element={<BookingAlert />} />

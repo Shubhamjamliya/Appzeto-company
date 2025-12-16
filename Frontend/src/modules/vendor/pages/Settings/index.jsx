@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBell, FiVolume2, FiGlobe, FiInfo, FiLogOut, FiTrash2 } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -58,13 +59,20 @@ const Settings = () => {
   };
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      // Clear vendor data
-      localStorage.removeItem('vendorProfile');
-      localStorage.removeItem('vendorSettings');
-      // Navigate to login (or home)
-      navigate('/');
-    }
+    // Clear all vendor data
+    localStorage.removeItem('vendorProfile');
+    localStorage.removeItem('vendorSettings');
+    localStorage.removeItem('vendorToken');
+    localStorage.removeItem('vendorAuth');
+    localStorage.removeItem('vendorData');
+    localStorage.removeItem('vendorWorkers');
+    localStorage.removeItem('vendorAcceptedBookings');
+    localStorage.removeItem('vendorWallet');
+    localStorage.removeItem('vendorTransactions');
+    // Show success message
+    toast.success('Logged out successfully');
+    // Navigate to vendor login
+    navigate('/vendor/login');
   };
 
   const handleDeleteAccount = () => {
@@ -202,11 +210,17 @@ const Settings = () => {
 
         {/* Logout */}
         <button
-          onClick={handleLogout}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleLogout();
+          }}
           className="w-full py-4 rounded-xl font-semibold text-white mb-4 flex items-center justify-center gap-2 transition-all active:scale-95"
           style={{
             background: themeColors.button,
             boxShadow: `0 4px 12px ${themeColors.button}40`,
+            cursor: 'pointer'
           }}
         >
           <FiLogOut className="w-5 h-5" />

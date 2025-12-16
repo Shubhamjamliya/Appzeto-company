@@ -1,22 +1,24 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiChevronRight, FiTag } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiChevronRight, FiTag, FiLogOut } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors, vendorTheme } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
 const Profile = () => {
   const navigate = useNavigate();
+  // Initialize with empty/default values - will be loaded from localStorage
   const [profile, setProfile] = useState({
-    name: 'Worker Name',
-    phone: '+91 9876543210',
-    email: 'worker@example.com',
-    address: 'Indore, Madhya Pradesh',
-    rating: 4.7,
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    rating: 0,
     totalJobs: 0,
     completedJobs: 0,
-    serviceCategory: 'Electrician',
-    skills: ['Fan Repair', 'AC', 'Lightings'],
+    serviceCategory: '',
+    skills: [],
   });
 
   useLayoutEffect(() => {
@@ -41,16 +43,51 @@ const Profile = () => {
       try {
         const workerProfile = JSON.parse(localStorage.getItem('workerProfile') || '{}');
         if (Object.keys(workerProfile).length > 0) {
-          // Handle migration from category to serviceCategory
+          // Use actual saved values - don't override with defaults if values exist (even if empty)
           const updatedProfile = {
-            ...workerProfile,
-            serviceCategory: workerProfile.serviceCategory || workerProfile.category || '',
-            skills: workerProfile.skills || []
+            name: workerProfile.name ?? 'Worker Name',
+            phone: workerProfile.phone ?? '+91 9876543210',
+            email: workerProfile.email ?? 'worker@example.com',
+            address: workerProfile.address ?? 'Indore, Madhya Pradesh',
+            rating: workerProfile.rating ?? 4.7,
+            totalJobs: workerProfile.totalJobs ?? 0,
+            completedJobs: workerProfile.completedJobs ?? 0,
+            serviceCategory: workerProfile.serviceCategory ?? workerProfile.category ?? '',
+            skills: Array.isArray(workerProfile.skills) ? workerProfile.skills : [],
+            photo: workerProfile.photo ?? null,
           };
-          setProfile(prev => ({ ...prev, ...updatedProfile }));
+          console.log('Profile page - Loaded profile:', updatedProfile);
+          setProfile(updatedProfile);
+        } else {
+          // Set default values if no profile exists (same as EditProfile)
+          setProfile({
+            name: 'Worker Name',
+            phone: '+91 9876543210',
+            email: 'worker@example.com',
+            address: 'Indore, Madhya Pradesh',
+            rating: 4.7,
+            totalJobs: 0,
+            completedJobs: 0,
+            serviceCategory: '',
+            skills: [],
+            photo: null,
+          });
         }
       } catch (error) {
         console.error('Error loading profile:', error);
+        // Set defaults on error too
+        setProfile({
+          name: 'Worker Name',
+          phone: '+91 9876543210',
+          email: 'worker@example.com',
+          address: 'Indore, Madhya Pradesh',
+          rating: 4.7,
+          totalJobs: 0,
+          completedJobs: 0,
+          serviceCategory: '',
+          skills: [],
+          photo: null,
+        });
       }
     };
 
@@ -61,6 +98,21 @@ const Profile = () => {
       window.removeEventListener('workerProfileUpdated', loadProfile);
     };
   }, []);
+
+  const handleLogout = () => {
+    // Clear all worker data
+    localStorage.removeItem('workerProfile');
+    localStorage.removeItem('workerSettings');
+    localStorage.removeItem('workerToken');
+    localStorage.removeItem('workerAuth');
+    localStorage.removeItem('workerData');
+    localStorage.removeItem('workerJobs');
+    localStorage.removeItem('workerAssignedJobs');
+    // Show success message
+    toast.success('Logged out successfully');
+    // Navigate to worker login
+    navigate('/worker/login');
+  };
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
@@ -242,9 +294,9 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Edit Profile Button */}
+        {/* Settings Button */}
         <button
-          onClick={() => navigate('/worker/profile/edit')}
+          onClick={() => navigate('/worker/settings')}
           className="w-full bg-white rounded-xl p-4 flex items-center justify-between shadow-md transition-all active:scale-95 mb-4"
           style={{
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
@@ -252,22 +304,28 @@ const Profile = () => {
         >
           <div className="flex items-center gap-3">
             <FiEdit2 className="w-5 h-5" style={{ color: themeColors.button }} />
-            <span className="font-semibold text-gray-800">Edit Profile</span>
+            <span className="font-semibold text-gray-800">Settings</span>
           </div>
           <FiChevronRight className="w-5 h-5 text-gray-400" />
         </button>
 
-        {/* Settings Button */}
+        {/* Logout Button */}
         <button
-          onClick={() => navigate('/worker/settings')}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleLogout();
+          }}
           className="w-full bg-white rounded-xl p-4 flex items-center justify-between shadow-md transition-all active:scale-95"
           style={{
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            cursor: 'pointer'
           }}
         >
           <div className="flex items-center gap-3">
-            <FiEdit2 className="w-5 h-5" style={{ color: themeColors.button }} />
-            <span className="font-semibold text-gray-800">Settings</span>
+            <FiLogOut className="w-5 h-5 text-red-500" />
+            <span className="font-semibold text-red-500">Logout</span>
           </div>
           <FiChevronRight className="w-5 h-5 text-gray-400" />
         </button>

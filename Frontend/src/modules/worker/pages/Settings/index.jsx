@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBell, FiVolume2, FiGlobe, FiLogOut } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -59,9 +60,18 @@ const Settings = () => {
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
+      // Clear all worker data
       localStorage.removeItem('workerProfile');
       localStorage.removeItem('workerSettings');
-      navigate('/');
+      localStorage.removeItem('workerToken');
+      localStorage.removeItem('workerAuth');
+      localStorage.removeItem('workerData');
+      localStorage.removeItem('workerJobs');
+      localStorage.removeItem('workerAssignedJobs');
+      // Show success message
+      toast.success('Logged out successfully');
+      // Navigate to worker login
+      navigate('/worker/login');
     }
   };
 

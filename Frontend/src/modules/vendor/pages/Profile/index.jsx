@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiArrowRight, FiFileText, FiSettings, FiChevronRight, FiCreditCard, FiTarget } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiArrowRight, FiFileText, FiSettings, FiChevronRight, FiCreditCard, FiTarget, FiLogOut } from 'react-icons/fi';
 import { FaWallet } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -471,7 +472,10 @@ const Profile = () => {
             {/* About Appzeto */}
             <button
               onClick={() => navigate('/vendor/about-appzeto')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 active:scale-[0.98]"
+              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
+              style={{
+                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
               }}
@@ -495,6 +499,48 @@ const Profile = () => {
               <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
             </button>
           </div>
+        </div>
+
+        {/* Logout Button */}
+        <div className="px-4 mt-4 mb-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Clear all vendor data
+              localStorage.removeItem('vendorProfile');
+              localStorage.removeItem('vendorSettings');
+              localStorage.removeItem('vendorToken');
+              localStorage.removeItem('vendorAuth');
+              localStorage.removeItem('vendorData');
+              localStorage.removeItem('vendorWorkers');
+              localStorage.removeItem('vendorAcceptedBookings');
+              localStorage.removeItem('vendorWallet');
+              localStorage.removeItem('vendorTransactions');
+              // Show success message
+              toast.success('Logged out successfully');
+              // Navigate to vendor login
+              navigate('/vendor/login');
+            }}
+            className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all text-white flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: '#2874F0',
+              boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#1e5fd4';
+              e.target.style.boxShadow = '0 6px 16px rgba(40, 116, 240, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#2874F0';
+              e.target.style.boxShadow = '0 4px 12px rgba(40, 116, 240, 0.3)';
+            }}
+          >
+            <FiLogOut className="w-5 h-5" />
+            Logout
+          </button>
         </div>
       </main>
 
