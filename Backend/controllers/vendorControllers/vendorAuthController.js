@@ -1,0 +1,268 @@
+const Vendor = require('../../models/Vendor');
+const { createOTPToken, verifyOTPToken, markTokenAsUsed } = require('../../services/otpService');
+const { generateTokenPair } = require('../../utils/tokenService');
+const { TOKEN_TYPES, USER_ROLES, VENDOR_STATUS } = require('../../utils/constants');
+const { validationResult } = require('express-validator');
+const { uploadFile } = require('../../services/cloudinaryService');
+
+/**
+ * Send OTP for vendor registration/login
+ */
+const sendOTP = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, email } = req.body;
+
+    const existingVendor = await Vendor.findOne({ phone });
+
+    const { token, otp } = await createOTPToken({
+      userId: existingVendor ? existingVendor._id : null,
+      phone,
+      email: email || null,
+      type: TOKEN_TYPES.PHONE_VERIFICATION,
+      expiryMinutes: 10
+    });
+
+    console.log(`OTP for vendor ${phone}: ${otp}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      token
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP. Please try again.'
+    });
+  }
+};
+
+/**
+ * Register vendor with OTP and documents
+ */
+const register = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { name, email, phone, aadhar, pan, service, otp, token } = req.body;
+
+    // Verify OTP
+    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    if (!verification.success) {
+      return res.status(400).json({
+        success: false,
+        message: verification.message
+      });
+    }
+
+    if (verification.tokenDoc.token !== token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification token'
+      });
+    }
+
+    // Check if vendor already exists
+    const existingVendor = await Vendor.findOne({ $or: [{ phone }, { email }] });
+    if (existingVendor) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor already exists. Please login.'
+      });
+    }
+
+    // Upload documents (assuming they're sent as base64 or URLs)
+    // In production, use multer middleware for file uploads
+    const aadharDoc = req.body.aadharDocument || null;
+    const panDoc = req.body.panDocument || null;
+    const otherDocs = req.body.otherDocuments || [];
+
+    // TODO: Upload documents to Cloudinary if they're files
+    // const aadharUpload = aadharDoc ? await uploadFile(aadharDoc, { folder: 'vendors/aadhar' }) : null;
+    // const panUpload = panDoc ? await uploadFile(panDoc, { folder: 'vendors/pan' }) : null;
+
+    // Create vendor (pending approval)
+    const vendor = await Vendor.create({
+      name,
+      email,
+      phone,
+      service,
+      aadhar: {
+        number: aadhar,
+        document: aadharDoc // In production, use uploaded URL
+      },
+      pan: {
+        number: pan,
+        document: panDoc // In production, use uploaded URL
+      },
+      otherDocuments: otherDocs,
+      approvalStatus: VENDOR_STATUS.PENDING,
+      isPhoneVerified: true
+    });
+
+    // Mark token as used
+    await markTokenAsUsed(verification.tokenDoc._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is pending admin approval.',
+      vendor: {
+        id: vendor._id,
+        name: vendor.name,
+        email: vendor.email,
+        phone: vendor.phone,
+        approvalStatus: vendor.approvalStatus
+      }
+    });
+  } catch (error) {
+    console.error('Vendor registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed. Please try again.'
+    });
+  }
+};
+
+/**
+ * Login vendor with OTP (only if approved)
+ */
+const login = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, otp, token } = req.body;
+
+    // Verify OTP
+    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    if (!verification.success) {
+      return res.status(400).json({
+        success: false,
+        message: verification.message
+      });
+    }
+
+    if (verification.tokenDoc.token !== token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification token'
+      });
+    }
+
+    // Find vendor
+    const vendor = await Vendor.findOne({ phone });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found. Please sign up first.'
+      });
+    }
+
+    // Check approval status
+    if (vendor.approvalStatus === VENDOR_STATUS.PENDING) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending admin approval. Please wait for approval.'
+      });
+    }
+
+    if (vendor.approvalStatus === VENDOR_STATUS.REJECTED) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been rejected. Please contact support.'
+      });
+    }
+
+    if (vendor.approvalStatus === VENDOR_STATUS.SUSPENDED) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.'
+      });
+    }
+
+    if (!vendor.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact support.'
+      });
+    }
+
+    // Mark token as used
+    await markTokenAsUsed(verification.tokenDoc._id);
+
+    // Generate JWT tokens
+    const tokens = generateTokenPair({
+      userId: vendor._id,
+      role: USER_ROLES.VENDOR
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      vendor: {
+        id: vendor._id,
+        name: vendor.name,
+        email: vendor.email,
+        phone: vendor.phone,
+        businessName: vendor.businessName,
+        service: vendor.service
+      },
+      ...tokens
+    });
+  } catch (error) {
+    console.error('Vendor login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Login failed. Please try again.'
+    });
+  }
+};
+
+/**
+ * Logout vendor
+ */
+const logout = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Logout failed'
+    });
+  }
+};
+
+module.exports = {
+  sendOTP,
+  register,
+  login,
+  logout
+};
+
