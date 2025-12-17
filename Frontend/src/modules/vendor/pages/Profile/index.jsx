@@ -4,6 +4,7 @@ import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiArro
 import { FaWallet } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
+import { vendorAuthService } from '../../../../services/authService';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
@@ -18,18 +19,9 @@ const Profile = () => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
   
-  const [profile, setProfile] = useState({
-    name: 'Vendor Name',
-    businessName: 'Business Name',
-    phone: '+91 9876543210',
-    email: 'vendor@example.com',
-    address: 'Indore, Madhya Pradesh',
-    rating: 4.8,
-    totalJobs: 0,
-    completionRate: 0,
-    serviceCategory: 'Electrician',
-    skills: ['Fan Repair', 'AC', 'Lightings'],
-  });
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -49,24 +41,119 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
-    const loadProfile = () => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const vendorProfile = JSON.parse(localStorage.getItem('vendorProfile') || '{}');
-        if (Object.keys(vendorProfile).length > 0) {
-          setProfile(prev => ({ ...prev, ...vendorProfile }));
+        const response = await vendorAuthService.getProfile();
+        if (response.success) {
+          const vendorData = response.vendor;
+          // Format address
+          const addressString = vendorData.address
+            ? `${vendorData.address.addressLine1 || ''} ${vendorData.address.addressLine2 || ''} ${vendorData.address.city || ''} ${vendorData.address.state || ''} ${vendorData.address.pincode || ''}`.trim() || 'Not set'
+            : 'Not set';
+          
+          setProfile({
+            name: vendorData.name || 'Vendor Name',
+            businessName: vendorData.businessName || null,
+            phone: vendorData.phone || '',
+            email: vendorData.email || '',
+            address: addressString,
+            rating: vendorData.rating || 0,
+            totalJobs: vendorData.totalJobs || 0,
+            completionRate: vendorData.completionRate || 0,
+            serviceCategory: vendorData.service || '',
+            skills: [],
+            photo: vendorData.profilePhoto || null,
+            approvalStatus: vendorData.approvalStatus,
+            isPhoneVerified: vendorData.isPhoneVerified || false,
+            isEmailVerified: vendorData.isEmailVerified || false
+          });
+          localStorage.setItem('vendorData', JSON.stringify(vendorData));
+        } else {
+          setError(response.message || 'Failed to fetch profile');
+          toast.error(response.message || 'Failed to fetch profile');
+          // Fallback to local storage if API fails
+          const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+          if (localVendorData && Object.keys(localVendorData).length > 0) {
+            setProfile({
+              name: localVendorData.name || 'Vendor Name',
+              businessName: localVendorData.businessName || null,
+              phone: localVendorData.phone || '',
+              email: localVendorData.email || '',
+              address: 'Not set',
+              rating: 0,
+              totalJobs: 0,
+              completionRate: 0,
+              serviceCategory: localVendorData.service || '',
+              skills: [],
+              photo: localVendorData.profilePhoto || null
+            });
+            toast.info('Loaded profile from local storage (API failed)');
+          }
         }
-      } catch (error) {
-        console.error('Error loading profile:', error);
+      } catch (err) {
+        console.error('Error fetching vendor profile:', err);
+        setError(err.response?.data?.message || 'Failed to fetch profile');
+        toast.error(err.response?.data?.message || 'Failed to fetch profile');
+        // Fallback to local storage if API fails
+        const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+        if (localVendorData && Object.keys(localVendorData).length > 0) {
+          setProfile({
+            name: localVendorData.name || 'Vendor Name',
+            businessName: localVendorData.businessName || null,
+            phone: localVendorData.phone || '',
+            email: localVendorData.email || '',
+            address: 'Not set',
+            rating: 0,
+            totalJobs: 0,
+            completionRate: 0,
+            serviceCategory: localVendorData.service || '',
+            skills: [],
+            photo: localVendorData.profilePhoto || null
+          });
+          toast.info('Loaded profile from local storage (API failed)');
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadProfile();
-    window.addEventListener('vendorProfileUpdated', loadProfile);
-
-    return () => {
-      window.removeEventListener('vendorProfileUpdated', loadProfile);
-    };
+    fetchProfile();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: themeColors.backgroundGradient }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: themeColors.button }}></div>
+          <p className="text-gray-600 text-sm">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: themeColors.backgroundGradient }}>
+        <div className="text-center p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Error loading profile</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:opacity-90"
+            style={{ backgroundColor: themeColors.button }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
@@ -505,23 +592,21 @@ const Profile = () => {
         <div className="px-4 mt-4 mb-3">
           <button
             type="button"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Clear all vendor data
-              localStorage.removeItem('vendorProfile');
-              localStorage.removeItem('vendorSettings');
-              localStorage.removeItem('vendorToken');
-              localStorage.removeItem('vendorAuth');
-              localStorage.removeItem('vendorData');
-              localStorage.removeItem('vendorWorkers');
-              localStorage.removeItem('vendorAcceptedBookings');
-              localStorage.removeItem('vendorWallet');
-              localStorage.removeItem('vendorTransactions');
-              // Show success message
-              toast.success('Logged out successfully');
-              // Navigate to vendor login
-              navigate('/vendor/login');
+              try {
+                await vendorAuthService.logout();
+                toast.success('Logged out successfully');
+                navigate('/vendor/login');
+              } catch (error) {
+                // Even if API call fails, clear local storage
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('vendorData');
+                toast.success('Logged out successfully');
+                navigate('/vendor/login');
+              }
             }}
             className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all text-white flex items-center justify-center gap-2"
             style={{

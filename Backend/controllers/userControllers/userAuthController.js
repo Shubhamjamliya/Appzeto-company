@@ -37,7 +37,11 @@ const sendOTP = async (req, res) => {
 
     // Send OTP via SMS (simulated) or Email
     // TODO: Integrate SMS service
-    console.log(`OTP for ${phone}: ${otp}`);
+    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
+      console.log(`[DEV MODE] Default OTP for ${phone}: ${otp}`);
+    } else {
+      console.log(`OTP for ${phone}: ${otp}`);
+    }
 
     if (email) {
       await sendOTPEmail(email, otp, 'verification');
@@ -124,7 +128,9 @@ const register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        phone: user.phone
+        phone: user.phone,
+        isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified
       },
       ...tokens
     });
@@ -202,7 +208,9 @@ const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        phone: user.phone
+        phone: user.phone,
+        isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified
       },
       ...tokens
     });

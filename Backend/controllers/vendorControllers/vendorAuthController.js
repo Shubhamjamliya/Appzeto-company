@@ -31,7 +31,11 @@ const sendOTP = async (req, res) => {
       expiryMinutes: 10
     });
 
-    console.log(`OTP for vendor ${phone}: ${otp}`);
+    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
+      console.log(`[DEV MODE] Default OTP for vendor ${phone}: ${otp}`);
+    } else {
+      console.log(`OTP for vendor ${phone}: ${otp}`);
+    }
 
     res.status(200).json({
       success: true,

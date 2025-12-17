@@ -1,16 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
+import { userAuthService } from '../../../../services/authService';
 
 const UpdateProfile = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: 'Verified Customer',
-    email: 'customer@example.com',
-    phoneNumber: '+91 6261387233',
+    name: '',
+    email: '',
+    phone: '',
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        // First check localStorage
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+          });
+        }
+
+        // Fetch fresh data from API
+        const response = await userAuthService.getProfile();
+        if (response.success && response.user) {
+          setFormData({
+            name: response.user.name || '',
+            email: response.user.email || '',
+            phone: response.user.phone || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Use localStorage data if API fails
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+          });
+        } else {
+          toast.error('Failed to load profile data');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // Format phone number for display
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '';
+    if (phone.startsWith('+91')) return phone;
+    if (phone.length === 10) return `+91 ${phone}`;
+    return phone;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,10 +77,37 @@ const UpdateProfile = () => {
     }));
   };
 
-  const handleSave = () => {
-    // Save profile data (can be extended to save to localStorage or API)
-    toast.success('Profile updated successfully!');
-    navigate('/user/account');
+  const handleSave = async () => {
+    // Validation
+    if (!formData.name || formData.name.trim().length < 2) {
+      toast.error('Please enter a valid name (at least 2 characters)');
+      return;
+    }
+
+    if (formData.email && !formData.email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await userAuthService.updateProfile({
+        name: formData.name.trim(),
+        email: formData.email.trim() || null
+      });
+
+      if (response.success) {
+        toast.success('Profile updated successfully!');
+        navigate('/user/account');
+      } else {
+        toast.error(response.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleBack = () => {
@@ -64,9 +148,10 @@ const UpdateProfile = () => {
               </div>
               <input
                 type="text"
-                name="fullName"
-                value={formData.fullName}
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 style={{
                   focusRingColor: themeColors.button,
@@ -101,6 +186,7 @@ const UpdateProfile = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
                 onFocus={(e) => {
                   e.target.style.borderColor = themeColors.button;
@@ -129,20 +215,15 @@ const UpdateProfile = () => {
               </div>
               <input
                 type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                onFocus={(e) => {
-                  e.target.style.borderColor = themeColors.button;
-                  e.target.style.boxShadow = '0 0 0 3px rgba(0, 166, 166, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#d1d5db';
-                  e.target.style.boxShadow = 'none';
-                }}
-                placeholder="Enter your phone number"
+                name="phone"
+                value={formatPhoneNumber(formData.phone)}
+                disabled
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
+                placeholder="Phone number cannot be changed"
               />
+              <p className="text-xs text-gray-500 mt-1 ml-1">
+                Phone number cannot be changed for security reasons
+              </p>
             </div>
           </div>
         </div>
@@ -151,21 +232,24 @@ const UpdateProfile = () => {
         <div className="mt-6">
           <button
             onClick={handleSave}
-            className="w-full text-white font-bold py-3.5 rounded-xl active:scale-98 transition-all shadow-lg"
+            disabled={isLoading || isSaving}
+            className="w-full text-white font-bold py-3.5 rounded-xl active:scale-98 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
               boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)',
             }}
             onMouseEnter={(e) => {
-              e.target.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.5)';
-              e.target.style.transform = 'translateY(-1px)';
+              if (!isLoading && !isSaving) {
+                e.target.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.5)';
+                e.target.style.transform = 'translateY(-1px)';
+              }
             }}
             onMouseLeave={(e) => {
               e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
               e.target.style.transform = 'translateY(0)';
             }}
           >
-            Save Changes
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </main>

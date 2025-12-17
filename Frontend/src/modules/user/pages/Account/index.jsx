@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
+import { userAuthService } from '../../../../services/authService';
 import BottomNav from '../../components/layout/BottomNav';
 import {
   FiEdit3,
@@ -19,7 +20,87 @@ import { MdAccountBalanceWallet } from 'react-icons/md';
 
 const Account = () => {
   const navigate = useNavigate();
-  const phoneNumber = '+91 6261387233';
+  const [userProfile, setUserProfile] = useState({
+    name: 'Verified Customer',
+    phone: '',
+    email: '',
+    isPhoneVerified: false,
+    isEmailVerified: false
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user profile from database
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        // First check localStorage
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setUserProfile({
+            name: userData.name || 'Verified Customer',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            isPhoneVerified: userData.isPhoneVerified || false,
+            isEmailVerified: userData.isEmailVerified || false
+          });
+        }
+
+        // Fetch fresh data from API
+        const response = await userAuthService.getProfile();
+        if (response.success && response.user) {
+          setUserProfile({
+            name: response.user.name || 'Verified Customer',
+            phone: response.user.phone || '',
+            email: response.user.email || '',
+            isPhoneVerified: response.user.isPhoneVerified || false,
+            isEmailVerified: response.user.isEmailVerified || false
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Use localStorage data if API fails
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setUserProfile({
+            name: userData.name || 'Verified Customer',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            isPhoneVerified: userData.isPhoneVerified || false,
+            isEmailVerified: userData.isEmailVerified || false
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // Format phone number for display
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '';
+    if (phone.startsWith('+91')) return phone;
+    if (phone.length === 10) return `+91 ${phone}`;
+    return phone;
+  };
+
+  // Get initials for avatar
+  const getInitials = () => {
+    if (userProfile.name && userProfile.name !== 'Verified Customer') {
+      const names = userProfile.name.split(' ');
+      if (names.length >= 2) {
+        return (names[0][0] + names[1][0]).toUpperCase();
+      }
+      return names[0][0].toUpperCase();
+    }
+    if (userProfile.phone) {
+      return userProfile.phone.slice(-2);
+    }
+    return 'VC';
+  };
 
   const menuItems = [
     { id: 1, label: 'My Plans', icon: FiFileText },
@@ -66,14 +147,19 @@ const Account = () => {
     navigate('/user/update-profile');
   };
 
-  const handleLogout = () => {
-    // Clear user auth data
-    localStorage.removeItem('userAuth');
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userData');
-    // Clear any other user-related data
-    toast.success('Logged out successfully');
-    navigate('/user/login');
+  const handleLogout = async () => {
+    try {
+      await userAuthService.logout();
+      toast.success('Logged out successfully');
+      navigate('/user/login');
+    } catch (error) {
+      // Even if API call fails, clear local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userData');
+      toast.success('Logged out successfully');
+      navigate('/user/login');
+    }
   };
 
 
@@ -96,25 +182,27 @@ const Account = () => {
                       boxShadow: `0 4px 12px rgba(0, 166, 166, 0.3)`,
                     }}
                   >
-                    {phoneNumber.slice(-2)}
+                    {isLoading ? '...' : getInitials()}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h1 className="text-xl font-bold text-black">
-                        Verified Customer
+                        {isLoading ? 'Loading...' : userProfile.name}
                       </h1>
-                      <div
-                        className="w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
-                      >
+                      {userProfile.isPhoneVerified && (
                         <div
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: '#22c55e' }}
-                        />
-                      </div>
+                          className="w-4 h-4 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: '#22c55e' }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 mt-0.5">
-                      {phoneNumber}
+                      {isLoading ? 'Loading...' : (userProfile.phone ? formatPhoneNumber(userProfile.phone) : 'No phone number')}
                     </p>
                   </div>
                 </div>

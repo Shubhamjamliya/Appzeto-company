@@ -6,6 +6,8 @@ import '../utils/testDummyData';
 import PageTransition from '../components/common/PageTransition';
 import BottomNav from '../components/layout/BottomNav';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import ProtectedRoute from '../../../components/auth/ProtectedRoute';
+import PublicRoute from '../../../components/auth/PublicRoute';
 
 // Lazy load vendor pages for code splitting with error handling
 const lazyLoad = (importFunc) => {
@@ -86,26 +88,29 @@ const VendorRoutes = () => {
       <Suspense fallback={<LoadingFallback />}>
         <PageTransition>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/" element={<Navigate to="dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/booking-alert/:id" element={<BookingAlert />} />
-            <Route path="/booking/:id" element={<BookingDetails />} />
-            <Route path="/booking/:id/timeline" element={<BookingTimeline />} />
-            <Route path="/jobs" element={<ActiveJobs />} />
-            <Route path="/workers" element={<WorkersList />} />
-            <Route path="/workers/add" element={<AddEditWorker />} />
-            <Route path="/workers/:id/edit" element={<AddEditWorker />} />
-            <Route path="/booking/:id/assign-worker" element={<AssignWorker />} />
-            <Route path="/earnings" element={<Earnings />} />
-            <Route path="/wallet" element={<Wallet />} />
-            <Route path="/wallet/withdraw" element={<WithdrawalRequest />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/details" element={<ProfileDetails />} />
-            <Route path="/profile/edit" element={<EditProfile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/notifications" element={<Notifications />} />
+            {/* Public routes */}
+            <Route path="/login" element={<PublicRoute userType="vendor"><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute userType="vendor"><Signup /></PublicRoute>} />
+            
+            {/* Protected routes (auth required) */}
+            <Route path="/" element={<ProtectedRoute userType="vendor"><Navigate to="dashboard" replace /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute userType="vendor"><Dashboard /></ProtectedRoute>} />
+            <Route path="/booking-alert/:id" element={<ProtectedRoute userType="vendor"><BookingAlert /></ProtectedRoute>} />
+            <Route path="/booking/:id" element={<ProtectedRoute userType="vendor"><BookingDetails /></ProtectedRoute>} />
+            <Route path="/booking/:id/timeline" element={<ProtectedRoute userType="vendor"><BookingTimeline /></ProtectedRoute>} />
+            <Route path="/jobs" element={<ProtectedRoute userType="vendor"><ActiveJobs /></ProtectedRoute>} />
+            <Route path="/workers" element={<ProtectedRoute userType="vendor"><WorkersList /></ProtectedRoute>} />
+            <Route path="/workers/add" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
+            <Route path="/workers/:id/edit" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
+            <Route path="/booking/:id/assign-worker" element={<ProtectedRoute userType="vendor"><AssignWorker /></ProtectedRoute>} />
+            <Route path="/earnings" element={<ProtectedRoute userType="vendor"><Earnings /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute userType="vendor"><Wallet /></ProtectedRoute>} />
+            <Route path="/wallet/withdraw" element={<ProtectedRoute userType="vendor"><WithdrawalRequest /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute userType="vendor"><Profile /></ProtectedRoute>} />
+            <Route path="/profile/details" element={<ProtectedRoute userType="vendor"><ProfileDetails /></ProtectedRoute>} />
+            <Route path="/profile/edit" element={<ProtectedRoute userType="vendor"><EditProfile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute userType="vendor"><Settings /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute userType="vendor"><Notifications /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiBell, FiVolume2, FiGlobe, FiLogOut } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors } from '../../../../theme';
+import { workerAuthService } from '../../../../services/authService';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
@@ -58,20 +59,20 @@ const Settings = () => {
     localStorage.setItem('workerSettings', JSON.stringify(updated));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      // Clear all worker data
-      localStorage.removeItem('workerProfile');
-      localStorage.removeItem('workerSettings');
-      localStorage.removeItem('workerToken');
-      localStorage.removeItem('workerAuth');
-      localStorage.removeItem('workerData');
-      localStorage.removeItem('workerJobs');
-      localStorage.removeItem('workerAssignedJobs');
-      // Show success message
-      toast.success('Logged out successfully');
-      // Navigate to worker login
-      navigate('/worker/login');
+      try {
+        await workerAuthService.logout();
+        toast.success('Logged out successfully');
+        navigate('/worker/login');
+      } catch (error) {
+        // Even if API call fails, clear local storage
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('workerData');
+        toast.success('Logged out successfully');
+        navigate('/worker/login');
+      }
     }
   };
 

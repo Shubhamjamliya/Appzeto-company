@@ -1,6 +1,8 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
+import ProtectedRoute from '../../../components/auth/ProtectedRoute';
+import PublicRoute from '../../../components/auth/PublicRoute';
 
 // Login page (not lazy loaded for faster initial access)
 import Login from '../pages/login';
@@ -31,11 +33,15 @@ const AdminRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        {/* Login route - outside of layout */}
-        <Route path="/login" element={<Login />} />
+        {/* Login route - outside of layout (public) */}
+        <Route path="/login" element={<PublicRoute userType="admin"><Login /></PublicRoute>} />
         
         {/* Protected routes - inside layout */}
-        <Route path="/" element={<AdminLayout />}>
+        <Route path="/" element={
+          <ProtectedRoute userType="admin">
+            <AdminLayout />
+          </ProtectedRoute>
+        }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users/*" element={<Users />} />

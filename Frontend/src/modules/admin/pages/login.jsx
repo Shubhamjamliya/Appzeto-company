@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
+import { adminAuthService } from '../../../services/authService';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -31,17 +32,24 @@ const AdminLogin = () => {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Store admin auth
-      if (rememberMe) {
-        localStorage.setItem('adminRememberMe', 'true');
+    try {
+      const response = await adminAuthService.login(formData.email, formData.password);
+      if (response.success) {
+        setIsLoading(false);
+        // Store remember me preference
+        if (rememberMe) {
+          localStorage.setItem('adminRememberMe', 'true');
+        }
+        toast.success('Login successful!');
+        navigate('/admin/dashboard');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Login failed');
       }
-      localStorage.setItem('adminAuth', JSON.stringify({ email: formData.email }));
-      toast.success('Login successful!');
-      navigate('/admin/dashboard');
-    }, 1000);
+    } catch (error) {
+      setIsLoading(false);
+      toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+    }
   };
 
   return (

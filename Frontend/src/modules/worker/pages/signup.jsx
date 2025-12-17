@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiX } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
+import { workerAuthService } from '../../../services/authService';
 
 const WorkerSignup = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const WorkerSignup = () => {
     aadharDocument: null
   });
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpToken, setOtpToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [documentPreview, setDocumentPreview] = useState(null);
 
@@ -88,12 +90,21 @@ const WorkerSignup = () => {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await workerAuthService.sendOTP(formData.phoneNumber, formData.email);
+      if (response.success) {
+        setOtpToken(response.token);
+        setIsLoading(false);
+        setStep('otp');
+        toast.success('OTP sent to your phone number');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
       setIsLoading(false);
-      setStep('otp');
-      toast.success('OTP sent to your phone number');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -123,13 +134,34 @@ const WorkerSignup = () => {
       toast.error('Please enter complete OTP');
       return;
     }
+    if (!otpToken) {
+      toast.error('Please request OTP first');
+      return;
+    }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const aadharDoc = documentPreview || null;
+      const response = await workerAuthService.register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phoneNumber,
+        aadhar: formData.aadhar,
+        aadharDocument: aadharDoc,
+        otp: otpValue,
+        token: otpToken
+      });
+      if (response.success) {
+        setIsLoading(false);
+        toast.success('Registration successful!');
+        navigate('/worker');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Registration failed');
+      }
+    } catch (error) {
       setIsLoading(false);
-      toast.success('Registration successful!');
-      navigate('/worker');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -358,8 +390,19 @@ const WorkerSignup = () => {
               We've sent a 6-digit OTP to {formData.phoneNumber}
             </p>
             <button
-              onClick={() => {
-                toast.success('OTP resent!');
+              type="button"
+              onClick={async () => {
+                try {
+                  const response = await workerAuthService.sendOTP(formData.phoneNumber, formData.email);
+                  if (response.success) {
+                    setOtpToken(response.token);
+                    toast.success('OTP resent!');
+                  } else {
+                    toast.error(response.message || 'Failed to resend OTP');
+                  }
+                } catch (error) {
+                  toast.error(error.response?.data?.message || 'Failed to resend OTP');
+                }
               }}
               className="text-sm mb-8 font-semibold"
               style={{ color: themeColors.button }}

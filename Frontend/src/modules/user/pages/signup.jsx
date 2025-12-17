@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
+import { userAuthService } from '../../../services/authService';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const Signup = () => {
     phoneNumber: ''
   });
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpToken, setOtpToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
@@ -34,12 +36,21 @@ const Signup = () => {
       return;
     }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await userAuthService.sendOTP(formData.phoneNumber, formData.email || null);
+      if (response.success) {
+        setOtpToken(response.token);
+        setIsLoading(false);
+        setStep('otp');
+        toast.success('OTP sent to your phone number');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
       setIsLoading(false);
-      setStep('otp');
-      toast.success('OTP sent to your phone number');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -69,13 +80,31 @@ const Signup = () => {
       toast.error('Please enter complete OTP');
       return;
     }
+    if (!otpToken) {
+      toast.error('Please request OTP first');
+      return;
+    }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await userAuthService.register({
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phoneNumber,
+        otp: otpValue,
+        token: otpToken
+      });
+      if (response.success) {
+        setIsLoading(false);
+        toast.success('Account created successfully!');
+        navigate('/user');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Registration failed');
+      }
+    } catch (error) {
       setIsLoading(false);
-      toast.success('Account created successfully!');
-      navigate('/user');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -238,8 +267,19 @@ const Signup = () => {
               We've sent a 6-digit OTP to {formData.phoneNumber}
             </p>
             <button
-              onClick={() => {
-                toast.success('OTP resent!');
+              type="button"
+              onClick={async () => {
+                try {
+                  const response = await userAuthService.sendOTP(formData.phoneNumber, formData.email || null);
+                  if (response.success) {
+                    setOtpToken(response.token);
+                    toast.success('OTP resent!');
+                  } else {
+                    toast.error(response.message || 'Failed to resend OTP');
+                  }
+                } catch (error) {
+                  toast.error(error.response?.data?.message || 'Failed to resend OTP');
+                }
               }}
               className="text-sm mb-8 font-semibold"
               style={{ color: themeColors.button }}

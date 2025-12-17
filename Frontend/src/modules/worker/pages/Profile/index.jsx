@@ -3,23 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiChevronRight, FiTag, FiLogOut } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors, vendorTheme } from '../../../../theme';
+import { workerAuthService } from '../../../../services/authService';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
 const Profile = () => {
   const navigate = useNavigate();
   // Initialize with empty/default values - will be loaded from localStorage
-  const [profile, setProfile] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    rating: 0,
-    totalJobs: 0,
-    completedJobs: 0,
-    serviceCategory: '',
-    skills: [],
-  });
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -39,80 +32,130 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
-    const loadProfile = () => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const workerProfile = JSON.parse(localStorage.getItem('workerProfile') || '{}');
-        if (Object.keys(workerProfile).length > 0) {
-          // Use actual saved values - don't override with defaults if values exist (even if empty)
-          const updatedProfile = {
-            name: workerProfile.name ?? 'Worker Name',
-            phone: workerProfile.phone ?? '+91 9876543210',
-            email: workerProfile.email ?? 'worker@example.com',
-            address: workerProfile.address ?? 'Indore, Madhya Pradesh',
-            rating: workerProfile.rating ?? 4.7,
-            totalJobs: workerProfile.totalJobs ?? 0,
-            completedJobs: workerProfile.completedJobs ?? 0,
-            serviceCategory: workerProfile.serviceCategory ?? workerProfile.category ?? '',
-            skills: Array.isArray(workerProfile.skills) ? workerProfile.skills : [],
-            photo: workerProfile.photo ?? null,
-          };
-          console.log('Profile page - Loaded profile:', updatedProfile);
-          setProfile(updatedProfile);
-        } else {
-          // Set default values if no profile exists (same as EditProfile)
+        const response = await workerAuthService.getProfile();
+        if (response.success) {
+          const workerData = response.worker;
+          // Format address
+          const addressString = workerData.address
+            ? `${workerData.address.addressLine1 || ''} ${workerData.address.addressLine2 || ''} ${workerData.address.city || ''} ${workerData.address.state || ''} ${workerData.address.pincode || ''}`.trim() || 'Not set'
+            : 'Not set';
+          
           setProfile({
-            name: 'Worker Name',
-            phone: '+91 9876543210',
-            email: 'worker@example.com',
-            address: 'Indore, Madhya Pradesh',
-            rating: 4.7,
-            totalJobs: 0,
-            completedJobs: 0,
-            serviceCategory: '',
-            skills: [],
-            photo: null,
+            name: workerData.name || 'Worker Name',
+            phone: workerData.phone || '',
+            email: workerData.email || '',
+            address: addressString,
+            rating: workerData.rating || 0,
+            totalJobs: workerData.totalJobs || 0,
+            completedJobs: workerData.completedJobs || 0,
+            serviceCategory: workerData.serviceCategory || '',
+            skills: workerData.skills || [],
+            photo: workerData.profilePhoto || null,
+            isPhoneVerified: workerData.isPhoneVerified || false,
+            isEmailVerified: workerData.isEmailVerified || false
           });
+          localStorage.setItem('workerData', JSON.stringify(workerData));
+        } else {
+          setError(response.message || 'Failed to fetch profile');
+          toast.error(response.message || 'Failed to fetch profile');
+          // Fallback to local storage if API fails
+          const localWorkerData = JSON.parse(localStorage.getItem('workerData') || '{}');
+          if (localWorkerData && Object.keys(localWorkerData).length > 0) {
+            setProfile({
+              name: localWorkerData.name || 'Worker Name',
+              phone: localWorkerData.phone || '',
+              email: localWorkerData.email || '',
+              address: 'Not set',
+              rating: localWorkerData.rating || 0,
+              totalJobs: localWorkerData.totalJobs || 0,
+              completedJobs: localWorkerData.completedJobs || 0,
+              serviceCategory: localWorkerData.serviceCategory || '',
+              skills: localWorkerData.skills || [],
+              photo: localWorkerData.profilePhoto || null
+            });
+            toast.info('Loaded profile from local storage (API failed)');
+          }
         }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        // Set defaults on error too
-        setProfile({
-          name: 'Worker Name',
-          phone: '+91 9876543210',
-          email: 'worker@example.com',
-          address: 'Indore, Madhya Pradesh',
-          rating: 4.7,
-          totalJobs: 0,
-          completedJobs: 0,
-          serviceCategory: '',
-          skills: [],
-          photo: null,
-        });
+      } catch (err) {
+        console.error('Error fetching worker profile:', err);
+        setError(err.response?.data?.message || 'Failed to fetch profile');
+        toast.error(err.response?.data?.message || 'Failed to fetch profile');
+        // Fallback to local storage if API fails
+        const localWorkerData = JSON.parse(localStorage.getItem('workerData') || '{}');
+        if (localWorkerData && Object.keys(localWorkerData).length > 0) {
+          setProfile({
+            name: localWorkerData.name || 'Worker Name',
+            phone: localWorkerData.phone || '',
+            email: localWorkerData.email || '',
+            address: 'Not set',
+            rating: localWorkerData.rating || 0,
+            totalJobs: localWorkerData.totalJobs || 0,
+            completedJobs: localWorkerData.completedJobs || 0,
+            serviceCategory: localWorkerData.serviceCategory || '',
+            skills: localWorkerData.skills || [],
+            photo: localWorkerData.profilePhoto || null
+          });
+          toast.info('Loaded profile from local storage (API failed)');
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadProfile();
-    window.addEventListener('workerProfileUpdated', loadProfile);
-
-    return () => {
-      window.removeEventListener('workerProfileUpdated', loadProfile);
-    };
+    fetchProfile();
   }, []);
 
-  const handleLogout = () => {
-    // Clear all worker data
-    localStorage.removeItem('workerProfile');
-    localStorage.removeItem('workerSettings');
-    localStorage.removeItem('workerToken');
-    localStorage.removeItem('workerAuth');
-    localStorage.removeItem('workerData');
-    localStorage.removeItem('workerJobs');
-    localStorage.removeItem('workerAssignedJobs');
-    // Show success message
-    toast.success('Logged out successfully');
-    // Navigate to worker login
-    navigate('/worker/login');
+  const handleLogout = async () => {
+    try {
+      await workerAuthService.logout();
+      toast.success('Logged out successfully');
+      navigate('/worker/login');
+    } catch (error) {
+      // Even if API call fails, clear local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('workerData');
+      toast.success('Logged out successfully');
+      navigate('/worker/login');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: themeColors.backgroundGradient }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: themeColors.button }}></div>
+          <p className="text-gray-600 text-sm">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: themeColors.backgroundGradient }}>
+        <div className="text-center p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Error loading profile</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:opacity-90"
+            style={{ backgroundColor: themeColors.button }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>

@@ -30,7 +30,11 @@ const sendOTP = async (req, res) => {
       expiryMinutes: 10
     });
 
-    console.log(`OTP for worker ${phone}: ${otp}`);
+    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
+      console.log(`[DEV MODE] Default OTP for worker ${phone}: ${otp}`);
+    } else {
+      console.log(`OTP for worker ${phone}: ${otp}`);
+    }
 
     res.status(200).json({
       success: true,

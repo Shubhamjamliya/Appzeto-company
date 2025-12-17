@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiPhone, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
+import { userAuthService } from '../../../services/authService';
 
 const Login = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('phone'); // 'phone' or 'otp'
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpToken, setOtpToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,12 +21,21 @@ const Login = () => {
       return;
     }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await userAuthService.sendOTP(phoneNumber);
+      if (response.success) {
+        setOtpToken(response.token);
+        setIsLoading(false);
+        setStep('otp');
+        toast.success('OTP sent to your phone number');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
       setIsLoading(false);
-      setStep('otp');
-      toast.success('OTP sent to your phone number');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -54,13 +65,29 @@ const Login = () => {
       toast.error('Please enter complete OTP');
       return;
     }
+    if (!otpToken) {
+      toast.error('Please request OTP first');
+      return;
+    }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await userAuthService.login({
+        phone: phoneNumber,
+        otp: otpValue,
+        token: otpToken
+      });
+      if (response.success) {
+        setIsLoading(false);
+        toast.success('Login successful!');
+        navigate('/user');
+      } else {
+        setIsLoading(false);
+        toast.error(response.message || 'Login failed');
+      }
+    } catch (error) {
       setIsLoading(false);
-      toast.success('Login successful!');
-      navigate('/user');
-    }, 1000);
+      toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+    }
   };
 
   return (
@@ -171,9 +198,19 @@ const Login = () => {
               We've sent a 6-digit OTP to {phoneNumber}
             </p>
             <button
-              onClick={() => {
-                setStep('phone');
-                toast.success('OTP resent!');
+              type="button"
+              onClick={async () => {
+                try {
+                  const response = await userAuthService.sendOTP(phoneNumber);
+                  if (response.success) {
+                    setOtpToken(response.token);
+                    toast.success('OTP resent!');
+                  } else {
+                    toast.error(response.message || 'Failed to resend OTP');
+                  }
+                } catch (error) {
+                  toast.error(error.response?.data?.message || 'Failed to resend OTP');
+                }
               }}
               className="text-sm mb-8 font-semibold"
               style={{ color: themeColors.button }}

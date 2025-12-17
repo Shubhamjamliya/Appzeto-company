@@ -4,6 +4,8 @@ import { autoInitDummyData } from '../utils/initDummyData';
 import PageTransition from '../components/common/PageTransition';
 import BottomNav from '../components/layout/BottomNav';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import ProtectedRoute from '../../../components/auth/ProtectedRoute';
+import PublicRoute from '../../../components/auth/PublicRoute';
 
 // Lazy load worker pages for code splitting with error handling
 const lazyLoad = (importFunc) => {
@@ -73,16 +75,19 @@ const WorkerRoutes = () => {
       <Suspense fallback={<LoadingFallback />}>
         <PageTransition>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/" element={<Navigate to="dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/jobs" element={<AssignedJobs />} />
-            <Route path="/job/:id" element={<JobDetails />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/edit" element={<EditProfile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/notifications" element={<Notifications />} />
+            {/* Public routes */}
+            <Route path="/login" element={<PublicRoute userType="worker"><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute userType="worker"><Signup /></PublicRoute>} />
+            
+            {/* Protected routes (auth required) */}
+            <Route path="/" element={<ProtectedRoute userType="worker"><Navigate to="dashboard" replace /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute userType="worker"><Dashboard /></ProtectedRoute>} />
+            <Route path="/jobs" element={<ProtectedRoute userType="worker"><AssignedJobs /></ProtectedRoute>} />
+            <Route path="/job/:id" element={<ProtectedRoute userType="worker"><JobDetails /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute userType="worker"><Profile /></ProtectedRoute>} />
+            <Route path="/profile/edit" element={<ProtectedRoute userType="worker"><EditProfile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute userType="worker"><Settings /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute userType="worker"><Notifications /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>

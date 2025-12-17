@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiBell, FiVolume2, FiGlobe, FiInfo, FiLogOut, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
+import { vendorAuthService } from '../../../../services/authService';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
@@ -58,17 +59,20 @@ const Settings = () => {
     localStorage.setItem('vendorSettings', JSON.stringify(updated));
   };
 
-  const handleLogout = () => {
-    // Clear all vendor data
-    localStorage.removeItem('vendorProfile');
-    localStorage.removeItem('vendorSettings');
-    localStorage.removeItem('vendorToken');
-    localStorage.removeItem('vendorAuth');
-    localStorage.removeItem('vendorData');
-    localStorage.removeItem('vendorWorkers');
-    localStorage.removeItem('vendorAcceptedBookings');
-    localStorage.removeItem('vendorWallet');
-    localStorage.removeItem('vendorTransactions');
+  const handleLogout = async () => {
+    try {
+      await vendorAuthService.logout();
+      toast.success('Logged out successfully');
+      navigate('/vendor/login');
+    } catch (error) {
+      // Even if API call fails, clear local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('vendorData');
+      toast.success('Logged out successfully');
+      navigate('/vendor/login');
+    }
+  };
     // Show success message
     toast.success('Logged out successfully');
     // Navigate to vendor login

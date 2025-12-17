@@ -4,8 +4,9 @@ const { TOKEN_TYPES } = require('../utils/constants');
 const tokenSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    index: true
+    required: false, // Optional - not available during signup
+    index: true,
+    default: null
   },
   email: {
     type: String,

@@ -3,6 +3,8 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import PageTransition from '../components/common/PageTransition';
 import BottomNav from '../components/layout/BottomNav';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import ProtectedRoute from '../../../components/auth/ProtectedRoute';
+import PublicRoute from '../../../components/auth/PublicRoute';
 
 // Lazy load wrapper with error handling
 const lazyLoad = (importFunc) => {
@@ -81,32 +83,37 @@ const UserRoutes = () => {
       <Suspense fallback={<LoadingFallback />}>
         <PageTransition>
           <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<PublicRoute userType="user"><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute userType="user"><Signup /></PublicRoute>} />
+            
+            {/* Public pages (no auth required) */}
             <Route path="/" element={<Home />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/account" element={<Account />} />
             <Route path="/native" element={<Native />} />
             <Route path="/ac-service" element={<ACService />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
             <Route path="/salon-for-women" element={<SalonForWomen />} />
             <Route path="/massage-for-men" element={<MassageForMen />} />
             <Route path="/bathroom-kitchen-cleaning" element={<BathroomKitchenCleaning />} />
             <Route path="/sofa-carpet-cleaning" element={<SofaCarpetCleaning />} />
             <Route path="/electrician" element={<Electrician />} />
-            <Route path="/my-bookings" element={<MyBookings />} />
-            <Route path="/booking/:id" element={<BookingDetails />} />
-            <Route path="/booking-confirmation/:id" element={<BookingConfirmation />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/manage-payment-methods" element={<ManagePaymentMethods />} />
-            <Route path="/manage-addresses" element={<ManageAddresses />} />
-            <Route path="/my-subscription" element={<MySubscription />} />
-            <Route path="/wallet" element={<Wallet />} />
-            <Route path="/my-plan" element={<MyPlan />} />
-            <Route path="/my-rating" element={<MyRating />} />
-            <Route path="/about-appzeto" element={<AboutAppzeto />} />
-            <Route path="/update-profile" element={<UpdateProfile />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            
+            {/* Protected routes (auth required) */}
+            <Route path="/rewards" element={<ProtectedRoute userType="user"><Rewards /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute userType="user"><Account /></ProtectedRoute>} />
+            <Route path="/cart" element={<ProtectedRoute userType="user"><Cart /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute userType="user"><Checkout /></ProtectedRoute>} />
+            <Route path="/my-bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
+            <Route path="/booking/:id" element={<ProtectedRoute userType="user"><BookingDetails /></ProtectedRoute>} />
+            <Route path="/booking-confirmation/:id" element={<ProtectedRoute userType="user"><BookingConfirmation /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute userType="user"><Settings /></ProtectedRoute>} />
+            <Route path="/manage-payment-methods" element={<ProtectedRoute userType="user"><ManagePaymentMethods /></ProtectedRoute>} />
+            <Route path="/manage-addresses" element={<ProtectedRoute userType="user"><ManageAddresses /></ProtectedRoute>} />
+            <Route path="/my-subscription" element={<ProtectedRoute userType="user"><MySubscription /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute userType="user"><Wallet /></ProtectedRoute>} />
+            <Route path="/my-plan" element={<ProtectedRoute userType="user"><MyPlan /></ProtectedRoute>} />
+            <Route path="/my-rating" element={<ProtectedRoute userType="user"><MyRating /></ProtectedRoute>} />
+            <Route path="/about-appzeto" element={<ProtectedRoute userType="user"><AboutAppzeto /></ProtectedRoute>} />
+            <Route path="/update-profile" element={<ProtectedRoute userType="user"><UpdateProfile /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>
