@@ -31,7 +31,6 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
             setServices(response.services);
           }
         } catch (error) {
-          console.error('Error fetching services for category:', error);
         } finally {
           setLoading(false);
         }
@@ -59,8 +58,6 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
     // Navigate to dynamic service page
     if (service.slug) {
       navigate(`/user/${service.slug}`);
-    } else {
-      console.warn('Service missing slug:', service.title);
     }
 
     // Close modal after navigation

@@ -16,35 +16,27 @@ const toAssetUrl = (url) => {
 };
 
 const ServiceCategories = React.memo(({ categories, onCategoryClick, onSeeAllClick }) => {
-  // Urban Company service categories
-  const defaultCategories = [
-    { id: 0, title: 'Electricity', icon: electricianIcon },
-    { id: 1, title: "Women's Salon & Spa", icon: womensSalonIcon },
-    { id: 2, title: 'Massage for Men', icon: massageMenIcon },
-    { id: 3, title: 'Cleaning', icon: cleaningIcon },
-    { id: 4, title: 'Electrician, Plumber & Carpenter', icon: electricianPlumberIcon },
-    { id: 5, title: 'AC & Appliance Repair', icon: acApplianceRepairIcon },
-  ];
 
-  const serviceCategories =
-    Array.isArray(categories) && categories.length > 0
-      ? categories.map((cat) => ({
-        ...cat,
-        icon: toAssetUrl(cat.icon || cat.image) || defaultCategories.find((d) => d.title === cat.title)?.icon,
-      }))
-      : defaultCategories.map((d) => ({ ...d, icon: toAssetUrl(d.icon) }));
+
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return null;
+  }
+
+  const serviceCategories = categories.map((cat) => ({
+    ...cat,
+    icon: toAssetUrl(cat.icon || cat.image),
+  }));
 
   return (
     <div className="px-4 pt-4 pb-2">
       {/* Section Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-800 drop-shadow-sm">Categories</h2>
+        <h2 className="text-xl font-bold text-gray-900 tracking-tight">Categories</h2>
         <button
           onClick={onSeeAllClick}
-          className="font-semibold text-sm transition-all hover:scale-105 active:scale-95 text-gray-800 drop-shadow-sm"
-          style={{ color: '#F59E0B' }}
+          className="font-bold text-xs px-4 py-2 rounded-full transition-all hover:bg-gray-100 active:scale-95 bg-gray-50 text-gray-700 border border-gray-100"
         >
-          See All
+          See all
         </button>
       </div>
       <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-2">

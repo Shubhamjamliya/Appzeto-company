@@ -28,7 +28,6 @@ const Wallet = () => {
           setTransactions(transactionsResponse.data || []);
         }
       } catch (error) {
-        console.error('Error loading wallet data:', error);
         toast.error('Failed to load wallet data');
       } finally {
         setLoading(false);
@@ -118,19 +117,17 @@ const Wallet = () => {
                   month: 'short',
                   year: 'numeric'
                 });
-                
+
                 return (
                   <div
                     key={item.id || index}
-                    className={`flex items-center justify-between py-4 ${
-                      index !== transactions.length - 1 ? 'border-b border-gray-200' : ''
-                    }`}
+                    className={`flex items-center justify-between py-4 ${index !== transactions.length - 1 ? 'border-b border-gray-200' : ''
+                      }`}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          item.type === 'credit' ? 'bg-green-50' : 'bg-red-50'
-                        }`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${item.type === 'credit' ? 'bg-green-50' : 'bg-red-50'
+                          }`}
                       >
                         <span className={`text-lg ${item.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
                           {item.type === 'credit' ? '+' : '-'}
@@ -143,9 +140,8 @@ const Wallet = () => {
                     </div>
                     <div className="text-right">
                       <p
-                        className={`text-sm font-bold ${
-                          item.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }`}
+                        className={`text-sm font-bold ${item.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                          }`}
                       >
                         {item.type === 'credit' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
                       </p>

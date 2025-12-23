@@ -8,7 +8,45 @@ import TestimonialsSection from './components/TestimonialsSection';
 import BrandPhilosophy from './components/BrandPhilosophy';
 
 const Native = () => {
-  const [location] = useState('New Palasia- Indore- Madhya Pradesh...');
+  const [location, setLocation] = useState('...');
+
+  // Auto-detect location on mount
+  React.useEffect(() => {
+    const autoDetectLocation = async () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+              const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+              );
+              const data = await response.json();
+
+              if (data.status === 'OK' && data.results.length > 0) {
+                const result = data.results[0];
+                const getComponent = (type) =>
+                  result.address_components.find(c => c.types.includes(type))?.long_name || '';
+
+                const area = getComponent('sublocality_level_1') || getComponent('neighborhood') || getComponent('locality');
+                const city = getComponent('locality') || getComponent('administrative_area_level_2');
+                const state = getComponent('administrative_area_level_1');
+
+                const formattedAddress = `${area}- ${city}- ${state}`;
+                setLocation(formattedAddress);
+              }
+            } catch (error) {
+            }
+          },
+          (error) => {
+          }
+        );
+      }
+    };
+
+    autoDetectLocation();
+  }, []);
   const [cartCount] = useState(0);
 
   const handleLocationClick = () => {
@@ -31,7 +69,7 @@ const Native = () => {
         onLocationClick={handleLocationClick}
         onCartClick={handleCartClick}
       />
-      
+
       <main className="pt-1">
         <BestInClassFeatures onFeatureClick={handleFeatureClick} />
         <NativeSmartLocks onKnowMoreClick={handleKnowMoreClick} />

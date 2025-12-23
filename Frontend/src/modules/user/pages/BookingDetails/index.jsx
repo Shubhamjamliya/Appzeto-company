@@ -14,10 +14,14 @@ import {
   FiPackage,
   FiEdit2,
   FiPhone,
-  FiMail
+  FiMail,
+  FiHome
 } from 'react-icons/fi';
 import BottomNav from '../../components/layout/BottomNav';
 import { bookingService } from '../../../../services/bookingService';
+import { paymentService } from '../../../../services/paymentService';
+import { cartService } from '../../../../services/cartService';
+
 
 const BookingDetails = () => {
   const navigate = useNavigate();
@@ -37,7 +41,6 @@ const BookingDetails = () => {
           navigate('/user/my-bookings');
         }
       } catch (error) {
-        console.error('Error loading booking:', error);
         toast.error('Failed to load booking details');
         navigate('/user/my-bookings');
       } finally {
@@ -60,6 +63,8 @@ const BookingDetails = () => {
         return <FiCheckCircle className="w-5 h-5 text-green-600" />;
       case 'cancelled':
         return <FiXCircle className="w-5 h-5 text-red-500" />;
+      case 'awaiting_payment':
+        return <FiClock className="w-5 h-5 text-orange-500" />;
       default:
         return <FiClock className="w-5 h-5 text-gray-500" />;
     }
@@ -75,6 +80,8 @@ const BookingDetails = () => {
         return 'bg-gray-50 text-gray-700 border-gray-200';
       case 'cancelled':
         return 'bg-red-50 text-red-700 border-red-200';
+      case 'awaiting_payment':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
@@ -90,6 +97,8 @@ const BookingDetails = () => {
         return 'Completed';
       case 'cancelled':
         return 'Cancelled';
+      case 'awaiting_payment':
+        return 'Awaiting Payment';
       default:
         return status;
     }
@@ -109,10 +118,79 @@ const BookingDetails = () => {
         toast.error(response.message || 'Failed to cancel booking');
       }
     } catch (error) {
-      console.error('Error cancelling booking:', error);
       toast.error('Failed to cancel booking. Please try again.');
     }
   };
+
+  const handleOnlinePayment = async () => {
+    try {
+      toast.loading('Creating payment order...');
+      const orderResponse = await paymentService.createOrder(booking._id || booking.id);
+      toast.dismiss();
+
+      if (!orderResponse.success) {
+        toast.error(orderResponse.message || 'Failed to create payment order');
+        return;
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderResponse.data.amount * 100,
+        currency: orderResponse.data.currency || 'INR',
+        order_id: orderResponse.data.orderId,
+        name: 'Appzeto',
+        description: `Payment for ${booking.serviceName}`,
+        handler: async function (response) {
+          toast.loading('Verifying payment...');
+          const verifyResponse = await paymentService.verifyPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          });
+          toast.dismiss();
+
+          if (verifyResponse.success) {
+            toast.success('Payment successful!');
+            setBooking({ ...booking, status: 'confirmed', paymentStatus: 'success', paymentMethod: 'razorpay' });
+          } else {
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: 'User',
+          contact: ''
+        },
+        theme: {
+          color: themeColors.button
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to process payment');
+    }
+  };
+
+  const handlePayAtHome = async () => {
+    try {
+      toast.loading('Confirming request...');
+      const response = await paymentService.confirmPayAtHome(booking._id || booking.id);
+      toast.dismiss();
+
+      if (response.success) {
+        toast.success('Booking confirmed!');
+        setBooking({ ...booking, status: 'confirmed', paymentMethod: 'pay_at_home', paymentStatus: 'pending' });
+      } else {
+        toast.error(response.message || 'Failed to confirm booking');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to process request');
+    }
+  };
+
 
   const getAddressString = (address) => {
     if (typeof address === 'string') return address;
@@ -162,7 +240,7 @@ const BookingDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-64">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-30">
         <div className="px-4 pt-4 pb-3">
@@ -322,8 +400,41 @@ const BookingDetails = () => {
           </div>
         </div>
 
+        {/* Action Card for Awaiting Payment */}
+        {booking.status === 'awaiting_payment' && (
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 space-y-4">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FiDollarSign className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-bold text-black">Payment Required</h3>
+              <p className="text-sm text-gray-500">The vendor has accepted your request. Please choose a payment method to confirm your booking.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={handleOnlinePayment}
+                className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+                style={{ background: themeColors.button }}
+              >
+                <FiDollarSign className="w-5 h-5" />
+                Pay Online (Razorpay/UPI)
+              </button>
+
+              <button
+                onClick={handlePayAtHome}
+                className="w-full py-4 rounded-xl font-bold text-gray-700 bg-gray-100 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                <FiHome className="w-5 h-5" />
+                Pay at Home (After Service)
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Payment Info Card */}
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+
           <h3 className="text-base font-bold text-black mb-3">Payment Information</h3>
           <div className="space-y-2">
             {booking.paymentId && (
@@ -341,8 +452,8 @@ const BookingDetails = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Payment Status</span>
               <span className={`text-sm font-semibold ${booking.paymentStatus === 'success' ? 'text-green-600' :
-                  booking.paymentStatus === 'pending' ? 'text-yellow-600' :
-                    'text-red-600'
+                booking.paymentStatus === 'pending' ? 'text-yellow-600' :
+                  'text-red-600'
                 }`}>
                 {booking.paymentStatus === 'success' ? 'Paid' :
                   booking.paymentStatus === 'pending' ? 'Pending' :

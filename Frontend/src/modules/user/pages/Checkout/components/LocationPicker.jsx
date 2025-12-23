@@ -51,7 +51,6 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
           reverseGeocode(newPos);
         },
         (error) => {
-          console.error('Error getting location:', error);
         }
       );
     }
@@ -131,7 +130,6 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
           reverseGeocode(newPos);
         },
         (error) => {
-          console.error('Error getting location:', error);
           alert('Unable to get your current location. Please select manually on the map.');
         }
       );

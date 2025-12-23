@@ -12,26 +12,37 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('accessToken');
-      let userData = null;
+      let tokenKey = 'accessToken';
+      let refreshTokenKey = 'refreshToken';
+      let dataKey = 'userData';
 
-      // Check for user data based on userType
+      // Determine keys based on userType
       switch (userType) {
-        case 'user':
-          userData = localStorage.getItem('userData');
-          break;
         case 'vendor':
-          userData = localStorage.getItem('vendorData');
+          tokenKey = 'vendorAccessToken';
+          refreshTokenKey = 'vendorRefreshToken';
+          dataKey = 'vendorData';
           break;
         case 'worker':
-          userData = localStorage.getItem('workerData');
+          tokenKey = 'workerAccessToken';
+          refreshTokenKey = 'workerRefreshToken';
+          dataKey = 'workerData';
           break;
         case 'admin':
-          userData = localStorage.getItem('adminData');
+          tokenKey = 'adminAccessToken';
+          refreshTokenKey = 'adminRefreshToken';
+          dataKey = 'adminData';
           break;
+        case 'user':
         default:
-          userData = localStorage.getItem('userData');
+          tokenKey = 'accessToken';
+          refreshTokenKey = 'refreshToken';
+          dataKey = 'userData';
+          break;
       }
+
+      const token = localStorage.getItem(tokenKey);
+      const userData = localStorage.getItem(dataKey);
 
       if (token && userData) {
         try {
@@ -44,12 +55,9 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
             // Check if token is expired
             if (!payload.exp || payload.exp <= currentTime) {
               // Clear expired tokens
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              if (userType === 'user') localStorage.removeItem('userData');
-              if (userType === 'vendor') localStorage.removeItem('vendorData');
-              if (userType === 'worker') localStorage.removeItem('workerData');
-              if (userType === 'admin') localStorage.removeItem('adminData');
+              localStorage.removeItem(tokenKey);
+              localStorage.removeItem(refreshTokenKey);
+              localStorage.removeItem(dataKey);
               setIsAuthenticated(false);
               return;
             }
@@ -65,49 +73,22 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
             if (payload.role === roleMap[userType]) {
               setIsAuthenticated(true);
             } else {
-              // Wrong role, clear tokens
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              if (userType === 'user') localStorage.removeItem('userData');
-              if (userType === 'vendor') localStorage.removeItem('vendorData');
-              if (userType === 'worker') localStorage.removeItem('workerData');
-              if (userType === 'admin') localStorage.removeItem('adminData');
+              // Role mismatch
               setIsAuthenticated(false);
             }
           } else {
-            // Invalid token format, clear it
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            if (userType === 'user') localStorage.removeItem('userData');
-            if (userType === 'vendor') localStorage.removeItem('vendorData');
-            if (userType === 'worker') localStorage.removeItem('workerData');
-            if (userType === 'admin') localStorage.removeItem('adminData');
+            // Invalid token format
             setIsAuthenticated(false);
           }
         } catch (error) {
-          // Invalid token, clear it
+          // Invalid token
           console.error('Token validation error:', error);
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          if (userType === 'user') localStorage.removeItem('userData');
-          if (userType === 'vendor') localStorage.removeItem('vendorData');
-          if (userType === 'worker') localStorage.removeItem('workerData');
-          if (userType === 'admin') localStorage.removeItem('adminData');
           setIsAuthenticated(false);
         }
       } else {
-        // Clear any leftover tokens that don't match userType
-        const hasToken = localStorage.getItem('accessToken');
-        const hasUserData = localStorage.getItem(userType + 'Data') || localStorage.getItem('userData');
-
-        if (hasToken && !hasUserData) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-        }
-
         setIsAuthenticated(false);
       }
-      
+
       setIsLoading(false);
     };
 
@@ -133,7 +114,7 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
       worker: '/worker/dashboard',
       admin: '/admin/dashboard'
     };
-    
+
     const redirectPath = redirectTo || defaultRedirects[userType] || '/user';
     return <Navigate to={redirectPath} replace />;
   }

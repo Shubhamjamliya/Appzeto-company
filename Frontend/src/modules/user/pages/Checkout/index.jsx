@@ -24,10 +24,11 @@ const Checkout = () => {
   const [isPlusAdded, setIsPlusAdded] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
-  const [address, setAddress] = useState('11 Bungalow Colony, Near City Center, Your City - 123456');
+  const [address, setAddress] = useState('');
   const [houseNumber, setHouseNumber] = useState('');
   const [addressDetails, setAddressDetails] = useState(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [userPhone, setUserPhone] = useState('');
 
   // New state for vendor search flow
   const [currentStep, setCurrentStep] = useState('details'); // 'details' | 'searching' | 'waiting' | 'accepted' | 'payment'
@@ -35,6 +36,7 @@ const Checkout = () => {
   const [bookingRequest, setBookingRequest] = useState(null);
   const [searchingVendors, setSearchingVendors] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' | 'pay_at_home'
 
   // Check if Razorpay is loaded (defer to avoid blocking initial render)
   useEffect(() => {
@@ -56,6 +58,17 @@ const Checkout = () => {
     }
   }, []);
 
+  // Load user data and cart
+  useEffect(() => {
+    const storedUserData = localStorage.getItem('userData');
+    if (storedUserData) {
+      const userData = JSON.parse(storedUserData);
+      if (userData.phone) {
+        setUserPhone(userData.phone);
+      }
+    }
+  }, []);
+
   // Load cart items from backend and filter by category if provided
   useEffect(() => {
     const loadCart = async () => {
@@ -72,7 +85,6 @@ const Checkout = () => {
           setCartItems([]);
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
         setCartItems([]);
       }
     };
@@ -108,7 +120,6 @@ const Checkout = () => {
         toast.error(response.message || 'Failed to update quantity');
       }
     } catch (error) {
-      console.error('Error updating quantity:', error);
       toast.error('Failed to update quantity');
     }
   };
@@ -143,15 +154,12 @@ const Checkout = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected, waiting for vendor acceptance...');
     });
 
     socket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
     });
 
     socket.on('booking_accepted', (data) => {
-      console.log('Booking accepted event received:', data);
       if (data.bookingId === bookingRequest._id) {
 
         // Construct vendor object from event data
@@ -273,11 +281,9 @@ const Checkout = () => {
 
       // Wait for real-time vendor acceptance via Socket.IO
       // The socket listener above will handle the 'booking_accepted' event
-      console.log('Waiting for vendor to accept...');
 
     } catch (error) {
       toast.dismiss();
-      console.error('Vendor search error:', error);
       toast.error('Failed to search for vendors. Please try again.');
       setCurrentStep('details');
       setSearchingVendors(false);
@@ -286,7 +292,7 @@ const Checkout = () => {
   };
 
   // Proceed to payment after vendor acceptance
-  const handlePayment = async () => {
+  const handleOnlinePayment = async () => {
     try {
       if (!acceptedVendor || !bookingRequest) {
         toast.error('No vendor selected or booking not created');
@@ -343,7 +349,6 @@ const Checkout = () => {
                 await cartService.clearCart();
                 setCartItems([]);
               } catch (error) {
-                console.error('Error clearing cart:', error);
               }
 
               // Navigate to booking confirmation
@@ -355,14 +360,13 @@ const Checkout = () => {
             }
           } catch (error) {
             toast.dismiss();
-            console.error('Payment verification error:', error);
             toast.error('Failed to verify payment');
           }
         },
         prefill: {
-          name: 'User Name',
-          email: 'user@example.com',
-          contact: '+91-6261387233'
+          name: JSON.parse(localStorage.getItem('userData'))?.name || 'User',
+          email: JSON.parse(localStorage.getItem('userData'))?.email || '',
+          contact: userPhone
         },
         theme: {
           color: themeColors.button
@@ -378,8 +382,43 @@ const Checkout = () => {
 
     } catch (error) {
       toast.dismiss();
-      console.error('Payment error:', error);
       toast.error('Failed to process payment');
+    }
+  };
+
+  const handlePayAtHome = async () => {
+    try {
+      if (!bookingRequest) return;
+      toast.loading('Confirming booking...');
+      const response = await paymentService.confirmPayAtHome(bookingRequest._id);
+      toast.dismiss();
+
+      if (response.success) {
+        toast.success('Booking confirmed!');
+        // Clear cart
+        try {
+          await cartService.clearCart();
+          setCartItems([]);
+        } catch (error) {
+        }
+        // Navigate to booking confirmation
+        navigate(`/user/booking-confirmation/${bookingRequest._id}`, {
+          replace: true
+        });
+      } else {
+        toast.error(response.message || 'Failed to confirm booking');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to process request');
+    }
+  };
+
+  const handlePayment = async () => {
+    if (paymentMethod === 'online') {
+      await handleOnlinePayment();
+    } else {
+      await handlePayAtHome();
     }
   };
 
@@ -495,7 +534,7 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div className="min-h-screen bg-white pb-80">
       {/* Header */}
       <header className="bg-white">
         <div className="px-4 pt-4 pb-3">
@@ -640,8 +679,8 @@ const Checkout = () => {
             <div className="flex items-center gap-3">
               <FiPhone className="w-5 h-5 text-gray-600" />
               <div>
-                <p className="text-sm font-medium text-black">Verified Customer</p>
-                <p className="text-xs text-gray-600">+91-6261387233</p>
+                <p className="text-sm font-medium text-black">{JSON.parse(localStorage.getItem('userData'))?.name || 'Verified Customer'}</p>
+                <p className="text-xs text-gray-600">{userPhone || 'Loading...'}</p>
               </div>
             </div>
             <button className="text-sm font-medium hover:underline" style={{ color: themeColors.button }}>
@@ -785,6 +824,52 @@ const Checkout = () => {
             ))}
           </div>
         </div>
+
+        {/* Payment Method Selection - Only show when vendor accepted */}
+        {currentStep === 'payment' && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+            <h3 className="text-base font-bold text-black mb-4">Select Payment Method</h3>
+            <div className="space-y-3">
+              <label className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'online' ? 'border-teal-600 bg-teal-50' : 'border-gray-100 hover:border-gray-200'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'online' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <FiShoppingCart className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">Online Payment</p>
+                    <p className="text-xs text-gray-500">Razorpay, UPI, Cards</p>
+                  </div>
+                </div>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  className="w-5 h-5 accent-teal-600"
+                  checked={paymentMethod === 'online'}
+                  onChange={() => setPaymentMethod('online')}
+                />
+              </label>
+
+              <label className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'pay_at_home' ? 'border-teal-600 bg-teal-50' : 'border-gray-100 hover:border-gray-200'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'pay_at_home' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <FiHome className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">Pay at Home</p>
+                    <p className="text-xs text-gray-500">Cash/UPI after service</p>
+                  </div>
+                </div>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  className="w-5 h-5 accent-teal-600"
+                  checked={paymentMethod === 'pay_at_home'}
+                  onChange={() => setPaymentMethod('pay_at_home')}
+                />
+              </label>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Bottom Action Button */}
@@ -854,7 +939,7 @@ const Checkout = () => {
             onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
           >
             {searchingVendors ? 'Searching for vendors...' :
-              currentStep === 'payment' ? 'Proceed to pay' :
+              currentStep === 'payment' ? (paymentMethod === 'online' ? 'Proceed to Pay' : 'Confirm Booking') :
                 selectedDate && selectedTime && houseNumber ?
                   'Find nearby vendors' :
                   'Add address and slot'}

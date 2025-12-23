@@ -42,6 +42,7 @@ const BookingTrack = () => {
   const [distance, setDistance] = useState('');
   const [duration, setDuration] = useState('');
   const [routePath, setRoutePath] = useState([]);
+  const [isAutoCenter, setIsAutoCenter] = useState(true);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -56,7 +57,6 @@ const BookingTrack = () => {
       socket.emit('join_tracking', id);
 
       const handleLocationUpdate = (data) => {
-        console.log('Live location update:', data);
         if (data.lat && data.lng) {
           setCurrentLocation({ lat: parseFloat(data.lat), lng: parseFloat(data.lng) });
         }
@@ -122,7 +122,6 @@ const BookingTrack = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching booking:', error);
       } finally {
         if (isFirstLoad) setLoading(false);
       }
@@ -168,7 +167,7 @@ const BookingTrack = () => {
             }
           }
         );
-      } else {
+      } else if (isAutoCenter) {
         // 2. Continuous Focus: Update bounds to include both rider and destination
         // This ensures the "pure track" is always visible without "jumping" solely to rider
         const bounds = new window.google.maps.LatLngBounds();
@@ -179,7 +178,7 @@ const BookingTrack = () => {
         map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
       }
     }
-  }, [isLoaded, coords, map, directions, currentLocation]);
+  }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
@@ -201,6 +200,12 @@ const BookingTrack = () => {
           defaultCenter={defaultCenter}
           defaultZoom={14}
           onLoad={map => setMap(map)}
+          onDragStart={() => setIsAutoCenter(false)}
+          onZoomChanged={() => {
+            // Only disable if it's a programmatic zoom check is complicated, 
+            // but usually we want to stop auto-centering if user zooms.
+            // However, fitBounds triggers zoom changed. So we check user interaction.
+          }}
           options={{
             styles: mapStyles,
             disableDefaultUI: true,
@@ -285,6 +290,26 @@ const BookingTrack = () => {
             </OverlayView>
           )}
         </GoogleMap>
+
+        {/* Floating Action Buttons */}
+        <div className="absolute bottom-32 right-4 flex flex-col gap-3 z-20">
+          <button
+            onClick={() => {
+              setIsAutoCenter(true);
+              if (map && currentLocation && coords) {
+                const bounds = new window.google.maps.LatLngBounds();
+                bounds.extend(currentLocation);
+                bounds.extend(coords);
+                map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
+              }
+            }}
+            className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${isAutoCenter ? 'bg-teal-600 text-white' : 'bg-white text-gray-700'
+              }`}
+            style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
+          >
+            <FiCrosshair className={`w-6 h-6 ${isAutoCenter ? 'animate-pulse' : ''}`} />
+          </button>
+        </div>
 
         {/* Recenter Button */}
         <button

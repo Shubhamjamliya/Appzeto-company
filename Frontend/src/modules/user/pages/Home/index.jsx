@@ -32,7 +32,45 @@ const toAssetUrl = (url) => {
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [address] = useState('New Palasia- Indore- Madhya Pradesh...');
+  const [address, setAddress] = useState('...');
+
+  // Auto-detect location on mount
+  useEffect(() => {
+    const autoDetectLocation = async () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+              const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+              );
+              const data = await response.json();
+
+              if (data.status === 'OK' && data.results.length > 0) {
+                const result = data.results[0];
+                const getComponent = (type) =>
+                  result.address_components.find(c => c.types.includes(type))?.long_name || '';
+
+                const area = getComponent('sublocality_level_1') || getComponent('neighborhood') || getComponent('locality');
+                const city = getComponent('locality') || getComponent('administrative_area_level_2');
+                const state = getComponent('administrative_area_level_1');
+
+                const formattedAddress = `${area}- ${city}- ${state}`;
+                setAddress(formattedAddress);
+              }
+            } catch (error) {
+            }
+          },
+          (error) => {
+          }
+        );
+      }
+    };
+
+    autoDetectLocation();
+  }, []);
   const [cartCount, setCartCount] = useState(0);
   const [categories, setCategories] = useState([]);
   const [homeContent, setHomeContent] = useState(null);
@@ -90,7 +128,6 @@ const Home = () => {
         if (error.response?.status === 401 || error.response?.status === 403) {
           setCartCount(0);
         } else {
-          console.error('Error loading cart count:', error);
           setCartCount(0);
         }
       }
@@ -132,7 +169,6 @@ const Home = () => {
           setHomeContent(homeContentRes.homeContent);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
         toast.error('Failed to load content. Please refresh the page.');
       } finally {
         setLoading(false);
@@ -264,7 +300,6 @@ const Home = () => {
         }
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
       toast.error('Failed to add to cart. Please try again.');
     }
   };
@@ -410,7 +445,6 @@ const Home = () => {
               subtitle={section.subtitle}
               services={section.cards?.map((card, cIdx) => {
                 const processedImage = toAssetUrl(card.imageUrl);
-                console.log(`Service ${card.title}: original=${card.imageUrl}, processed=${processedImage}`);
                 return {
                   id: card._id || cIdx,
                   title: card.title,

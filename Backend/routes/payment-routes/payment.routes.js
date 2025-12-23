@@ -8,7 +8,8 @@ const {
   verifyPaymentWebhook,
   processWalletPayment,
   processRefund,
-  getPaymentHistory
+  getPaymentHistory,
+  confirmPayAtHome
 } = require('../../controllers/paymentControllers/paymentController');
 
 // Validation rules
@@ -36,6 +37,7 @@ router.post('/create-order', authenticate, isUser, createOrderValidation, create
 router.post('/verify', authenticate, isUser, verifyPaymentValidation, verifyPaymentWebhook);
 router.post('/wallet', authenticate, isUser, walletPaymentValidation, processWalletPayment);
 router.post('/refund', authenticate, isUser, refundValidation, processRefund);
+router.post('/pay-at-home', authenticate, isUser, walletPaymentValidation, confirmPayAtHome);
 router.get('/history', authenticate, isUser, getPaymentHistory);
 
 module.exports = router;

@@ -34,7 +34,6 @@ const BottomNav = React.memo(() => {
         if (error.response?.status === 401 || error.response?.status === 403) {
           setCartCount(0);
         } else {
-          console.error('Error loading cart count:', error);
           setCartCount(0);
         }
       }
@@ -183,8 +182,8 @@ const BottomNav = React.memo(() => {
                 handleTabClick(item.path, item.id);
               }}
               className={`flex flex-col items-center justify-center gap-1 py-1.5 px-4 rounded-xl transition-all duration-300 relative ${isActive
-                  ? 'transform scale-105'
-                  : 'hover:bg-white/50 active:scale-95'
+                ? 'transform scale-105'
+                : 'hover:bg-white/50 active:scale-95'
                 }`}
               style={isActive ? {
                 background: 'linear-gradient(135deg, rgba(0, 166, 166, 0.15) 0%, rgba(41, 173, 129, 0.1) 100%)',

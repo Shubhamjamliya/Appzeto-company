@@ -38,6 +38,12 @@ export const paymentService = {
 
     const response = await api.get(`/payments/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
     return response.data;
+  },
+
+  // Confirm Pay at Home option
+  confirmPayAtHome: async (bookingId) => {
+    const response = await api.post('/payments/pay-at-home', { bookingId });
+    return response.data;
   }
 };
 

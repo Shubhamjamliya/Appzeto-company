@@ -3,7 +3,6 @@ import { AiFillStar } from 'react-icons/ai';
 import { themeColors } from '../../../../theme';
 
 const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, originalPrice, discount, onClick, onAddClick }) => {
-  console.log(`ServiceWithRatingCard ${title}: image=${image}`);
   return (
     <div
       className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"

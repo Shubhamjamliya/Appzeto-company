@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
-import { 
-  FiCheckCircle, 
-  FiMapPin, 
-  FiClock, 
+import {
+  FiCheckCircle,
+  FiMapPin,
+  FiClock,
   FiCalendar,
   FiPackage,
   FiDollarSign,
@@ -34,7 +34,6 @@ const BookingConfirmation = () => {
           navigate('/user/my-bookings');
         }
       } catch (error) {
-        console.error('Error loading booking:', error);
         toast.error('Failed to load booking details');
         navigate('/user/my-bookings');
       } finally {
@@ -50,11 +49,11 @@ const BookingConfirmation = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { 
+    return date.toLocaleDateString('en-IN', {
       weekday: 'long',
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 

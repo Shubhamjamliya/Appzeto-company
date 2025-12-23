@@ -33,7 +33,7 @@ const ManagePaymentMethods = () => {
   useEffect(() => {
     if (showAddCardModal && modalRef.current && backdropRef.current) {
       // Open animation
-      gsap.fromTo(backdropRef.current, 
+      gsap.fromTo(backdropRef.current,
         { opacity: 0 },
         { opacity: 1, duration: 0.3, ease: 'power2.out' }
       );
@@ -88,7 +88,6 @@ const ManagePaymentMethods = () => {
     // Validate and save card
     if (cardNumber && expiryMMYY && cvv) {
       // Here you would typically save the card to backend/localStorage
-      console.log('Card saved:', { cardNumber, expiryMMYY, saveCard });
       toast.success('Card added successfully!');
       handleCloseModal();
     } else {
@@ -164,7 +163,7 @@ const ManagePaymentMethods = () => {
         {/* Cards Section */}
         <div>
           <h2 className="text-base font-bold text-black mb-4">Cards</h2>
-          
+
           {/* Add Card Button */}
           <button
             onClick={handleAddCard}
@@ -191,7 +190,7 @@ const ManagePaymentMethods = () => {
             onClick={handleCloseModal}
             style={{ opacity: 0 }}
           />
-          
+
           {/* Modal Container with Close Button */}
           <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
             {/* Close Button - Above Modal (Same as project-wide style) */}
@@ -208,7 +207,7 @@ const ManagePaymentMethods = () => {
             <div
               ref={modalRef}
               className="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pointer-events-auto flex flex-col"
-              style={{ 
+              style={{
                 maxHeight: '90vh',
                 transform: 'translateY(100%)',
                 opacity: 0

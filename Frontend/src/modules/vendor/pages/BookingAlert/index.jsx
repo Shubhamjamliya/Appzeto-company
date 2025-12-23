@@ -179,7 +179,7 @@ const BookingAlert = () => {
       window.dispatchEvent(new Event('vendorStatsUpdated'));
 
       setTimeout(() => {
-        navigate(`/vendor/booking/${booking.id}`);
+        navigate('/vendor/dashboard');
       }, 300);
     } catch (error) {
       console.error('Error accepting booking:', error);

@@ -29,7 +29,6 @@ const Cart = () => {
           setCartItems([]);
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
         toast.error('Failed to load cart');
         setCartItems([]);
       } finally {
@@ -87,7 +86,6 @@ const Cart = () => {
         toast.error(response.message || 'Failed to remove category items');
       }
     } catch (error) {
-      console.error('Error removing category items:', error);
       toast.error('Failed to remove category items');
     }
   };
@@ -102,7 +100,6 @@ const Cart = () => {
         toast.error(response.message || 'Failed to remove item');
       }
     } catch (error) {
-      console.error('Error removing item:', error);
       toast.error('Failed to remove item');
     }
   };
@@ -114,14 +111,13 @@ const Cart = () => {
 
       const newCount = Math.max(1, (item.serviceCount || 1) + change);
       const response = await cartService.updateItem(itemId, newCount);
-      
+
       if (response.success) {
         setCartItems(response.data || []);
       } else {
         toast.error(response.message || 'Failed to update quantity');
       }
     } catch (error) {
-      console.error('Error updating quantity:', error);
       toast.error('Failed to update quantity');
     }
   };
@@ -303,7 +299,7 @@ const Cart = () => {
                     <button
                       onClick={() => handleCategoryCheckout(category)}
                       className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 shadow-md"
-                      style={{ 
+                      style={{
                         backgroundColor: themeColors.button,
                         boxShadow: '0 2px 6px rgba(0, 166, 166, 0.3)'
                       }}

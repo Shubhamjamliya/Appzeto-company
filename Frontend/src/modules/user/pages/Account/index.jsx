@@ -58,7 +58,6 @@ const Account = () => {
           });
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
         // Use localStorage data if API fails
         const storedUserData = localStorage.getItem('userData');
         if (storedUserData) {

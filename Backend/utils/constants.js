@@ -39,6 +39,7 @@ const WORKER_STATUS = {
 const BOOKING_STATUS = {
   SEARCHING: 'searching', // Initial search phase
   REQUESTED: 'requested', // Waiting for vendor to accept
+  AWAITING_PAYMENT: 'awaiting_payment', // Accepted by vendor, waiting for user payment
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
   IN_PROGRESS: 'in_progress',

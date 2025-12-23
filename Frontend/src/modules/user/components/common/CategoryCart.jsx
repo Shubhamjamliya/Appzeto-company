@@ -23,15 +23,14 @@ const CategoryCart = ({
         setLoading(true);
         const response = await cartService.getCart();
         if (response.success) {
-      // Filter by category
+          // Filter by category
           const categoryItems = (response.data || []).filter(item => item.category === category);
-      setCartItems(categoryItems);
+          setCartItems(categoryItems);
         } else {
           toast.error(response.message || 'Failed to load cart');
           setCartItems([]);
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
         toast.error('Failed to load cart');
         setCartItems([]);
       } finally {
@@ -60,7 +59,6 @@ const CategoryCart = ({
         toast.error(response.message || 'Failed to remove item');
       }
     } catch (error) {
-      console.error('Error removing item:', error);
       toast.error('Failed to remove item');
     }
   };
@@ -70,9 +68,9 @@ const CategoryCart = ({
       const item = cartItems.find(i => i._id === itemId || i.id === itemId);
       if (!item) return;
 
-        const newCount = Math.max(1, (item.serviceCount || 1) + change);
+      const newCount = Math.max(1, (item.serviceCount || 1) + change);
       const response = await cartService.updateItem(itemId, newCount);
-      
+
       if (response.success) {
         // Filter by category from updated cart
         const categoryItems = (response.data || []).filter(item => item.category === category);
@@ -81,7 +79,6 @@ const CategoryCart = ({
         toast.error(response.message || 'Failed to update quantity');
       }
     } catch (error) {
-      console.error('Error updating quantity:', error);
       toast.error('Failed to update quantity');
     }
   };

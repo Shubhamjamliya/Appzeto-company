@@ -83,12 +83,12 @@ const ServiceSectionWithRating = React.memo(({ title, subtitle, services, onSeeA
       <div ref={titleRef} className="px-4 mb-5 flex items-center justify-between" style={{ opacity: 1 }}>
         <div>
           <h2
-            className="text-xl font-bold mb-1 text-black"
+            className="text-xl font-bold mb-1 text-gray-900 tracking-tight"
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-sm font-medium text-black">
+            <p className="text-sm font-medium text-gray-500">
               {subtitle}
             </p>
           )}
@@ -96,28 +96,14 @@ const ServiceSectionWithRating = React.memo(({ title, subtitle, services, onSeeA
         {onSeeAllClick && (
           <button
             onClick={onSeeAllClick}
-            className="font-semibold text-sm px-4 py-1.5 rounded-full transition-all hover:scale-105 active:scale-95"
-            style={{
-              color: themeColors.button,
-              backgroundColor: 'rgba(0, 166, 166, 0.08)',
-              border: '1.5px solid rgba(0, 166, 166, 0.25)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.12)';
-              e.target.style.borderColor = themeColors.button;
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.08)';
-              e.target.style.borderColor = 'rgba(0, 166, 166, 0.25)';
-            }}
+            className="font-bold text-xs px-4 py-2 rounded-full transition-all hover:bg-gray-100 active:scale-95 bg-gray-50 text-gray-700 border border-gray-100"
           >
-            See all →
+            See all
           </button>
         )}
       </div>
 
-      {/* Horizontal Scrollable Service Cards */}
-      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-6 pb-2 scrollbar-hide">
         {services.map((service) => (
           <ServiceWithRatingCard
             key={service.id}

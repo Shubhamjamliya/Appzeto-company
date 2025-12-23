@@ -15,65 +15,9 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
   const carouselRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Default promotional cards if none provided
-  const defaultPromos = [
-    {
-      id: 2,
-      title: 'New Service',
-      subtitle: 'Smart Home Installation - Get 20% off',
-      buttonText: 'Explore',
-      className: 'from-blue-600 to-blue-800',
-      image: promo2,
-      route: '/user/electrician-services',
-    },
-    {
-      id: 3,
-      title: 'Emergency',
-      subtitle: '24/7 Emergency Services',
-      buttonText: 'Call Now',
-      className: 'from-orange-600 to-orange-800',
-      image: promo3,
-      route: '/user/ac-service',
-    },
-    {
-      id: 4,
-      title: 'Special Offer',
-      subtitle: 'Get amazing deals on all services',
-      buttonText: 'Book now',
-      className: 'from-blue-600 to-blue-800',
-      image: promo4,
-      route: '/user/salon-for-women',
-    },
-    {
-      id: 5,
-      title: 'Premium Services',
-      subtitle: 'Experience the best',
-      buttonText: 'Explore',
-      className: 'from-indigo-600 to-indigo-800',
-      image: promo5,
-      route: '/user/salon-for-women',
-    },
-    {
-      id: 6,
-      title: 'Limited Time',
-      subtitle: 'Hurry up! Limited offers',
-      buttonText: 'Book now',
-      className: 'from-pink-600 to-pink-800',
-      image: promo6,
-      route: '/bathroom-kitchen-cleaning',
-    },
-    {
-      id: 1,
-      title: 'Shine your bathroom deserves',
-      subtitle: '',
-      buttonText: 'Book now',
-      className: 'from-green-600 to-green-700',
-      image: promo1,
-      route: '/bathroom-kitchen-cleaning',
-    },
-  ];
 
-  const promotionalCards = promos || defaultPromos;
+
+  const promotionalCards = promos || [];
 
   // Optimized auto-scroll functionality - use setInterval instead of continuous RAF
   useEffect(() => {
@@ -114,7 +58,7 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
   // Optimized scroll to current index - use requestAnimationFrame
   useEffect(() => {
     if (!scrollContainerRef.current) return;
-    
+
     const container = scrollContainerRef.current;
     const firstCard = container.querySelector('[data-promo-card]');
     if (!firstCard) return;
@@ -163,7 +107,7 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
           const gap = 16;
           const scrollLeft = container.scrollLeft;
           const newIndex = Math.round(scrollLeft / (cardWidth + gap));
-          
+
           if (newIndex !== currentIndex && newIndex >= 0 && newIndex < promotionalCards.length) {
             setCurrentIndex(newIndex);
           }
@@ -211,15 +155,19 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
     }
   }, []);
 
+  if (!promos || promos.length === 0) {
+    return null;
+  }
+
   return (
-    <div 
+    <div
       ref={carouselRef}
       className="pb-6"
       style={{ opacity: 1 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div 
+      <div
         ref={scrollContainerRef}
         className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide"
         style={{ scrollBehavior: 'smooth' }}
@@ -243,7 +191,7 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
           <div
             key={index}
             className={`rounded-full transition-all ${index === currentIndex ? 'w-6 h-1.5' : 'w-1.5 h-1.5'}`}
-            style={{ 
+            style={{
               backgroundColor: index === currentIndex ? '#F59E0B' : 'rgba(245, 158, 11, 0.4)',
               boxShadow: index === currentIndex ? '0 2px 6px rgba(245, 158, 11, 0.5)' : '0 1px 2px rgba(0, 0, 0, 0.2)'
             }}

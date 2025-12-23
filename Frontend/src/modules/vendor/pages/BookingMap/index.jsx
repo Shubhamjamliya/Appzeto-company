@@ -43,6 +43,7 @@ const BookingMap = () => {
   const [distance, setDistance] = useState('');
   const [duration, setDuration] = useState('');
   const [routePath, setRoutePath] = useState([]);
+  const [isAutoCenter, setIsAutoCenter] = useState(true);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -147,16 +148,16 @@ const BookingMap = () => {
             }
           }
         );
-      } else {
+      } else if (isAutoCenter) {
         // Continuous Focus: Update bounds to include both worker and destination
-        // Pure track focus focus
+        // Only if user hasn't manually moved the map
         const bounds = new window.google.maps.LatLngBounds();
         bounds.extend(currentLocation);
         bounds.extend(coords);
         map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
       }
     }
-  }, [isLoaded, coords, map, directions, currentLocation]);
+  }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
@@ -178,6 +179,7 @@ const BookingMap = () => {
           defaultCenter={defaultCenter}
           defaultZoom={14}
           onLoad={map => setMap(map)}
+          onDragStart={() => setIsAutoCenter(false)}
           options={{
             styles: mapStyles,
             disableDefaultUI: true,
@@ -263,16 +265,19 @@ const BookingMap = () => {
         {/* Recenter Button */}
         <button
           onClick={() => {
+            setIsAutoCenter(true);
             if (map && (currentLocation || coords)) {
               const bounds = new window.google.maps.LatLngBounds();
               if (currentLocation) bounds.extend(currentLocation);
               if (coords) bounds.extend(coords);
-              map.fitBounds(bounds);
+              map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
             }
           }}
-          className="absolute bottom-64 right-4 p-3 bg-white rounded-full shadow-lg text-gray-700 z-10 active:scale-95"
+          className={`absolute bottom-64 right-4 p-4 rounded-full shadow-2xl transition-all active:scale-90 z-20 ${isAutoCenter ? 'bg-teal-600 text-white' : 'bg-white text-gray-700'
+            }`}
+          style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
         >
-          <FiCrosshair className="w-6 h-6" />
+          <FiCrosshair className={`w-6 h-6 ${isAutoCenter ? 'animate-pulse' : ''}`} />
         </button>
       </div>
 

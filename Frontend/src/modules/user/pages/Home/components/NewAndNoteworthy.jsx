@@ -10,31 +10,9 @@ const NewAndNoteworthy = React.memo(({ services, onServiceClick }) => {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
   const cardsRef = useRef(null);
-  // Default electrical services if none provided
-  const defaultServices = [
-    {
-      id: 1,
-      title: 'Native Water Purifier',
-      image: waterPurifierImage,
-    },
-    {
-      id: 2,
-      title: 'Bathroom & Kitchen Cleaning',
-      image: bathroomCleaningImage,
-    },
-    {
-      id: 3,
-      title: 'Hair Studio for Women',
-      image: hairStudioImage,
-    },
-    {
-      id: 4,
-      title: 'AC Service and Repair',
-      image: acRepairImage,
-    },
-  ];
 
-  const serviceList = (services && services.length > 0) ? services : defaultServices;
+
+  const serviceList = services || [];
 
   // Defer GSAP scroll animations until after initial render for better performance
   useEffect(() => {
@@ -105,18 +83,21 @@ const NewAndNoteworthy = React.memo(({ services, onServiceClick }) => {
     }
   }, []); // Empty deps - only run once on mount
 
+  if (serviceList.length === 0) {
+    return null;
+  }
+
   return (
     <div ref={sectionRef} className="mb-6">
       <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 1 }}>
         <h2
-          className="text-xl font-bold text-black"
+          className="text-xl font-bold text-gray-900 tracking-tight"
         >
           New and noteworthy
         </h2>
       </div>
 
-      {/* Horizontal Scrollable Service Cards */}
-      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-6 pb-2 scrollbar-hide">
         {serviceList.map((service) => (
           <SimpleServiceCard
             key={service.id}

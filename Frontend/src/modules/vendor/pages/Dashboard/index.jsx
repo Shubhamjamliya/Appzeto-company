@@ -174,97 +174,77 @@ const Dashboard = () => {
     loadDashboardData();
   }, []);
 
-  // Socket.IO Listener for Real-time Booking Alerts
+  // Listen for real-time updates via window events (dispatched by useAppNotifications)
   useEffect(() => {
-    // Get vendor ID from profile
-    const profile = JSON.parse(localStorage.getItem('vendorData') || '{}');
-    const vendorId = profile.id || profile._id;
+    const handleUpdate = () => {
+      console.log('🔄 Dashboard: Refreshing data due to real-time update');
+      // Re-fetch dashboard data
+      // We can just call the loading function again
+      const refreshData = async () => {
+        try {
+          const response = await vendorDashboardService.getDashboardStats();
+          if (response.success) {
+            const { stats: apiStats, recentBookings } = response.data;
+            setStats({
+              todayEarnings: apiStats.vendorEarnings || 0,
+              activeJobs: apiStats.inProgressBookings || 0,
+              pendingAlerts: apiStats.pendingBookings || 0,
+              workersOnline: 0,
+              totalEarnings: apiStats.vendorEarnings || 0,
+              completedJobs: apiStats.completedBookings || 0,
+              rating: 4.8,
+            });
 
-    if (!vendorId) return;
+            const requestedBookings = (recentBookings || []).filter(booking => booking.status === 'REQUESTED');
+            const otherBookings = (recentBookings || []).filter(booking => booking.status !== 'REQUESTED');
 
-    // Connect to Socket.IO
-    const socket = io(SOCKET_URL, {
-      auth: {
-        token: localStorage.getItem('vendorAccessToken'),
-        vendorId: vendorId
-      },
-      transports: ['websocket', 'polling']
-    });
+            const recentJobsData = otherBookings.slice(0, 3).map(booking => ({
+              id: booking._id,
+              serviceType: booking.serviceId?.title || 'Service',
+              customerName: booking.userId?.name || 'Customer',
+              location: booking.address?.addressLine1 || 'Address not available',
+              price: booking.finalAmount || booking.baseAmount || 0,
+              timeSlot: {
+                date: new Date(booking.scheduledDate).toLocaleDateString(),
+                time: booking.scheduledTimeSlot || 'Time not set'
+              },
+              status: booking.status,
+              assignedTo: booking.workerId ? { name: booking.workerId.name } : null,
+            }));
+            setRecentJobs(recentJobsData);
 
-    socket.on('connect', () => {
-      console.log('✅ Vendor Dashboard: Connected to Socket.IO');
-      socket.emit('join_vendor_room', vendorId);
-    });
-
-    // Listen for new booking requests (within 10km)
-    socket.on('new_booking_request', (data) => {
-      console.log('🔔 New Booking Request:', data);
-
-      // 1. Create a pending job object
-      const newJob = {
-        id: data.bookingId,
-        serviceType: data.serviceName,
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
-        location: {
-          address: 'Location shared', // Will be fetched in detail page
-          distance: data.distance ? `${data.distance.toFixed(1)} km` : 'Near you'
-        },
-        price: data.price,
-        timeSlot: {
-          date: new Date(data.scheduledDate).toLocaleDateString(),
-          time: data.scheduledTime
-        },
-        status: 'REQUESTED',
-        createdAt: new Date().toISOString()
+            const pendingBookingsData = requestedBookings.slice(0, 5).map(booking => ({
+              id: booking._id,
+              serviceType: booking.serviceId?.title || 'Service Request',
+              customerName: booking.userId?.name || 'Customer',
+              location: {
+                address: booking.address?.addressLine1 || 'Address not available',
+                distance: 'N/A'
+              },
+              price: booking.finalAmount || booking.baseAmount || 0,
+              timeSlot: {
+                date: new Date(booking.scheduledDate).toLocaleDateString(),
+                time: booking.scheduledTimeSlot || 'Time not set'
+              },
+              status: booking.status,
+            }));
+            setPendingBookings(pendingBookingsData);
+          }
+        } catch (err) {
+          console.error('Error refreshing dashboard data:', err);
+        }
       };
+      refreshData();
+    };
 
-      // 2. Save to localStorage temporarily (BookingAlert page reads this)
-      const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
-      // Avoid duplicates
-      if (!pendingJobs.find(job => job.id === newJob.id)) {
-        pendingJobs.unshift(newJob);
-        localStorage.setItem('vendorPendingJobs', JSON.stringify(pendingJobs));
-
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          pendingAlerts: (prev.pendingAlerts || 0) + 1
-        }));
-      }
-
-      // 3. Update pending bookings list immediately
-      setPendingBookings(prev => {
-        const exists = prev.find(b => b.id === data.bookingId);
-        if (exists) return prev;
-
-        return [{
-          id: data.bookingId,
-          serviceType: data.serviceName,
-          customerName: data.customerName,
-          customerPhone: data.customerPhone,
-          location: {
-            address: 'Location shared',
-            distance: data.distance ? `${data.distance.toFixed(1)} km` : 'Near you'
-          },
-          price: data.price,
-          timeSlot: {
-            date: new Date(data.scheduledDate).toLocaleDateString(),
-            time: data.scheduledTime
-          },
-          status: 'REQUESTED'
-        }, ...prev];
-      });
-
-      // 4. Redirect to BookingAlert page immediately!
-      // This will trigger the ring sound and 60s timer
-      navigate(`/vendor/booking-alert/${data.bookingId}`);
-    });
+    window.addEventListener('vendorJobsUpdated', handleUpdate);
+    window.addEventListener('vendorStatsUpdated', handleUpdate);
 
     return () => {
-      socket.disconnect();
+      window.removeEventListener('vendorJobsUpdated', handleUpdate);
+      window.removeEventListener('vendorStatsUpdated', handleUpdate);
     };
-  }, [navigate]);
+  }, []);
 
   const quickActions = [
     {
@@ -693,8 +673,8 @@ const Dashboard = () => {
                             const updated = pendingJobs.filter(b => b.id !== booking.id);
                             localStorage.setItem('vendorPendingJobs', JSON.stringify(updated));
 
-                            // Navigate
-                            navigate(`/vendor/booking/${booking.id}`);
+                            // Dispatch stats update event
+                            window.dispatchEvent(new Event('vendorStatsUpdated'));
                           } catch (error) {
                             console.error('Error accepting:', error);
                             alert('Failed to accept booking');

@@ -1,22 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
-// import { playNotificationSound, isSoundEnabled } from '../utils/notificationSound';
-// Using inline simple sound or imported one if available. 
-// Note: importing from utils might fail if circular dep/path issues, but it should be fine.
-
-// We need to dynamic import or use the existing sound util.
-import { playNotificationSound, isSoundEnabled } from '../utils/notificationSound';
+import { useNavigate } from 'react-router-dom';
+import { playNotificationSound, isSoundEnabled, playAlertRing } from '../utils/notificationSound';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
 /**
  * Universal hook for app-wide notifications
- * Connects to Socket.IO and listens for 'notification' event
+ * Connects to Socket.IO and listens for 'notification' and custom events
  */
 export const useAppNotifications = (userType) => {
   const socketRef = useRef(null);
-  const toastRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let tokenKey = 'accessToken';
@@ -58,6 +54,15 @@ export const useAppNotifications = (userType) => {
 
     socket.on('connect', () => {
       console.log(`✅ ${userType.toUpperCase()} App Socket connected`);
+
+      // If vendor, join vendor-specific room just in case backend expects it
+      if (userType === 'vendor') {
+        const vendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+        const vendorId = vendorData.id || vendorData._id;
+        if (vendorId) {
+          socket.emit('join_vendor_room', vendorId);
+        }
+      }
     });
 
     socket.on('disconnect', () => {
@@ -76,22 +81,25 @@ export const useAppNotifications = (userType) => {
         playNotificationSound();
       }
 
-      // Prevent duplicate toasts if strictly necessary, but standard toast behavior is usually fine.
+      // Show custom toast for all notifications
       toast.custom((t) => (
         <div
           className={`${t.visible ? 'animate-enter' : 'animate-leave'
             } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 cursor-pointer`}
           onClick={() => {
             toast.dismiss(t.id);
-            // Could assume a navigate function here but keeping it simple
-            // window.location.href = '/notifications'; // primitive
+            // Optional: navigate based on relatedId
+            if (data.relatedId) {
+              if (userType === 'vendor') navigate(`/vendor/booking/${data.relatedId}`);
+              else if (userType === 'worker') navigate(`/worker/job/${data.relatedId}`);
+              else navigate(`/user/booking/${data.relatedId}`);
+            }
           }}
         >
           <div className="flex-1 w-0 p-4">
             <div className="flex items-start">
               <div className="flex-shrink-0 pt-0.5">
-                {/* Icon or Avatar */}
-                <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-lg">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
                   🔔
                 </div>
               </div>
@@ -121,7 +129,58 @@ export const useAppNotifications = (userType) => {
         duration: 5000,
         position: 'top-right'
       });
+
+      // Dispatch update events to refresh UI components
+      if (userType === 'worker') window.dispatchEvent(new Event('workerJobsUpdated'));
+      if (userType === 'vendor') window.dispatchEvent(new Event('vendorJobsUpdated'));
     });
+
+    // Listen for special Vendor Booking Requests
+    if (userType === 'vendor') {
+      socket.on('new_booking_request', (data) => {
+        console.log('🚨 New Booking Request Alert:', data);
+
+        // Play urgent alert ring
+        playAlertRing();
+
+        // Save to localStorage for the Alert screen and Dashboard to read
+        const newJob = {
+          id: data.bookingId,
+          serviceType: data.serviceName,
+          customerName: data.customerName,
+          customerPhone: data.customerPhone,
+          location: {
+            address: 'Location shared',
+            distance: data.distance ? `${data.distance.toFixed(1)} km` : 'Near you'
+          },
+          price: data.price,
+          timeSlot: {
+            date: new Date(data.scheduledDate).toLocaleDateString(),
+            time: data.scheduledTime
+          },
+          status: 'REQUESTED',
+          createdAt: new Date().toISOString()
+        };
+
+        const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+        if (!pendingJobs.find(job => job.id === newJob.id)) {
+          pendingJobs.unshift(newJob);
+          localStorage.setItem('vendorPendingJobs', JSON.stringify(pendingJobs));
+
+          // Update stats
+          const stats = JSON.parse(localStorage.getItem('vendorStats') || '{}');
+          stats.pendingAlerts = (stats.pendingAlerts || 0) + 1;
+          localStorage.setItem('vendorStats', JSON.stringify(stats));
+        }
+
+        // Notify app components to refresh
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        window.dispatchEvent(new Event('vendorStatsUpdated'));
+
+        // Navigate to Alert Page
+        navigate(`/vendor/booking-alert/${data.bookingId}`);
+      });
+    }
 
     return () => {
       if (socketRef.current) {
@@ -129,9 +188,10 @@ export const useAppNotifications = (userType) => {
       }
     };
 
-  }, [userType]);
+  }, [userType, navigate]);
 
   return socketRef.current;
 };
 
 export default useAppNotifications;
+

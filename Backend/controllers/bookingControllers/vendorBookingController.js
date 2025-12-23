@@ -15,7 +15,7 @@ const getVendorBookings = async (req, res) => {
     // Build query
     const query = {
       $or: [
-        { vendorId }, // Bookings assigned to this vendor
+        { vendorId, status: { $ne: BOOKING_STATUS.AWAITING_PAYMENT } }, // Assigned to this vendor but not awaiting payment
         { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING] } } // Unassigned REQUESTED/SEARCHING bookings
       ]
     };
@@ -140,7 +140,7 @@ const acceptBooking = async (req, res) => {
 
     // Assign vendor and update booking status
     booking.vendorId = vendorId;
-    booking.status = BOOKING_STATUS.PENDING; // Wait for payment
+    booking.status = BOOKING_STATUS.AWAITING_PAYMENT; // Notify user to pay
     booking.acceptedAt = new Date();
 
     await booking.save();
@@ -150,20 +150,22 @@ const acceptBooking = async (req, res) => {
     if (io) {
       io.to(`user_${booking.userId}`).emit('booking_accepted', {
         bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
         vendor: {
           id: vendorId,
-          name: req.user.name, // Assuming req.user has name from auth middleware
-          businessName: req.user.businessName // Assuming req.user has businessName
-        }
+          name: req.user.name,
+          businessName: req.user.businessName
+        },
+        message: 'Vendor has accepted your request. Please complete payment to confirm your booking.'
       });
     }
 
     // Send notification to user
     await createNotification({
       userId: booking.userId,
-      type: 'booking_confirmed',
-      title: 'Booking Confirmed',
-      message: `Your booking ${booking.bookingNumber} has been confirmed by the vendor.`,
+      type: 'booking_accepted',
+      title: 'Request Accepted by Vendor',
+      message: `Vendor ${req.user.businessName || req.user.name} has accepted your request ${booking.bookingNumber}. Please complete payment to book the service.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });

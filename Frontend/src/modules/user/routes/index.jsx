@@ -11,7 +11,7 @@ import useAppNotifications from '../../../hooks/useAppNotifications.jsx';
 const lazyLoad = (importFunc) => {
   return lazy(() => {
     return Promise.resolve(importFunc()).catch((error) => {
-      console.error('Failed to load user page:', error);
+      // Failed to load user page
       // Return a fallback component wrapped in a Promise
       return Promise.resolve({
         default: () => (
@@ -87,19 +87,10 @@ const UserRoutes = () => {
             <Route path="/login" element={<PublicRoute userType="user"><Login /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute userType="user"><Signup /></PublicRoute>} />
 
-            {/* Public pages (no auth required) */}
-            <Route path="/" element={<Home />} />
-            <Route path="/native" element={<Native />} />
-            {/* All service pages now use ServiceDynamic component */}
-            {/* <Route path="/ac-service" element={<ACService />} /> */}
-            {/* <Route path="/salon-for-women" element={<SalonForWomen />} /> */}
-            {/* <Route path="/massage-for-men" element={<MassageForMen />} /> */}
-            {/* <Route path="/bathroom-kitchen-cleaning" element={<BathroomKitchenCleaning />} /> */}
-            {/* <Route path="/sofa-carpet-cleaning" element={<SofaCarpetCleaning />} /> */}
-            {/* <Route path="/electrician" element={<Electrician />} /> */}
-            <Route path="/:slug" element={<ServiceDynamic />} />
-
             {/* Protected routes (auth required) */}
+            <Route path="/" element={<ProtectedRoute userType="user"><Home /></ProtectedRoute>} />
+            <Route path="/native" element={<ProtectedRoute userType="user"><Native /></ProtectedRoute>} />
+            <Route path="/:slug" element={<ProtectedRoute userType="user"><ServiceDynamic /></ProtectedRoute>} />
             <Route path="/rewards" element={<ProtectedRoute userType="user"><Rewards /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute userType="user"><Account /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute userType="user"><Cart /></ProtectedRoute>} />

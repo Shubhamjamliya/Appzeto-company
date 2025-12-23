@@ -28,7 +28,6 @@ const MyBookings = () => {
           setBookings([]);
         }
       } catch (error) {
-        console.error('Error loading bookings:', error);
         toast.error('Failed to load bookings. Please try again.');
         setBookings([]);
       } finally {
@@ -49,6 +48,8 @@ const MyBookings = () => {
         return <FiCheckCircle className="w-4 h-4 text-green-600" />;
       case 'cancelled':
         return <FiXCircle className="w-4 h-4 text-red-500" />;
+      case 'awaiting_payment':
+        return <FiClock className="w-4 h-4 text-orange-500" />;
       default:
         return <FiClock className="w-4 h-4 text-gray-500" />;
     }
@@ -64,6 +65,8 @@ const MyBookings = () => {
         return 'bg-gray-50 text-gray-700 border-gray-200';
       case 'cancelled':
         return 'bg-red-50 text-red-700 border-red-200';
+      case 'awaiting_payment':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
@@ -79,6 +82,8 @@ const MyBookings = () => {
         return 'Completed';
       case 'cancelled':
         return 'Cancelled';
+      case 'awaiting_payment':
+        return 'Awaiting Payment';
       default:
         return status;
     }
@@ -91,10 +96,10 @@ const MyBookings = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
   };
 
@@ -141,11 +146,10 @@ const MyBookings = () => {
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                filter === tab.id
-                  ? 'bg-brand text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${filter === tab.id
+                ? 'bg-brand text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               style={filter === tab.id ? { backgroundColor: themeColors.button } : {}}
             >
               {tab.label}
@@ -166,8 +170,8 @@ const MyBookings = () => {
             <FiClock className="w-16 h-16 text-gray-300 mb-4" />
             <p className="text-gray-500 text-lg font-medium">No bookings found</p>
             <p className="text-gray-400 text-sm mt-2">
-              {filter === 'all' 
-                ? 'You haven\'t made any bookings yet' 
+              {filter === 'all'
+                ? 'You haven\'t made any bookings yet'
                 : `No ${filter} bookings`}
             </p>
           </div>

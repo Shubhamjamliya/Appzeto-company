@@ -10,8 +10,11 @@ const getDashboardStats = async (req, res) => {
   try {
     const vendorId = req.user.id;
 
-    // Total bookings
-    const totalBookings = await Booking.countDocuments({ vendorId });
+    // Total bookings (excluding accepted but unpaid)
+    const totalBookings = await Booking.countDocuments({
+      vendorId,
+      status: { $ne: BOOKING_STATUS.AWAITING_PAYMENT }
+    });
 
     // Pending bookings
     const pendingBookings = await Booking.countDocuments({
@@ -51,8 +54,11 @@ const getDashboardStats = async (req, res) => {
     const totalRevenue = revenueResult[0]?.totalRevenue || 0;
     const vendorEarnings = totalRevenue * 0.8; // 20% platform commission
 
-    // Recent bookings (last 5)
-    const recentBookings = await Booking.find({ vendorId })
+    // Recent bookings (last 5, excluding accepted but unpaid)
+    const recentBookings = await Booking.find({
+      vendorId,
+      status: { $ne: BOOKING_STATUS.AWAITING_PAYMENT }
+    })
       .populate('userId', 'name phone')
       .populate('serviceId', 'title iconUrl')
       .populate('workerId', 'name')

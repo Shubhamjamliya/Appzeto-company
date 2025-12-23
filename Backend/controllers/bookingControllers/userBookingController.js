@@ -247,8 +247,9 @@ const getUserBookings = async (req, res) => {
     if (status) {
       query.status = status;
     } else {
-      // By default, exclude 'searching' bookings (which are not yet paid/confirmed)
-      query.status = { $ne: BOOKING_STATUS.SEARCHING };
+      // By default, exclude 'searching' bookings (which are not yet paid/confirmed/accepted)
+      // Allow AWAITING_PAYMENT so user can see what to pay for
+      query.status = { $nin: [BOOKING_STATUS.SEARCHING] };
     }
     if (startDate || endDate) {
       query.scheduledDate = {};

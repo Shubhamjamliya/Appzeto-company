@@ -40,7 +40,6 @@ const UpdateProfile = () => {
           });
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
         // Use localStorage data if API fails
         const storedUserData = localStorage.getItem('userData');
         if (storedUserData) {
@@ -103,7 +102,6 @@ const UpdateProfile = () => {
         toast.error(response.message || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Update profile error:', error);
       toast.error(error.response?.data?.message || 'Failed to update profile. Please try again.');
     } finally {
       setIsSaving(false);
@@ -140,7 +138,7 @@ const UpdateProfile = () => {
               Full Name
             </label>
             <div className="relative">
-              <div 
+              <div
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
                 style={{ color: themeColors.button }}
               >
@@ -175,7 +173,7 @@ const UpdateProfile = () => {
               Email Address
             </label>
             <div className="relative">
-              <div 
+              <div
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
                 style={{ color: themeColors.button }}
               >
@@ -207,7 +205,7 @@ const UpdateProfile = () => {
               Phone Number
             </label>
             <div className="relative">
-              <div 
+              <div
                 className="absolute left-3 top-1/2 transform -translate-y-1/2"
                 style={{ color: themeColors.button }}
               >

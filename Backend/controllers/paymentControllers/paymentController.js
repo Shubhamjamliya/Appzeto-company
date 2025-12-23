@@ -126,8 +126,8 @@ const verifyPaymentWebhook = async (req, res) => {
     booking.razorpayPaymentId = razorpay_payment_id;
     booking.paymentId = razorpay_payment_id;
 
-    // Update booking status to confirmed if it was pending or searching
-    if (booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.SEARCHING) {
+    // Update booking status to confirmed if it was pending or searching or awaiting_payment
+    if ([BOOKING_STATUS.PENDING, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.AWAITING_PAYMENT].includes(booking.status)) {
       booking.status = BOOKING_STATUS.CONFIRMED;
     }
 
@@ -141,6 +141,16 @@ const verifyPaymentWebhook = async (req, res) => {
       message: `Payment of ₹${booking.finalAmount} for booking ${booking.bookingNumber} was successful.`,
       relatedId: booking._id,
       relatedType: 'payment'
+    });
+
+    // Notify vendor
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed',
+      message: `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
     });
 
     res.status(200).json({
@@ -217,8 +227,8 @@ const processWalletPayment = async (req, res) => {
     booking.paymentMethod = 'wallet';
     booking.paymentId = `WALLET_${Date.now()}`;
 
-    // Update booking status to confirmed if it was pending or searching
-    if (booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.SEARCHING) {
+    // Update booking status to confirmed if it was pending or searching or awaiting_payment
+    if ([BOOKING_STATUS.PENDING, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.AWAITING_PAYMENT].includes(booking.status)) {
       booking.status = BOOKING_STATUS.CONFIRMED;
     }
 
@@ -232,6 +242,16 @@ const processWalletPayment = async (req, res) => {
       message: `Payment of ₹${booking.finalAmount} for booking ${booking.bookingNumber} was successful.`,
       relatedId: booking._id,
       relatedType: 'payment'
+    });
+
+    // Notify vendor
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed',
+      message: `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
     });
 
     res.status(200).json({
@@ -391,11 +411,67 @@ const getPaymentHistory = async (req, res) => {
   }
 };
 
+/**
+ * Confirm Pay at Home option
+ */
+const confirmPayAtHome = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { bookingId } = req.body;
+
+    const booking = await Booking.findOne({ _id: bookingId, userId });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    if (booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment already completed for this booking'
+      });
+    }
+
+    // Update booking status
+    booking.paymentMethod = 'pay_at_home';
+    booking.paymentStatus = PAYMENT_STATUS.PENDING;
+    booking.status = BOOKING_STATUS.CONFIRMED;
+
+    await booking.save();
+
+    // Notify Vendor that booking is confirmed
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed (Pay at Home)',
+      message: `Booking ${booking.bookingNumber} has been confirmed. Payment method: Pay at Home.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking confirmed with Pay at Home option',
+      data: booking
+    });
+  } catch (error) {
+    console.error('Confirm Pay at Home error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm booking. Please try again.'
+    });
+  }
+};
+
 module.exports = {
   createPaymentOrder,
   verifyPaymentWebhook,
   processWalletPayment,
   processRefund,
-  getPaymentHistory
+  getPaymentHistory,
+  confirmPayAtHome
 };
 

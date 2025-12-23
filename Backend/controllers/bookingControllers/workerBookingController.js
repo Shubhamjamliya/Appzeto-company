@@ -182,6 +182,27 @@ const startJob = async (req, res) => {
 
     await booking.save();
 
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'worker_started',
+      title: 'Worker Started Service',
+      message: `The worker has started the service for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    // Notify vendor
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'worker_started',
+      title: 'Worker Started Service',
+      message: `Your worker has started the service for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
     res.status(200).json({
       success: true,
       message: 'Job started successfully',
@@ -226,7 +247,29 @@ const completeJob = async (req, res) => {
 
     await booking.save();
 
-    // TODO: Update worker stats (totalJobs, completedJobs)
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'worker_completed',
+      title: 'Service Completed',
+      message: `The service for booking ${booking.bookingNumber} has been completed.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    // Notify vendor
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'worker_completed',
+      title: 'Service Completed',
+      message: `Your worker has completed the service for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    // Update worker stats (totalJobs, completedJobs)
+    // TODO: Update worker document with stats if needed
 
     res.status(200).json({
       success: true,

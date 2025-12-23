@@ -26,6 +26,7 @@ const getProfile = async (req, res) => {
         phone: user.phone || null,
         isPhoneVerified: user.isPhoneVerified || false,
         isEmailVerified: user.isEmailVerified || false,
+        addresses: user.addresses || [],
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

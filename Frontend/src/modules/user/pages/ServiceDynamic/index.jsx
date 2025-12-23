@@ -49,7 +49,6 @@ const ServiceDynamic = () => {
           navigate('/user');
         }
       } catch (error) {
-        console.error('Error fetching service:', error);
         toast.error('Failed to load service details');
         navigate('/user');
       } finally {
@@ -70,7 +69,6 @@ const ServiceDynamic = () => {
           setCartCount(items.length);
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
       }
     };
     loadCart();
@@ -143,7 +141,6 @@ const ServiceDynamic = () => {
         toast.error(response.message || 'Failed to add to cart');
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
       toast.error('Failed to add to cart. Please try again.');
     }
   };

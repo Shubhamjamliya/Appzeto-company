@@ -6,48 +6,9 @@ const CuratedServices = React.memo(({ services, onServiceClick }) => {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
   const cardsRef = useRef(null);
-  // Default electrical services if none provided
-  const defaultServices = [
-    {
-      id: 1,
-      title: 'Bathroom Deep Cleaning',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
 
-    {
-      id: 2,
-      title: 'SPA for WOMEN',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
-    {
-      id: 3,
-      title: 'Massage for Men',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
-    {
-      id: 4,
-      title: 'Roll-on waxing',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
-    {
-      id: 5,
-      title: 'FACIALS & CLEANUPS',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
-    {
-      id: 6,
-      title: 'Professional Sofa Cleaning',
-      gif: null,
-      youtubeUrl: null, // Videos removed temporarily
-    },
-  ];
 
-  const serviceList = (services && services.length > 0) ? services : defaultServices;
+  const serviceList = services || [];
 
   // Defer GSAP scroll animations until after initial render for better performance
   useEffect(() => {
@@ -118,22 +79,25 @@ const CuratedServices = React.memo(({ services, onServiceClick }) => {
     }
   }, []); // Empty deps - only run once on mount
 
+  if (serviceList.length === 0) {
+    return null;
+  }
+
   return (
     <div ref={sectionRef} className="mb-6">
       {/* Title Section */}
-      <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 1 }}>
+      <div ref={titleRef} className="px-4 mb-5 mt-6" style={{ opacity: 1 }}>
         <h2
-          className="text-xl font-bold mb-1 text-black"
+          className="text-xl font-bold mb-1 text-gray-900 tracking-tight"
         >
           Thoughtful curations
         </h2>
-        <p className="text-sm font-medium text-black">
+        <p className="text-sm font-medium text-gray-500">
           of our finest experiences
         </p>
       </div>
 
-      {/* Horizontal Scrollable Service Cards */}
-      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-6 pb-2 scrollbar-hide">
         {serviceList.map((service) => (
           <ServiceCard
             key={service.id}

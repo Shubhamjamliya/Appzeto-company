@@ -12,95 +12,9 @@ import fanRepairImage from '../../../../../assets/images/pages/Home/MostBookedSe
 import switchBoardImage from '../../../../../assets/images/pages/Home/MostBookedServices/switch-board.jpg';
 
 const MostBookedServices = React.memo(({ services, onServiceClick, onAddClick }) => {
-  // Default electrical services if none provided
-  const defaultServices = [
-    {
-      id: 1,
-      title: 'Intense cleaning (2 bathrooms)',
-      rating: '4.79',
-      reviews: '3.7M',
-      price: '950',
-      originalPrice: '1,038',
-      discount: '8%',
-      image: intenseBathroom2Image,
-    },
-    {
-      id: 2,
-      title: 'Intense cleaning (3 bathrooms)',
-      rating: '4.79',
-      reviews: '3.7M',
-      price: '1,381',
-      originalPrice: '1,667',
-      discount: '11%',
-      image: intenseBathroom3Image,
-    },
-    {
-      id: 3,
-      title: 'Drill & hang (wall decor)',
-      rating: '4.85',
-      reviews: '99K',
-      price: '49',
-      image: drillHangImage,
-    },
-    {
-      id: 4,
-      title: 'Roll-on waxing (Full arms, legs & underarms)',
-      rating: '4.87',
-      reviews: '47K',
-      price: '799',
-      image: rollOnWaxImage,
-    },
-    {
-      id: 5,
-      title: 'Tap repair',
-      rating: '4.80',
-      reviews: '119K',
-      price: '49',
-      image: tapRepairImage,
-    },
-    {
-      id: 6,
-      title: 'Automatic top load machine check-up',
-      rating: '4.78',
-      reviews: '339K',
-      price: '160',
-      image: automaticTopLoadImage,
-    },
-    {
-      id: 7,
-      title: 'Spatula waxing (Full arms)',
-      rating: '4.86',
-      reviews: '31K',
-      price: '599',
-      image: spatulaWaxingImage,
-    },
-    {
-      id: 8,
-      title: 'Fan repair (ceiling/exhaust/wall)',
-      rating: '4.81',
-      reviews: '92K',
-      price: '109',
-      image: fanRepairImage,
-    },
-    {
-      id: 9,
-      title: 'Switch/socket replacement',
-      rating: '4.84',
-      reviews: '78K',
-      price: '49',
-      image: switchBoardImage,
-    },
-    {
-      id: 10,
-      title: 'Semi-automatic machine check-up',
-      rating: '4.76',
-      reviews: '83K',
-      price: '160',
-      image: automaticTopLoadImage, // Using automatic top load image as placeholder
-    },
-  ];
 
-  const serviceList = (services && services.length > 0) ? services : defaultServices;
+
+  const serviceList = services || [];
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
   const cardsRef = useRef(null);
@@ -174,18 +88,21 @@ const MostBookedServices = React.memo(({ services, onServiceClick, onAddClick })
     }
   }, []); // Empty deps - only run once on mount
 
+  if (serviceList.length === 0) {
+    return null;
+  }
+
   return (
     <div ref={sectionRef} className="mb-6">
       <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 1 }}>
         <h2
-          className="text-xl font-bold text-black"
+          className="text-xl font-bold text-gray-900 tracking-tight"
         >
           Most booked services
         </h2>
       </div>
 
-      {/* Horizontal Scrollable Service Cards */}
-      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+      <div ref={cardsRef} className="flex gap-2 overflow-x-auto px-6 pb-2 scrollbar-hide">
         {serviceList.map((service) => (
           <DetailedServiceCard
             key={service.id}
