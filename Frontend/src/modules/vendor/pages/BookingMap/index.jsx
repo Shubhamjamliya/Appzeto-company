@@ -46,8 +46,10 @@ const BookingMap = () => {
   const [routePath, setRoutePath] = useState([]);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
   const [isNavigationMode, setIsNavigationMode] = useState(false);
+  const [heading, setHeading] = useState(0); // Lifted state up
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -95,10 +97,13 @@ const BookingMap = () => {
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
+          const { latitude, longitude, heading: gpsHeading } = position.coords;
+          setCurrentLocation({ lat: latitude, lng: longitude });
+
+          // Use GPS heading if available (more accurate for movement)
+          if (gpsHeading !== null && !isNaN(gpsHeading)) {
+            setHeading(gpsHeading);
+          }
         },
         null,
         { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
@@ -135,7 +140,6 @@ const BookingMap = () => {
 
   // ... existing code ...
 
-  const [heading, setHeading] = useState(0);
   const prevLocationRef = useRef(null);
 
   // Calculate Route - Run ONCE
@@ -186,7 +190,7 @@ const BookingMap = () => {
         const distanceMoved = window.google.maps.geometry.spherical.computeDistanceBetween(start, end);
 
         // Update heading only if movement is significant (> 2 meters) to prevent jitter
-        if (distanceMoved > 2) {
+        if (distanceMoved > 1) { // Reduced threshold
           const newHeading = window.google.maps.geometry.spherical.computeHeading(start, end);
           setHeading(newHeading);
         }
@@ -255,6 +259,17 @@ const BookingMap = () => {
     </OverlayView>
   ), [currentLocation, heading]);
 
+  const mapOptions = useMemo(() => ({
+    disableDefaultUI: true,
+    zoomControl: false,
+    mapTypeId: 'roadmap',
+    gestureHandling: 'greedy',
+    rotateControl: true,
+    tiltControl: true,
+    isFractionalZoomEnabled: true,
+    mapId: mapId || '8e0a97af9386fefc',
+  }), [mapId]);
+
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
@@ -274,19 +289,12 @@ const BookingMap = () => {
           mapContainerStyle={{ width: '100%', height: '100%' }}
           defaultCenter={defaultCenter}
           defaultZoom={14}
-          onLoad={map => setMap(map)}
-          onDragStart={() => setIsAutoCenter(false)}
-          options={{
-            styles: mapStyles,
-            disableDefaultUI: true,
-            zoomControl: false,
-            mapTypeId: 'roadmap',
-            gestureHandling: 'greedy',
-            rotateControl: true,
-            tiltControl: true,
-            isFractionalZoomEnabled: true,
-            mapId: '8e0a97af9386fefc', // Add Vector Map ID back for rotation support
+          onLoad={map => {
+            setMap(map);
+            map.setTilt(0);
           }}
+          onDragStart={() => setIsAutoCenter(false)}
+          options={mapOptions}
         >
           {directions && (
             <DirectionsRenderer

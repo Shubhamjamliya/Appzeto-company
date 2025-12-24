@@ -251,6 +251,20 @@ const BookingTrack = () => {
     }
   }, [isLoaded, coords, map, currentLocation, isAutoCenter, isNavigationMode, heading]);
 
+  const mapOptions = useMemo(() => ({
+    disableDefaultUI: true,
+    zoomControl: false,
+    mapTypeId: 'roadmap',
+    gestureHandling: 'greedy',
+    rotateControl: true,
+    tiltControl: true,
+    isFractionalZoomEnabled: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    mapId: '8e0a97af9386fefc',
+  }), []);
+
   // Memoize Map Markers to prevent flickering/blinking
   const destinationMarker = useMemo(() => coords && (
     <OverlayView
@@ -319,19 +333,7 @@ const BookingTrack = () => {
             // but usually we want to stop auto-centering if user zooms.
             // However, fitBounds triggers zoom changed. So we check user interaction.
           }}
-          options={{
-            disableDefaultUI: true,
-            zoomControl: false,
-            mapTypeId: 'roadmap',
-            gestureHandling: 'greedy', // Allows one-finger pan and two-finger rotate
-            rotateControl: true,
-            tiltControl: true,
-            isFractionalZoomEnabled: true, // Smoother zoom transitions
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-            mapId: '8e0a97af9386fefc', // Enabled Vector Map
-          }}
+          options={mapOptions}
           onHeadingChanged={() => {
             if (map && isAutoCenter) {
               const h = map.getHeading();
