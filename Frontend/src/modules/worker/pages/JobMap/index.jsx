@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, OverlayViewF, MarkerF } from '@react-google-maps/api';
 import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiClock, FiMaximize2 } from 'react-icons/fi';
 import { FaMotorcycle } from 'react-icons/fa';
 import workerService from '../../../../services/workerService';
@@ -222,13 +222,13 @@ const JobMap = () => {
           onLoad={map => setMap(map)}
           onDragStart={() => setIsAutoCenter(false)}
           options={{
-            styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
             mapTypeId: 'roadmap',
             gestureHandling: 'greedy',
             rotateControl: true,
             tiltControl: true,
+            mapId: '8e0a97af9386fefc',
           }}
         >
           {directions && (
@@ -248,9 +248,9 @@ const JobMap = () => {
 
           {/* Destination Marker - Premium Pin */}
           {coords && (
-            <OverlayView
+            <OverlayViewF
               position={coords}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
             >
               <div className="relative -translate-x-1/2 -translate-y-full">
                 <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-white relative z-10 animate-bounce">
@@ -259,14 +259,14 @@ const JobMap = () => {
                 <div className="w-4 h-4 bg-teal-600 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 z-0"></div>
                 <div className="w-8 h-2 bg-black/20 rounded-[100%] absolute -bottom-3 left-1/2 -translate-x-1/2 blur-sm"></div>
               </div>
-            </OverlayView>
+            </OverlayViewF>
           )}
 
           {/* Service Rider Marker */}
           {currentLocation && (
-            <OverlayView
+            <OverlayViewF
               position={currentLocation}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
             >
               {/* Container - centered on the coordinate */}
               <div
@@ -294,7 +294,7 @@ const JobMap = () => {
                 {/* Shadow */}
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
               </div>
-            </OverlayView>
+            </OverlayViewF>
           )}
         </GoogleMap>
 
