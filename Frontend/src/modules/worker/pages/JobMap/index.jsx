@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, MarkerF } from '@react-google-maps/api';
 import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiClock, FiMaximize2 } from 'react-icons/fi';
@@ -207,6 +207,53 @@ const JobMap = () => {
     }
   }, [map, heading, isAutoCenter, currentLocation]);
 
+  // Memoize Map Markers to prevent flickering/blinking
+  const destinationMarker = useMemo(() => coords && (
+    <OverlayView
+      position={coords}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    >
+      <div className="relative -translate-x-1/2 -translate-y-[90%] pointer-events-none flex flex-col items-center">
+        <FiMapPin className="w-10 h-10 text-red-600 drop-shadow-xl fill-red-600 stroke-white stroke-[1.5px]" />
+        <div className="w-3 h-1 bg-black/20 rounded-full blur-[2px] mt-[-2px]"></div>
+      </div>
+    </OverlayView>
+  ), [coords]);
+
+  const riderMarker = useMemo(() => currentLocation && (
+    <OverlayView
+      position={currentLocation}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    >
+      {/* Container - centered on the coordinate */}
+      <div
+        style={{
+          position: 'absolute',
+          transform: 'translate(-50%, -50%)',
+          cursor: 'pointer'
+        }}
+      >
+        {/* Icon Container - No background/border */}
+        <div
+          className="relative z-20 w-16 h-16 transition-transform duration-500 ease-in-out"
+          style={{ transform: `rotate(${heading}deg)` }}
+        >
+          <img
+            src="/rider-3D.png"
+            alt="Rider"
+            className="w-full h-full object-contain drop-shadow-xl"
+          />
+        </div>
+
+        {/* Pulse Animation */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-teal-500/30 rounded-full animate-ping z-10 pointer-events-none"></div>
+
+        {/* Shadow */}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
+      </div>
+    </OverlayView>
+  ), [currentLocation, heading]);
+
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
@@ -254,56 +301,8 @@ const JobMap = () => {
             />
           )}
 
-          {/* Destination Marker - Premium Pin */}
-          {coords && (
-            <OverlayView
-              position={coords}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            >
-              <div className="relative -translate-x-1/2 -translate-y-full">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-white relative z-10 animate-bounce">
-                  <FiMapPin className="w-5 h-5 fill-current" />
-                </div>
-                <div className="w-4 h-4 bg-teal-600 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 z-0"></div>
-                <div className="w-8 h-2 bg-black/20 rounded-[100%] absolute -bottom-3 left-1/2 -translate-x-1/2 blur-sm"></div>
-              </div>
-            </OverlayView>
-          )}
-
-          {/* Service Rider Marker */}
-          {currentLocation && (
-            <OverlayView
-              position={currentLocation}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            >
-              {/* Container - centered on the coordinate */}
-              <div
-                style={{
-                  position: 'absolute',
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'pointer'
-                }}
-              >
-                {/* Icon Container - No background/border */}
-                <div
-                  className="relative z-20 w-16 h-16 transition-transform duration-500 ease-in-out"
-                  style={{ transform: `rotate(${heading}deg)` }}
-                >
-                  <img
-                    src="/rider-3D.png"
-                    alt="Rider"
-                    className="w-full h-full object-contain drop-shadow-xl"
-                  />
-                </div>
-
-                {/* Pulse Animation */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-teal-500/30 rounded-full animate-ping z-10 pointer-events-none"></div>
-
-                {/* Shadow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
-              </div>
-            </OverlayView>
-          )}
+          {destinationMarker}
+          {riderMarker}
         </GoogleMap>
 
         {/* Recenter Button */}
