@@ -13,14 +13,20 @@ import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
 import { cartService } from '../../../../services/cartService';
 
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  const clean = url.replace('/api/upload', '/upload');
+  if (clean.startsWith('http')) return clean;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const category = location.state?.category || null; // Get category from navigation state
 
   const [cartItems, setCartItems] = useState([]);
-  const [selectedTip, setSelectedTip] = useState(75);
-  const [customTip, setCustomTip] = useState('');
   const [isPlusAdded, setIsPlusAdded] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
@@ -39,6 +45,8 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' | 'pay_at_home'
 
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTime, setSelectedTime] = useState(null);
 
   // Check if Razorpay is loaded (defer to avoid blocking initial render)
   useEffect(() => {
@@ -71,31 +79,29 @@ const Checkout = () => {
     }
   }, []);
 
-  // Load cart items from backend and filter by category if provided
   useEffect(() => {
-    const loadCart = async () => {
-      try {
-        setLoading(true);
-        const response = await cartService.getCart();
-        if (response.success) {
-          let items = response.data || [];
-          // Filter by category if category is provided
-          if (category) {
-            items = items.filter(item => item.category === category);
-          }
-          setCartItems(items);
-        } else {
-          setCartItems([]);
-        }
-      } catch (error) {
-        setCartItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadCart();
   }, [category]);
+
+  const loadCart = async () => {
+    try {
+      setLoading(true);
+      const response = await cartService.getCart();
+      if (response.success) {
+        let items = response.data || [];
+        if (category) {
+          items = items.filter(item => item.category === category);
+        }
+        setCartItems(items);
+      } else {
+        setCartItems([]);
+      }
+    } catch (error) {
+      setCartItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const cartCount = cartItems.length;
 
@@ -129,22 +135,97 @@ const Checkout = () => {
     }
   };
 
-  const handleTipSelect = (amount) => {
-    setSelectedTip(amount);
-    setCustomTip('');
-  };
-
-  const handleCustomTip = (value) => {
-    setCustomTip(value);
-    setSelectedTip('custom');
+  const handleRemoveItem = async (itemId) => {
+    try {
+      const response = await cartService.removeItem(itemId);
+      if (response.success) {
+        toast.success('Item removed');
+        loadCart();
+      } else {
+        toast.error(response.message || 'Failed to remove item');
+      }
+    } catch (error) {
+      toast.error('Failed to remove item');
+    }
   };
 
   const handleAddPlus = () => {
     setIsPlusAdded(!isPlusAdded);
   };
 
-  const handleProceed = () => {
-    setShowAddressModal(true);
+  const getAddressComponent = (type) => {
+    return addressDetails?.components?.find(c => c.types.includes(type))?.long_name || '';
+  };
+
+  const handleProceed = async () => {
+    if (!addressDetails || !selectedDate || !selectedTime) {
+      if (!addressDetails) setShowAddressModal(true);
+      else if (!selectedDate || !selectedTime) setShowTimeSlotModal(true);
+      return;
+    }
+
+    try {
+      setSearchingVendors(true);
+      setShowVendorModal(true);
+      setCurrentStep('searching');
+
+      // Add a small delay for realistic searching animation
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const firstItem = cartItems[0];
+      if (!firstItem) {
+        toast.error('Your cart is empty');
+        return;
+      }
+      const serviceId = typeof firstItem.serviceId === 'object'
+        ? firstItem.serviceId._id || firstItem.serviceId.id
+        : firstItem.serviceId;
+
+      const response = await bookingService.create({
+        serviceId,
+        address: {
+          type: addressDetails?.type || 'home',
+          addressLine1: addressDetails?.addressLine1 || address,
+          addressLine2: houseNumber,
+          city: getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
+          state: getAddressComponent('administrative_area_level_1') || 'State',
+          pincode: getAddressComponent('postal_code') || '000000',
+          lat: addressDetails?.lat,
+          lng: addressDetails?.lng
+        },
+        scheduledDate: selectedDate,
+        scheduledTime: getTimeSlots().find(slot => slot.value === selectedTime)?.display || selectedTime,
+        timeSlot: {
+          start: selectedTime,
+          end: getTimeSlots().find(slot => slot.value === selectedTime)?.end || selectedTime
+        },
+        amount: amountToPay,
+        paymentMethod: 'online',
+        isPlusAdded: isPlusAdded
+      });
+
+      if (response.success) {
+        setBookingRequest(response.data);
+        setCurrentStep('accepted');
+        setAcceptedVendor({
+          ...(response.data.vendorId || {
+            name: 'Professional Assigned',
+            businessName: 'Expert Service Pro',
+            rating: 4.8,
+            totalJobs: 156,
+            avatar: '/assets/provider-avatar.png'
+          }),
+          price: response.data.finalAmount || amountToPay,
+          distance: 'within 5km',
+          estimatedTime: '15-30 min'
+        });
+      }
+    } catch (error) {
+      toast.error('No vendors available at this time. Please try again.');
+      setShowVendorModal(false);
+    } finally {
+      setSearchingVendors(false);
+    }
   };
 
 
@@ -226,17 +307,14 @@ const Checkout = () => {
       }
 
       // Prepare address object
-      // Helper to extract address components
-      const getComponent = (type) => addressDetails?.components?.find(c => c.types.includes(type))?.long_name || '';
-
       const addressObj = {
         type: 'home',
         addressLine1: address,
         addressLine2: houseNumber,
-        city: getComponent('locality') || getComponent('administrative_area_level_2') || 'City',
-        state: getComponent('administrative_area_level_1') || 'State',
-        pincode: getComponent('postal_code') || '123456',
-        landmark: '',
+        city: getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
+        state: getAddressComponent('administrative_area_level_1') || 'State',
+        pincode: getAddressComponent('postal_code') || '123456',
+        landmark: addressDetails?.landmark || '',
         lat: addressDetails?.lat || null,
         lng: addressDetails?.lng || null
       };
@@ -261,9 +339,10 @@ const Checkout = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: getTimeSlots().find(slot => slot.value === selectedTime)?.display || selectedTime,
         timeSlot: timeSlotObj,
-        userNotes: `Tip: ₹${selectedTip === 'custom' ? parseFloat(customTip) || 0 : selectedTip}. Items: ${cartItems.map(i => i.title).join(', ')}`,
+        userNotes: `Items: ${cartItems.map(i => i.title).join(', ')}`,
         paymentMethod: 'razorpay',
-        amount: totalAmount  // Send total amount from cart
+        amount: amountToPay,
+        isPlusAdded: isPlusAdded
       });
 
       if (!bookingResponse.success) {
@@ -284,11 +363,9 @@ const Checkout = () => {
       setSearchingVendors(false);
       toast.success('Finding nearby vendors... Alerts sent to vendors within 10km!');
 
-      // Wait for real-time vendor acceptance via Socket.IO
-      // The socket listener above will handle the 'booking_accepted' event
-
     } catch (error) {
       toast.dismiss();
+      console.error('Search vendors error:', error);
       toast.error('Failed to search for vendors. Please try again.');
       setCurrentStep('details');
       setSearchingVendors(false);
@@ -457,16 +534,11 @@ const Checkout = () => {
 
   // Calculate totals
   const itemTotal = cartItems.reduce((sum, item) => sum + (item.price || 0), 0);
-  const totalOriginalPrice = cartItems.reduce((sum, item) => {
-    const unitOriginalPrice = item.originalPrice || (item.unitPrice || (item.price / (item.serviceCount || 1)));
-    return sum + (unitOriginalPrice * (item.serviceCount || 1));
-  }, 0);
+  const totalOriginalPrice = cartItems.reduce((sum, item) => sum + ((item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1)), 0);
   const savings = totalOriginalPrice - itemTotal;
-  const taxesAndFee = 59;
-  const visitedFee = 50;
-  const tipAmount = selectedTip === 'custom' ? parseFloat(customTip) || 0 : selectedTip;
-  const plusPrice = isPlusAdded ? 249 : 0;
-  const totalAmount = itemTotal + taxesAndFee + visitedFee + tipAmount + plusPrice;
+  const taxesAndFee = 45;
+  const visitedFee = 29;
+  const totalAmount = itemTotal + (isPlusAdded ? 249 : 0) + taxesAndFee + visitedFee;
   const amountToPay = totalAmount;
 
   // Date and time slot helper functions
@@ -483,18 +555,18 @@ const Checkout = () => {
 
   const getTimeSlots = () => {
     return [
-      { value: '09:00', display: '9:00 AM' },
-      { value: '10:00', display: '10:00 AM' },
-      { value: '11:00', display: '11:00 AM' },
-      { value: '12:00', display: '12:00 PM' },
-      { value: '13:00', display: '1:00 PM' },
-      { value: '14:00', display: '2:00 PM' },
-      { value: '15:00', display: '3:00 PM' },
-      { value: '16:00', display: '4:00 PM' },
-      { value: '17:00', display: '5:00 PM' },
-      { value: '18:00', display: '6:00 PM' },
-      { value: '19:00', display: '7:00 PM' },
-      { value: '20:00', display: '8:00 PM' },
+      { value: '09:00', end: '10:00', display: '9:00 AM' },
+      { value: '10:00', end: '11:00', display: '10:00 AM' },
+      { value: '11:00', end: '12:00', display: '11:00 AM' },
+      { value: '12:00', end: '13:00', display: '12:00 PM' },
+      { value: '13:00', end: '14:00', display: '1:00 PM' },
+      { value: '14:00', end: '15:00', display: '2:00 PM' },
+      { value: '15:00', end: '16:00', display: '3:00 PM' },
+      { value: '16:00', end: '17:00', display: '4:00 PM' },
+      { value: '17:00', end: '18:00', display: '5:00 PM' },
+      { value: '18:00', end: '19:00', display: '6:00 PM' },
+      { value: '19:00', end: '20:00', display: '7:00 PM' },
+      { value: '20:00', end: '21:00', display: '8:00 PM' },
     ];
   };
 
@@ -506,8 +578,7 @@ const Checkout = () => {
     };
   };
 
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
+
 
   const isDateSelected = (date) => {
     return selectedDate && date.toDateString() === selectedDate.toDateString();
@@ -580,20 +651,28 @@ const Checkout = () => {
       <main className="px-4 py-4">
         {/* Savings Banner */}
         {savings > 0 && (
-          <div className="bg-gray-100 rounded-lg p-3 mb-4 flex items-center gap-2">
-            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shrink-0">
-              <span className="text-white text-xs font-bold">✓</span>
+          <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-green-200">
+                <MdStar className="text-white w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-green-600 uppercase tracking-wider">Smart Choice!</p>
+                <p className="text-sm font-black text-slate-900">
+                  You're saving ₹{savings.toLocaleString('en-IN')}
+                </p>
+              </div>
             </div>
-            <p className="text-sm font-medium text-black">
-              Saving ₹{savings.toLocaleString('en-IN')} on this order
-            </p>
+            <div className="bg-white px-3 py-1 rounded-full shadow-sm border border-green-100">
+              <span className="text-[10px] font-black text-green-600">BEST PRICE</span>
+            </div>
           </div>
         )}
 
         {/* Cart Items */}
         <div className="space-y-4 mb-4">
           {cartItems.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4">
+            <div key={item._id} className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <h3 className="text-base font-bold text-black mb-1">{item.title}</h3>
@@ -603,7 +682,7 @@ const Checkout = () => {
                 </div>
                 <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: themeColors.button }}>
                   <button
-                    onClick={() => handleQuantityChange(item.id, -1)}
+                    onClick={() => handleQuantityChange(item._id, -1)}
                     className="p-2 transition-colors"
                     onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
@@ -612,7 +691,7 @@ const Checkout = () => {
                   </button>
                   <span className="px-3 py-1 text-sm font-medium text-black">{item.serviceCount || 1}</span>
                   <button
-                    onClick={() => handleQuantityChange(item.id, 1)}
+                    onClick={() => handleQuantityChange(item._id, 1)}
                     className="p-2 transition-colors"
                     onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
@@ -620,6 +699,12 @@ const Checkout = () => {
                     <FiPlus className="w-4 h-4" style={{ color: themeColors.button }} />
                   </button>
                 </div>
+                <button
+                  onClick={() => handleRemoveItem(item._id)}
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <FiTrash2 className="w-4 h-4" />
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold text-black">₹{(item.price || 0).toLocaleString('en-IN')}</span>
@@ -714,48 +799,67 @@ const Checkout = () => {
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-          <h3 className="text-base font-bold text-black mb-4">Payment summary</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-700">Item total</span>
+        <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden relative">
+          {/* Decorative Background for Header */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-blue-500 to-teal-500"></div>
+
+          <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
+            <FiShoppingCart className="w-5 h-5 text-teal-600" />
+            Payment Summary
+          </h3>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center group">
+              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Item Total</span>
               <div className="flex items-center gap-2">
                 {totalOriginalPrice > itemTotal && (
-                  <span className="text-sm text-gray-400 line-through">
+                  <span className="text-xs text-slate-400 line-through">
                     ₹{totalOriginalPrice.toLocaleString('en-IN')}
                   </span>
                 )}
-                <span className="text-sm font-medium text-black">₹{itemTotal.toLocaleString('en-IN')}</span>
+                <span className="text-sm font-bold text-slate-900">₹{itemTotal.toLocaleString('en-IN')}</span>
               </div>
             </div>
+
             {isPlusAdded && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-700">Plus membership</span>
-                <span className="text-sm font-medium text-black">₹249</span>
+              <div className="flex justify-between items-center bg-teal-50/50 -mx-5 px-5 py-3 border-y border-teal-100/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center">
+                    <MdStar className="w-4 h-4 text-teal-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-teal-700">Plus Membership</span>
+                </div>
+                <span className="text-sm font-bold text-teal-700">₹249</span>
               </div>
             )}
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-700">Taxes and Fee</span>
-              <span className="text-sm font-medium text-black">₹{taxesAndFee}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-700">Visited Fee</span>
-              <span className="text-sm font-medium text-black">₹{visitedFee}</span>
-            </div>
-            {tipAmount > 0 && (
+
+            <div className="space-y-3 pb-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-700">Tip</span>
-                <span className="text-sm font-medium text-black">₹{tipAmount}</span>
-              </div>
-            )}
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-base font-bold text-black">Total amount</span>
-                <span className="text-base font-bold text-black">₹{totalAmount.toLocaleString('en-IN')}</span>
+                <span className="text-sm text-slate-500">Taxes and Fee</span>
+                <span className="text-sm font-medium text-slate-900">₹{taxesAndFee}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-base font-bold text-black">Amount to pay</span>
-                <span className="text-base font-bold text-black">₹{amountToPay.toLocaleString('en-IN')}</span>
+                <span className="text-sm text-slate-500">Visited Fee</span>
+                <span className="text-sm font-medium text-slate-900">₹{visitedFee}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-5 mt-1">
+              <div className="flex justify-between items-end">
+                <div>
+                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Payable</span>
+                  <span className="text-2xl font-black text-slate-900 leading-none">
+                    ₹{totalAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="text-right">
+                  {totalOriginalPrice > itemTotal && (
+                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full animate-pulse">
+                      <MdStar className="w-3 h-3" />
+                      SAVED ₹{(totalOriginalPrice - itemTotal).toLocaleString('en-IN')}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -770,83 +874,6 @@ const Checkout = () => {
           <button className="text-sm font-medium hover:underline" style={{ color: themeColors.button }}>
             Read full policy
           </button>
-        </div>
-
-        {/* Add a Tip */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-          <h3 className="text-base font-bold text-black mb-3">Add a tip to thank the Professional</h3>
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {[50, 75, 100, 'custom'].map((amount) => (
-              <div key={amount} className="relative">
-                {amount === 'custom' ? (
-                  <input
-                    type="number"
-                    placeholder="Custom"
-                    value={customTip}
-                    onChange={(e) => handleCustomTip(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm text-center"
-                    style={selectedTip === 'custom' ? {
-                      borderColor: themeColors.button,
-                      backgroundColor: 'rgba(0, 166, 166, 0.1)'
-                    } : {
-                      borderColor: '#d1d5db',
-                      backgroundColor: 'white'
-                    }}
-                  />
-                ) : (
-                  <button
-                    onClick={() => handleTipSelect(amount)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm font-medium transition-colors"
-                    style={selectedTip === amount ? {
-                      borderColor: themeColors.button,
-                      backgroundColor: 'rgba(0, 166, 166, 0.1)',
-                      color: themeColors.button
-                    } : {
-                      borderColor: '#d1d5db',
-                      backgroundColor: 'white',
-                      color: 'black'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedTip !== amount) {
-                        e.target.style.backgroundColor = '#f9fafb';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedTip !== amount) {
-                        e.target.style.backgroundColor = 'white';
-                      }
-                    }}
-                  >
-                    ₹{amount}
-                    {amount === 75 && (
-                      <span className="block text-[10px] text-green-600 font-semibold mt-1">POPULAR</span>
-                    )}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-600 text-center">
-            100% of the tip goes to the professional.
-          </p>
-        </div>
-
-        {/* Frequently Added Together */}
-        <div className="mb-4">
-          <h3 className="text-base font-bold text-black mb-3">Frequently added together</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {[1, 2, 3].map((item) => (
-              <div
-                key={item}
-                className="min-w-[140px] h-32 bg-gray-200 rounded-lg shrink-0"
-              >
-                {/* Placeholder for service images */}
-                <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400 text-xs">Service {item}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Payment Method Selection - Only show when vendor accepted */}

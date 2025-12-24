@@ -13,6 +13,7 @@ import PaymentOffers from '../../components/common/PaymentOffers';
 import ServiceCategoriesGrid from '../../components/common/ServiceCategoriesGrid';
 import MenuModal from '../../components/common/MenuModal';
 import CategoryCart from '../../components/common/CategoryCart';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -145,12 +146,7 @@ const ServiceDynamic = () => {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
-      <div className="w-12 h-12 border-4 border-gray-100 border-t-primary-600 rounded-full animate-spin"></div>
-      <p className="text-gray-500 font-medium">Loading service details...</p>
-    </div>
-  );
+  if (loading) return <LoadingSpinner message="Loading service details..." />;
 
   if (!service) {
     return (
@@ -356,46 +352,9 @@ const ServiceDynamic = () => {
         </div>
       </main>
 
-      {/* Cart Summary */}
-      {(() => {
-        const categoryItems = cartItems.filter(item => item.category === service.title);
-        if (categoryItems.length === 0) return null;
-        const totalPrice = categoryItems.reduce((sum, item) => sum + (item.price || 0), 0);
-        return (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between z-[9996] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900">₹{totalPrice.toLocaleString('en-IN')}</span>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{categoryItems.length} Items in cart</span>
-            </div>
-            <button
-              onClick={() => setShowCategoryCartModal(true)}
-              className="px-8 py-3 text-white font-bold rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-sm uppercase tracking-wide"
-              style={{ background: themeColors.button }}
-            >
-              View Cart
-            </button>
-          </div>
-        );
-      })()}
 
-      <MenuModal
-        isOpen={isMenuModalOpen}
-        onClose={() => setIsMenuModalOpen(false)}
-        onCategoryClick={(cat) => {
-          const idx = service.sections.findIndex(s =>
-            s.title.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '') ===
-            cat.title.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
-          );
-          if (idx !== -1) {
-            document.getElementById(`section-${idx}`)?.scrollIntoView({ behavior: 'smooth' });
-          }
-        }}
-        categories={service.page?.serviceCategoriesGrid?.map((c, i) => ({
-          id: c.id || i,
-          title: c.title,
-          image: toAssetUrl(c.imageUrl)
-        })) || []}
-      />
+
+
 
 
       {/* Service Detail Modal */}

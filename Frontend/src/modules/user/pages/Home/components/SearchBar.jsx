@@ -89,81 +89,45 @@ const SearchBar = ({ onSearch }) => {
   };
 
   return (
-    <form 
-      onSubmit={handleSubmit} 
-      className="sticky top-0 z-40 py-2.5 px-4 mb-0 flex justify-center relative"
+    <form
+      onSubmit={handleSubmit}
+      className="w-full relative"
     >
-      <div className="relative w-full max-w-md z-10">
-        <div className="relative w-full">
-          {/* Search icon container with gradient */}
-          <div 
-            className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10"
-            style={{
-              background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)',
-              borderRadius: '9999px 0 0 9999px',
-              paddingLeft: '12px',
-              paddingRight: '6px'
-            }}
-          >
-            <FiSearch className="w-4 h-4" style={{ color: '#F59E0B', filter: 'drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4))' }} />
-          </div>
-          
-          {/* Enhanced input with glassmorphism */}
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 rounded-full text-sm border-2 focus:outline-none transition-all"
-            style={{
-              borderColor: 'rgba(255, 255, 255, 0.7)',
-              color: searchQuery ? '#111827' : 'transparent',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#F59E0B';
-              e.target.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.25), 0 12px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9)';
-              e.target.style.background = 'rgba(255, 255, 255, 1)';
-              e.target.style.transform = 'scale(1.02)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'rgba(255, 255, 255, 0.7)';
-              e.target.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)';
-              e.target.style.background = 'rgba(255, 255, 255, 0.95)';
-              e.target.style.transform = 'scale(1)';
-            }}
-          />
-          
-          {/* Placeholder text with enhanced styling */}
-          {!searchQuery && (
-            <div className="absolute inset-y-0 left-12 right-4 flex items-center pointer-events-none z-10">
-              <span 
-                className="text-sm font-medium"
-                style={{ 
-                  color: '#666666'
-                }}
-              >
-                Search for <span 
-                  className="font-semibold"
-                  style={{ 
-                    color: '#F59E0B'
-                  }}
-                >{displayedText}</span>
-              </span>
-            </div>
-          )}
-          
-          {/* Glow effect on focus */}
-          <div 
-            className="absolute inset-0 rounded-full pointer-events-none opacity-0 transition-opacity duration-300"
-            style={{
-              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%)',
-              filter: 'blur(10px)',
-              zIndex: -1
-            }}
-          />
+      <div className="relative w-full group">
+        {/* Glow effect on hover */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+        {/* Search icon */}
+        <div
+          className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10"
+        >
+          <FiSearch className="w-5 h-5 text-gray-400 group-hover:text-[#00A6A6] transition-colors duration-300" />
         </div>
+
+        {/* Floating input */}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-3.5 rounded-2xl text-[15px] bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group-hover:border-[#CCFBF1] group-hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_30px_-6px_rgba(0,166,166,0.15)] focus:border-[#00A6A6] transition-all duration-300 text-gray-800 placeholder-transparent outline-none ring-0"
+          onFocus={(e) => {
+            e.target.parentElement.classList.add('scale-[1.01]');
+          }}
+          onBlur={(e) => {
+            if (!searchQuery) {
+              e.target.parentElement.classList.remove('scale-[1.01]');
+            }
+          }}
+        />
+
+        {/* Placeholder text with typing animation */}
+        {!searchQuery && (
+          <div className="absolute inset-y-0 left-12 right-4 flex items-center pointer-events-none">
+            <span className="text-[15px] text-gray-400 tracking-wide font-light">
+              Search for <span className="font-medium text-[#00A6A6]">{displayedText}</span>
+            </span>
+          </div>
+        )}
       </div>
     </form>
   );

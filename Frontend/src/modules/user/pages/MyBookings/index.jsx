@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiClock, FiMapPin, FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiMapPin, FiCheckCircle, FiXCircle, FiLoader, FiCalendar, FiChevronRight } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import BottomNav from '../../components/layout/BottomNav';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { bookingService } from '../../../../services/bookingService';
 
 const MyBookings = () => {
@@ -41,51 +42,55 @@ const MyBookings = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'confirmed':
-        return <FiCheckCircle className="w-4 h-4 text-green-500" />;
+        return <FiCheckCircle className="w-3.5 h-3.5" />;
       case 'in-progress':
-        return <FiLoader className="w-4 h-4 text-blue-500 animate-spin" />;
+        return <FiLoader className="w-3.5 h-3.5 animate-spin" />;
       case 'completed':
-        return <FiCheckCircle className="w-4 h-4 text-green-600" />;
+        return <FiCheckCircle className="w-3.5 h-3.5" />;
       case 'cancelled':
-        return <FiXCircle className="w-4 h-4 text-red-500" />;
+        return <FiXCircle className="w-3.5 h-3.5" />;
       case 'awaiting_payment':
-        return <FiClock className="w-4 h-4 text-orange-500" />;
       default:
-        return <FiClock className="w-4 h-4 text-gray-500" />;
+        return <FiClock className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getStatusBorderColor = (status) => {
+    switch (status) {
+      case 'confirmed': return '!border-l-emerald-500';
+      case 'in-progress': return '!border-l-blue-500';
+      case 'completed': return '!border-l-violet-500';
+      case 'cancelled':
+      case 'rejected': return '!border-l-rose-500';
+      case 'awaiting_payment': return '!border-l-amber-500';
+      default: return '!border-l-gray-300';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-50 text-green-700 border-green-200';
+        return 'bg-emerald-500 text-white border-emerald-600 ring-emerald-500';
       case 'in-progress':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-500 text-white border-blue-600 ring-blue-500';
       case 'completed':
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-violet-500 text-white border-violet-600 ring-violet-500';
       case 'cancelled':
-        return 'bg-red-50 text-red-700 border-red-200';
+      case 'rejected':
+        return 'bg-rose-500 text-white border-rose-600 ring-rose-500';
       case 'awaiting_payment':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
+        return 'bg-amber-500 text-white border-amber-600 ring-amber-500';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-gray-500 text-white border-gray-600 ring-gray-500';
     }
   };
 
   const getStatusLabel = (status) => {
+    if (!status) return 'Unknown';
     switch (status) {
-      case 'confirmed':
-        return 'Confirmed';
-      case 'in-progress':
-        return 'In Progress';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'awaiting_payment':
-        return 'Awaiting Payment';
-      default:
-        return status;
+      case 'in-progress': return 'In Progress';
+      case 'awaiting_payment': return 'Payment Pending';
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -111,33 +116,38 @@ const MyBookings = () => {
   const getAddressString = (address) => {
     if (typeof address === 'string') return address;
     if (address && typeof address === 'object') {
-      return `${address.addressLine1 || ''}${address.addressLine2 ? `, ${address.addressLine2}` : ''}, ${address.city || ''}, ${address.state || ''} - ${address.pincode || ''}`;
+      const parts = [
+        address.addressLine1,
+        address.addressLine2,
+        address.city
+      ].filter(Boolean);
+      return parts.join(', ');
     }
-    return 'N/A';
+    return 'Detailed Address';
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
+      <header className="bg-white/80 backdrop-blur-lg border-b border-slate-100 sticky top-0 z-30 transition-all">
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2.5 hover:bg-slate-50 active:bg-slate-100 rounded-full transition-colors text-slate-700"
             >
-              <FiArrowLeft className="w-5 h-5 text-black" />
+              <FiArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold text-black">My Bookings</h1>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">My Bookings</h1>
           </div>
         </div>
       </header>
 
       {/* Filter Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-[57px] z-20">
-        <div className="flex overflow-x-auto px-4 py-2 gap-2">
+      <div className="bg-white border-b border-slate-100 sticky top-[61px] z-20 shadow-[0_4px_20px_-16px_rgba(0,0,0,0.1)]">
+        <div className="flex overflow-x-auto px-4 py-3 gap-2.5 no-scrollbar scroll-smooth">
           {[
-            { id: 'all', label: 'All' },
+            { id: 'all', label: 'All Bookings' },
             { id: 'confirmed', label: 'Confirmed' },
             { id: 'in-progress', label: 'In Progress' },
             { id: 'completed', label: 'Completed' },
@@ -146,9 +156,9 @@ const MyBookings = () => {
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${filter === tab.id
-                ? 'bg-brand text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 border ${filter === tab.id
+                ? 'border-transparent text-white shadow-lg shadow-blue-500/25 active:scale-95'
+                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                 }`}
               style={filter === tab.id ? { backgroundColor: themeColors.button } : {}}
             >
@@ -159,20 +169,19 @@ const MyBookings = () => {
       </div>
 
       {/* Bookings List */}
-      <main className="px-4 py-4">
+      <main className="px-4 py-5 max-w-lg mx-auto w-full">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <FiLoader className="w-16 h-16 text-gray-300 mb-4 animate-spin" />
-            <p className="text-gray-500 text-lg font-medium">Loading bookings...</p>
-          </div>
+          <LoadingSpinner fullScreen={false} message="Fetching your bookings..." />
         ) : bookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <FiClock className="w-16 h-16 text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg font-medium">No bookings found</p>
-            <p className="text-gray-400 text-sm mt-2">
+          <div className="flex flex-col items-center justify-center py-24 text-center px-6">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+              <FiClock className="w-8 h-8 text-slate-300" />
+            </div>
+            <h3 className="text-slate-900 text-lg font-bold mb-2">No Bookings Found</h3>
+            <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
               {filter === 'all'
-                ? 'You haven\'t made any bookings yet'
-                : `No ${filter} bookings`}
+                ? "Looks like you haven't booked any services yet. Explore our services to get started!"
+                : `You don't have any ${filter.replace('-', ' ')} bookings at the moment.`}
             </p>
           </div>
         ) : (
@@ -181,53 +190,75 @@ const MyBookings = () => {
               <div
                 key={booking._id || booking.id}
                 onClick={() => handleBookingClick(booking)}
-                className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform"
-                style={{
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
-                }}
+                className={`group relative bg-white rounded-2xl p-5 border border-slate-200 border-l-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.08)] hover:border-blue-300 active:scale-[0.99] transition-all duration-300 cursor-pointer overflow-hidden ${getStatusBorderColor(booking.status)}`}
               >
-                {/* Booking Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-base font-bold text-black">
-                        {booking.serviceName || booking.serviceCategory || 'Service'}
-                      </h3>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(booking.status)}`}>
-                        {getStatusLabel(booking.status)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Booking ID: {booking.bookingNumber || (booking._id || booking.id).substring(0, 12)}...
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-slate-50 via-transparent to-transparent -z-0 opacity-50" />
+
+                {/* Header Section */}
+                <div className="relative z-10 flex items-start justify-between mb-4 border-b border-slate-100 pb-4">
+                  <div className="pr-4">
+                    <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                      #{booking.bookingNumber || (booking._id || booking.id).substring(0, 8)}
                     </p>
+                    <h3 className="text-lg font-bold text-slate-800 leading-tight line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      {booking.serviceName || booking.serviceCategory || 'Service Request'}
+                    </h3>
                   </div>
-                  <div className="flex items-center gap-1">
+
+                  {/* Status Badge */}
+                  <div className={`px-3 py-1 pb-1.5 rounded-full border ring-1 ring-inset flex items-center gap-1.5 shadow-sm ${getStatusColor(booking.status)}`}>
                     {getStatusIcon(booking.status)}
+                    <span className="text-[11px] font-bold uppercase tracking-wide">
+                      {getStatusLabel(booking.status)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Booking Details */}
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-start gap-2">
-                    <FiMapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
-                    <p className="text-sm text-gray-700 line-clamp-2">
+                {/* Details Grid */}
+                <div className="relative z-10 grid grid-cols-[auto_1fr] gap-x-3 gap-y-4 mb-5 p-3 rounded-xl bg-slate-50/50 border border-slate-200">
+                  {/* Schedule */}
+                  <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                    <FiCalendar className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Scheduled For</p>
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                      <span>{formatDate(booking.scheduledDate)}</span>
+                      <span className="text-slate-300">•</span>
+                      <span>{booking.scheduledTime || booking.timeSlot?.start || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                    <FiMapPin className="w-4 h-4 text-rose-500" />
+                  </div>
+                  <div className="flex flex-col justify-center min-w-0">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Location</p>
+                    <p className="text-sm font-medium text-slate-700 truncate w-full">
                       {getAddressString(booking.address)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FiClock className="w-4 h-4 text-gray-400 shrink-0" />
-                    <p className="text-sm text-gray-700">
-                      {formatDate(booking.scheduledDate)} • {booking.scheduledTime || booking.timeSlot?.start || 'N/A'}
-                    </p>
-                  </div>
                 </div>
 
-                {/* Amount */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Total Amount</span>
-                  <span className="text-lg font-bold text-black">
-                    ₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}
-                  </span>
+                {/* Footer Section */}
+                <div className="relative z-10 flex items-center justify-between pt-4 border-t border-slate-200">
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Total Amount</p>
+                    <p className="text-xl font-bold text-slate-900 flex items-baseline gap-0.5">
+                      <span className="text-sm font-semibold text-slate-400">₹</span>
+                      {(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+
+                  <button
+                    className="flex items-center gap-1.5 pl-4 pr-3 py-2 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-sm hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition-all shadow-sm active:scale-95"
+                  >
+                    View Details
+                    <FiChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}

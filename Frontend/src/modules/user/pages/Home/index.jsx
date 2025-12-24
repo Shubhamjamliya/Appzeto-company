@@ -16,10 +16,10 @@ const MostBookedServices = lazy(() => import('./components/MostBookedServices'))
 const CuratedServices = lazy(() => import('./components/CuratedServices'));
 const ServiceSectionWithRating = lazy(() => import('./components/ServiceSectionWithRating'));
 const Banner = lazy(() => import('./components/Banner'));
-// Lazy load more heavy components
-const BannerWithRefer = lazy(() => import('./components/BannerWithRefer'));
-import ACApplianceModal from './components/ACApplianceModal';
+const ReferEarnSection = lazy(() => import('./components/ReferEarnSection'));
 import CategoryModal from './components/CategoryModal';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import AddressSelectionModal from '../Checkout/components/AddressSelectionModal';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -32,12 +32,22 @@ const toAssetUrl = (url) => {
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [address, setAddress] = useState('...');
+  const [address, setAddress] = useState('Select Location');
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [houseNumber, setHouseNumber] = useState('');
+
+  const handleAddressSave = (savedHouseNumber, locationObj) => {
+    if (locationObj) {
+      setAddress(locationObj.address);
+    }
+    setHouseNumber(savedHouseNumber);
+    setIsAddressModalOpen(false);
+  };
 
   // Auto-detect location on mount
   useEffect(() => {
     const autoDetectLocation = async () => {
-      if (navigator.geolocation) {
+      if (navigator.geolocation && address === 'Select Location') {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             try {
@@ -61,9 +71,11 @@ const Home = () => {
                 setAddress(formattedAddress);
               }
             } catch (error) {
+              // Silent fail
             }
           },
           (error) => {
+            // Silent fail
           }
         );
       }
@@ -138,7 +150,7 @@ const Home = () => {
     const interval = setInterval(loadCartCount, 10000);
     return () => clearInterval(interval);
   }, []);
-  const [isACModalOpen, setIsACModalOpen] = useState(false);
+
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
@@ -310,13 +322,17 @@ const Home = () => {
 
 
   const handleLocationClick = () => {
-    // Open location selector modal
+    setIsAddressModalOpen(true);
   };
 
   const handleCartClick = () => {
     // Navigate to cart page
   };
 
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div
@@ -325,65 +341,57 @@ const Home = () => {
         willChange: 'auto',
         opacity: 1,
         visibility: 'visible',
-        background: 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)',
-        backgroundColor: '#ffffff',
+        background: themeColors.backgroundGradient,
+        backgroundColor: '#EBF8FF', // Light blue fallback
         minHeight: '100vh',
         position: 'relative',
         zIndex: 1
       }}
     >
-      <Header
-        location={address}
-        onLocationClick={handleLocationClick}
-      />
-
-      <main className="pt-0">
-        {/* Complete Gradient Section: Header continuation, Search, Categories, and Carousel */}
-        <div
-          className="relative overflow-hidden"
-          style={{
-            background: themeColors.gradient
-          }}
-        >
-          {/* Gradient overlay for depth */}
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              background: 'radial-gradient(circle at top right, rgba(255, 255, 255, 0.3), transparent 70%)'
-            }}
-          />
-
-          <div className="relative z-10">
-            <SearchBar
-              onSearch={handleSearch}
-            />
-
-            <ServiceCategories
-              categories={categories}
-              onCategoryClick={handleCategoryClick}
-              onSeeAllClick={() => { }}
-            />
-
-            <Suspense fallback={<div className="h-48" />}>
-              <PromoCarousel
-                promos={(homeContent?.promos || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map(promo => ({
-                  id: promo.id || promo._id,
-                  title: promo.title || '',
-                  subtitle: promo.subtitle || promo.description || '',
-                  buttonText: promo.buttonText || 'Book now',
-                  className: promo.gradientClass || 'from-blue-600 to-blue-800',
-                  image: toAssetUrl(promo.imageUrl),
-                  targetCategoryId: promo.targetCategoryId,
-                  scrollToSection: promo.scrollToSection,
-                  route: '/'
-                }))}
-                onPromoClick={handlePromoClick}
-              />
-            </Suspense>
-          </div>
+      <div className="bg-[#EBF8FF]/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 rounded-b-[20px] shadow-sm transition-all duration-300">
+        <Header
+          location={address}
+          onLocationClick={handleLocationClick}
+        />
+        <div className="px-4 pb-4 pt-1 max-w-lg mx-auto w-full">
+          <SearchBar onSearch={handleSearch} />
         </div>
+      </div>
 
-        <Suspense fallback={<div className="h-32" />}>
+      <main className="pt-6 space-y-8 pb-24 max-w-screen-xl mx-auto w-full">
+        {/* Hero Section - Promo Carousel */}
+        <section className="relative z-0">
+          <Suspense fallback={<div className="h-52 w-full bg-gray-100 animate-pulse rounded-2xl mx-4" />}>
+            <PromoCarousel
+              promos={(homeContent?.promos || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map(promo => ({
+                id: promo.id || promo._id,
+                title: promo.title || '',
+                subtitle: promo.subtitle || promo.description || '',
+                buttonText: promo.buttonText || 'Book now',
+                className: promo.gradientClass || 'from-[#00A6A6] to-[#008a8a]',
+                image: toAssetUrl(promo.imageUrl),
+                targetCategoryId: promo.targetCategoryId,
+                scrollToSection: promo.scrollToSection,
+                route: '/'
+              }))}
+              onPromoClick={handlePromoClick}
+            />
+          </Suspense>
+        </section>
+
+        {/* Categories Section */}
+        <section className="relative overflow-hidden">
+          {/* Decorative background for categories */}
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-50/30 to-transparent pointer-events-none -z-10" />
+          <ServiceCategories
+            categories={categories}
+            onCategoryClick={handleCategoryClick}
+            onSeeAllClick={() => { }}
+          />
+        </section>
+
+        {/* Curated Services */}
+        <Suspense fallback={<div className="h-40 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
           <CuratedServices
             services={(homeContent?.curated || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map(item => ({
               id: item.id || item._id,
@@ -394,7 +402,8 @@ const Home = () => {
           />
         </Suspense>
 
-        <Suspense fallback={<div className="h-32" />}>
+        {/* New & Noteworthy */}
+        <Suspense fallback={<div className="h-40 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
           <NewAndNoteworthy
             services={(homeContent?.noteworthy || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map(item => ({
               id: item.id || item._id,
@@ -405,7 +414,8 @@ const Home = () => {
           />
         </Suspense>
 
-        <Suspense fallback={<div className="h-32" />}>
+        {/* Most Booked */}
+        <Suspense fallback={<div className="h-40 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
           <MostBookedServices
             services={(homeContent?.booked || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map(item => ({
               id: item.id || item._id,
@@ -423,8 +433,8 @@ const Home = () => {
           />
         </Suspense>
 
-        {/* Dynamic Banner 1 from Backend - Moved after Most Booked Services */}
-        <Suspense fallback={<div className="h-32" />}>
+        {/* Dynamic Banner 1 */}
+        <Suspense fallback={<div className="h-32 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
           <Banner
             imageUrl={homeContent?.banners?.[0] ? toAssetUrl(homeContent.banners[0].imageUrl) : null}
             onClick={() => {
@@ -437,9 +447,9 @@ const Home = () => {
           />
         </Suspense>
 
-        {/* Dynamic Category Sections from Backend */}
+        {/* Dynamic Sections */}
         {(homeContent?.categorySections || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, sIdx) => (
-          <Suspense key={section._id || sIdx} fallback={<div className="h-32" />}>
+          <Suspense key={section._id || sIdx} fallback={<div className="h-40 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
             <ServiceSectionWithRating
               title={section.title}
               subtitle={section.subtitle}
@@ -450,7 +460,7 @@ const Home = () => {
                   title: card.title,
                   rating: card.rating || "4.8",
                   reviews: card.reviews || "10k+",
-                  price: card.price || "Contact for price",
+                  price: card.price,
                   image: processedImage,
                   targetCategoryId: card.targetCategoryId
                 };
@@ -472,35 +482,29 @@ const Home = () => {
           </Suspense>
         ))}
 
-
-
-
-
-        {/* Dynamic Banner 2 from Backend */}
-        <Suspense fallback={<div className="h-32" />}>
-          <BannerWithRefer
+        {/* Dynamic Banner 2 */}
+        <Suspense fallback={<div className="h-32 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
+          <Banner
             imageUrl={homeContent?.banners?.[1] ? toAssetUrl(homeContent.banners[1].imageUrl) : null}
-            onBannerClick={() => {
+            onClick={() => {
               const b = homeContent?.banners?.[1];
               if (b?.targetCategoryId) {
                 const cat = categories.find(c => c.id === b.targetCategoryId);
                 if (cat) handleCategoryClick(cat);
               }
             }}
-            onReferClick={handleReferClick}
           />
+        </Suspense>
+
+        {/* Refer & Earn Section - Separate but consistent */}
+        <Suspense fallback={<div className="h-32 bg-gray-50 animate-pulse rounded-xl mx-4" />}>
+          <ReferEarnSection onReferClick={handleReferClick} />
         </Suspense>
       </main>
 
       <BottomNav />
 
-      {/* AC & Appliance Repair Modal */}
-      <ACApplianceModal
-        isOpen={isACModalOpen}
-        onClose={() => setIsACModalOpen(false)}
-        location={address}
-        cartCount={cartCount}
-      />
+
 
 
       {/* Category Modal */}
@@ -513,6 +517,15 @@ const Home = () => {
         category={selectedCategory}
         location={address}
         cartCount={cartCount}
+      />
+
+      {/* Address Selection Modal */}
+      <AddressSelectionModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        houseNumber={houseNumber}
+        onHouseNumberChange={setHouseNumber}
+        onSave={handleAddressSave}
       />
     </div>
   );

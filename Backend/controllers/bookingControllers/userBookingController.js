@@ -1,5 +1,6 @@
 const Booking = require('../../models/Booking');
 const Service = require('../../models/Service');
+const Category = require('../../models/Category');
 const User = require('../../models/User');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
@@ -29,7 +30,8 @@ const createBooking = async (req, res) => {
       timeSlot,
       userNotes,
       paymentMethod,
-      amount  // Accept amount from frontend
+      amount, // Accept amount from frontend
+      isPlusAdded
     } = req.body;
 
     // Handle serviceId if it's an object (from populated cart data)
@@ -82,7 +84,7 @@ const createBooking = async (req, res) => {
 
     // Get category for the service
     const categoryId = service.categoryId || service.categoryIds?.[0];
-    const category = categoryId ? await Service.findById(categoryId) : null;
+    const category = categoryId ? await Category.findById(categoryId) : null;
 
     // Create booking with REQUESTED status (no vendor assigned yet)
     const bookingNumber = `BK${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -118,10 +120,21 @@ const createBooking = async (req, res) => {
         end: timeSlot.end
       },
       userNotes: userNotes || null,
+      isPlusAdded: isPlusAdded || false,
       paymentMethod: paymentMethod || null,
       status: BOOKING_STATUS.SEARCHING, // Initial search phase (hidden from user until payment/confirmed)
       paymentStatus: PAYMENT_STATUS.PENDING
     });
+
+    // If Plus membership was added, update user status
+    if (isPlusAdded) {
+      const expiryDate = new Date();
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // 1 year membership
+      user.isPlusMember = true;
+      user.plusExpiry = expiryDate;
+      await user.save();
+      console.log(`User ${userId} upgraded to Plus Membership until ${expiryDate}`);
+    }
 
     // Find nearby vendors using location service
     const { findNearbyVendors, geocodeAddress } = require('../../services/locationService');

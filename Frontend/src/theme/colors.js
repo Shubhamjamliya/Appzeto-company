@@ -9,23 +9,26 @@
  * - Backward compatibility: import themeColors from '../../../../theme' (uses userTheme)
  */
 
+
+// User Theme Colors
 // User Theme Colors
 const userTheme = {
   // Background Gradient (for full page)
-  backgroundGradient: 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)',
+  backgroundGradient: 'linear-gradient(180deg, #F0FDFA 0%, #F5FAFF 15%, #FFFFFF 30%)',
 
-  // Top Section Gradient (yellow gradient)
-  gradient: 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 50%, #FEF3C7 100%)',
+  // Top Section Gradient (Teal)
+  gradient: 'linear-gradient(135deg, #00A6A6 0%, #008a8a 50%, #006d6d 100%)',
 
-  // Header Gradient (solid yellow - same as user dashboard)
-  headerGradient: '#FCD34D',
+  // Header Gradient (Solid Teal)
+  headerGradient: '#00A6A6',
 
   // Button Color
-  button: '#00a6a6',
+  button: '#00A6A6',
 
   // Icon Color
-  icon: '#29ad81',
+  icon: '#00A6A6',
 };
+
 
 // Vendor Theme Colors (currently same as user, can be changed independently)
 const vendorTheme = {
@@ -44,6 +47,7 @@ const vendorTheme = {
   // Icon Color
   icon: '#29ad81',
 };
+
 
 // Worker Theme Colors (same as vendor)
 const workerTheme = {

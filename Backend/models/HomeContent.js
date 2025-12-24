@@ -169,6 +169,11 @@ const homeContentSchema = new mongoose.Schema({
       title: String,
       imageUrl: String,
       badge: String,
+      price: String,
+      originalPrice: String,
+      discount: String,
+      rating: String,
+      reviews: String,
       targetCategoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',

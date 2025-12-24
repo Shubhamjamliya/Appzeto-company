@@ -213,6 +213,10 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  isPlusAdded: {
+    type: Boolean,
+    default: false
+  },
   vendorNotes: {
     type: String,
     default: null

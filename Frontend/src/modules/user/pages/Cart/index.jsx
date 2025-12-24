@@ -4,6 +4,7 @@ import { FiArrowLeft, FiShoppingCart, FiTrash2, FiPlus, FiMinus, FiLoader } from
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import BottomNav from '../../components/layout/BottomNav';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { cartService } from '../../../../services/cartService';
 import electricianIcon from '../../../../assets/images/icons/services/electrician.png';
 import womensSalonIcon from '../../../../assets/images/icons/services/womens-salon-spa-icon.png';
@@ -183,10 +184,7 @@ const Cart = () => {
       {/* Cart Items - Grouped by Category */}
       <main className="px-4 py-4" style={{ paddingBottom: cartItems.length > 0 ? '70px' : '100px' }}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <FiLoader className="w-16 h-16 text-gray-300 mb-4 animate-spin" />
-            <p className="text-gray-500 text-lg font-medium">Loading cart...</p>
-          </div>
+          <LoadingSpinner fullScreen={false} message="Loading cart..." />
         ) : cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <FiShoppingCart className="w-16 h-16 text-gray-300 mb-4" />

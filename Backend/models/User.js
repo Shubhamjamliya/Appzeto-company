@@ -89,6 +89,14 @@ const userSchema = new mongoose.Schema({
   cancelledBookings: {
     type: Number,
     default: 0
+  },
+  isPlusMember: {
+    type: Boolean,
+    default: false
+  },
+  plusExpiry: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

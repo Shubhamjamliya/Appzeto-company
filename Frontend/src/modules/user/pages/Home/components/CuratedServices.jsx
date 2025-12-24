@@ -84,9 +84,9 @@ const CuratedServices = React.memo(({ services, onServiceClick }) => {
   }
 
   return (
-    <div ref={sectionRef} className="mb-6">
+    <div ref={sectionRef} className="">
       {/* Title Section */}
-      <div ref={titleRef} className="px-4 mb-5 mt-6" style={{ opacity: 1 }}>
+      <div ref={titleRef} className="px-4 mb-5" style={{ opacity: 1 }}>
         <h2
           className="text-xl font-bold mb-1 text-gray-900 tracking-tight"
         >

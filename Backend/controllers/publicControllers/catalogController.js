@@ -73,7 +73,7 @@ const getPublicServices = async (req, res) => {
     }
 
     let services = await Service.find(query)
-      .select('title slug iconUrl badge categoryIds')
+      .select('title slug iconUrl imageUrl badge categoryIds basePrice discountPrice sections')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -95,9 +95,13 @@ const getPublicServices = async (req, res) => {
         title: svc.title,
         slug: svc.slug,
         icon: svc.iconUrl || '',
+        imageUrl: svc.imageUrl || svc.iconUrl || '',
         badge: svc.badge || '',
+        price: svc.basePrice || 0,
+        originalPrice: svc.discountPrice ? (svc.basePrice + svc.discountPrice) : (svc.basePrice || 0),
         categoryId: svc.categoryIds && svc.categoryIds.length > 0 ? svc.categoryIds[0].toString() : null,
-        categoryIds: (svc.categoryIds || []).map(id => id.toString())
+        categoryIds: (svc.categoryIds || []).map(id => id.toString()),
+        sections: svc.sections || []
       }))
     });
   } catch (error) {

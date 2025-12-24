@@ -914,19 +914,9 @@ const HomePage = ({ catalog, setCatalog }) => {
                             <button
                               type="button"
                               onClick={() => {
-                                const section = home.categorySections.find((s) => s.id === sec.id);
-                                if (section) {
-                                  setEditingCategorySectionId(sec.id);
-                                  // Find the category ID from cards if available
-                                  const categoryIdFromCards = section.cards?.[0]?.targetCategoryId || section.seeAllTargetCategoryId || "";
-                                  setCategorySectionForm({
-                                    title: section.title || "",
-                                    seeAllTargetCategoryId: section.seeAllTargetCategoryId || "",
-                                    selectedCategoryId: categoryIdFromCards,
-                                    cards: section.cards || [],
-                                  });
-                                  setIsCategorySectionModalOpen(true);
-                                }
+                                setEditingCategorySectionId(sec.id);
+                                setCategorySectionForm({ ...sec });
+                                setIsCategorySectionModalOpen(true);
                               }}
                               className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title="Edit"
@@ -1433,7 +1423,23 @@ const HomePage = ({ catalog, setCatalog }) => {
               <label className="block text-base font-bold text-gray-900 mb-2">Price</label>
               <input
                 value={bookedForm.price}
-                onChange={(e) => setBookedForm((p) => ({ ...p, price: e.target.value }))}
+                onChange={(e) => {
+                  const newPrice = e.target.value;
+                  let newDiscount = bookedForm.discount;
+
+                  // Auto-calculate discount
+                  if (newPrice && bookedForm.originalPrice) {
+                    const priceVal = parseFloat(newPrice.toString().replace(/[^0-9.]/g, ''));
+                    const originalVal = parseFloat(bookedForm.originalPrice.toString().replace(/[^0-9.]/g, ''));
+
+                    if (!isNaN(priceVal) && !isNaN(originalVal) && originalVal > priceVal) {
+                      const discountVal = Math.round(((originalVal - priceVal) / originalVal) * 100);
+                      newDiscount = `${discountVal}% OFF`;
+                    }
+                  }
+
+                  setBookedForm((p) => ({ ...p, price: newPrice, discount: newDiscount }));
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
                 placeholder="950"
               />
@@ -1442,18 +1448,34 @@ const HomePage = ({ catalog, setCatalog }) => {
               <label className="block text-base font-bold text-gray-900 mb-2">Original Price</label>
               <input
                 value={bookedForm.originalPrice}
-                onChange={(e) => setBookedForm((p) => ({ ...p, originalPrice: e.target.value }))}
+                onChange={(e) => {
+                  const newOriginalPrice = e.target.value;
+                  let newDiscount = bookedForm.discount;
+
+                  // Auto-calculate discount
+                  if (bookedForm.price && newOriginalPrice) {
+                    const priceVal = parseFloat(bookedForm.price.toString().replace(/[^0-9.]/g, ''));
+                    const originalVal = parseFloat(newOriginalPrice.toString().replace(/[^0-9.]/g, ''));
+
+                    if (!isNaN(priceVal) && !isNaN(originalVal) && originalVal > priceVal) {
+                      const discountVal = Math.round(((originalVal - priceVal) / originalVal) * 100);
+                      newDiscount = `${discountVal}% OFF`;
+                    }
+                  }
+
+                  setBookedForm((p) => ({ ...p, originalPrice: newOriginalPrice, discount: newDiscount }));
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
                 placeholder="1,038"
               />
             </div>
             <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">Discount</label>
+              <label className="block text-base font-bold text-gray-900 mb-2">Discount (auto)</label>
               <input
                 value={bookedForm.discount}
                 onChange={(e) => setBookedForm((p) => ({ ...p, discount: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
-                placeholder="8%"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-gray-50 text-gray-600"
+                placeholder="8% OFF"
               />
             </div>
           </div>
@@ -1571,16 +1593,7 @@ const HomePage = ({ catalog, setCatalog }) => {
                           type="button"
                           onClick={() => {
                             setEditingCardId(card.id);
-                            setCardForm({
-                              title: card.title || "",
-                              imageUrl: card.imageUrl || "",
-                              rating: card.rating || "",
-                              reviews: card.reviews || "",
-                              price: card.price || "",
-                              originalPrice: card.originalPrice || "",
-                              discount: card.discount || "",
-                              targetCategoryId: card.targetCategoryId || "",
-                            });
+                            setCardForm({ ...card });
                             setIsCardModalOpen(true);
                           }}
                           className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -1705,7 +1718,23 @@ const HomePage = ({ catalog, setCatalog }) => {
               <input
                 type="text"
                 value={cardForm.price}
-                onChange={(e) => setCardForm((p) => ({ ...p, price: e.target.value }))}
+                onChange={(e) => {
+                  const newPrice = e.target.value;
+                  let newDiscount = cardForm.discount;
+
+                  // Auto-calculate discount
+                  if (newPrice && cardForm.originalPrice) {
+                    const priceVal = parseFloat(newPrice.toString().replace(/[^0-9.]/g, ''));
+                    const originalVal = parseFloat(cardForm.originalPrice.toString().replace(/[^0-9.]/g, ''));
+
+                    if (!isNaN(priceVal) && !isNaN(originalVal) && originalVal > priceVal) {
+                      const discountVal = Math.round(((originalVal - priceVal) / originalVal) * 100);
+                      newDiscount = `${discountVal}% OFF`;
+                    }
+                  }
+
+                  setCardForm((p) => ({ ...p, price: newPrice, discount: newDiscount }));
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
                 placeholder="e.g. 950"
               />
@@ -1715,19 +1744,35 @@ const HomePage = ({ catalog, setCatalog }) => {
               <input
                 type="text"
                 value={cardForm.originalPrice}
-                onChange={(e) => setCardForm((p) => ({ ...p, originalPrice: e.target.value }))}
+                onChange={(e) => {
+                  const newOriginalPrice = e.target.value;
+                  let newDiscount = cardForm.discount;
+
+                  // Auto-calculate discount
+                  if (cardForm.price && newOriginalPrice) {
+                    const priceVal = parseFloat(cardForm.price.toString().replace(/[^0-9.]/g, ''));
+                    const originalVal = parseFloat(newOriginalPrice.toString().replace(/[^0-9.]/g, ''));
+
+                    if (!isNaN(priceVal) && !isNaN(originalVal) && originalVal > priceVal) {
+                      const discountVal = Math.round(((originalVal - priceVal) / originalVal) * 100);
+                      newDiscount = `${discountVal}% OFF`;
+                    }
+                  }
+
+                  setCardForm((p) => ({ ...p, originalPrice: newOriginalPrice, discount: newDiscount }));
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
                 placeholder="e.g. 1,038"
               />
             </div>
             <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">Discount (optional)</label>
+              <label className="block text-base font-bold text-gray-900 mb-2">Discount (auto)</label>
               <input
                 type="text"
                 value={cardForm.discount}
                 onChange={(e) => setCardForm((p) => ({ ...p, discount: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
-                placeholder="e.g. 8%"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-gray-50 text-gray-600"
+                placeholder="e.g. 8% OFF"
               />
             </div>
           </div>

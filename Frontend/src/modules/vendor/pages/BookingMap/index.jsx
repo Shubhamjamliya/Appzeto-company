@@ -30,6 +30,7 @@ const mapStyles = [
 ];
 
 const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+const libraries = ['places', 'geometry'];
 
 const BookingMap = () => {
   const { id } = useParams();
@@ -50,7 +51,7 @@ const BookingMap = () => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
-    libraries: ['places', 'geometry']
+    libraries
   });
 
   const mapRef = useRef(null);
@@ -62,23 +63,16 @@ const BookingMap = () => {
         const data = response.data || response;
         setBooking(data);
 
-        // Use saved coordinates if available
-        const addressData = data.address || data.location || {};
+        // 1. Destination: Fixed Booking Address from DB
+        const bAddr = data.address || {};
 
-        if (addressData.lat && addressData.lng) {
-          setCoords({
-            lat: parseFloat(addressData.lat),
-            lng: parseFloat(addressData.lng)
-          });
+        if (bAddr.lat && bAddr.lng) {
+          setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
         } else {
-          // Fallback to Geocoding
-          const geocoder = new window.google.maps.Geocoder();
-          const fullAddress = addressData.addressLine1
-            ? `${addressData.addressLine1}, ${addressData.city || ''}, ${addressData.state || ''} ${addressData.pincode || ''}`
-            : addressData.address || '';
-
-          if (fullAddress) {
-            geocoder.geocode({ address: fullAddress }, (results, status) => {
+          const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
+          if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ address: addressStr }, (results, status) => {
               if (status === 'OK' && results[0]) {
                 setCoords(results[0].geometry.location.toJSON());
               }
@@ -169,16 +163,30 @@ const BookingMap = () => {
   }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
 
   const [heading, setHeading] = useState(0);
+  const prevLocationRef = useRef(null);
 
-  // Calculate Heading (Orientation)
+  // Calculate Heading based on movement (Direction Sense)
   useEffect(() => {
-    if (isLoaded && currentLocation && coords && window.google) {
-      const start = new window.google.maps.LatLng(currentLocation);
-      const end = new window.google.maps.LatLng(coords);
-      const headingVal = window.google.maps.geometry.spherical.computeHeading(start, end);
-      setHeading(headingVal);
+    if (isLoaded && currentLocation && window.google) {
+      if (prevLocationRef.current) {
+        const start = new window.google.maps.LatLng(prevLocationRef.current);
+        const end = new window.google.maps.LatLng(currentLocation);
+        const distanceMoved = window.google.maps.geometry.spherical.computeDistanceBetween(start, end);
+
+        // Update heading only if movement is significant (> 2 meters) to prevent jitter
+        if (distanceMoved > 2) {
+          const newHeading = window.google.maps.geometry.spherical.computeHeading(start, end);
+          setHeading(newHeading);
+        }
+      } else if (coords) {
+        // Initial heading towards job destination
+        const start = new window.google.maps.LatLng(currentLocation);
+        const end = new window.google.maps.LatLng(coords);
+        setHeading(window.google.maps.geometry.spherical.computeHeading(start, end));
+      }
+      prevLocationRef.current = currentLocation;
     }
-  }, [isLoaded, currentLocation, coords]);
+  }, [currentLocation, isLoaded, coords]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
@@ -205,12 +213,9 @@ const BookingMap = () => {
             styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
-            // Rotational & Premium Map Features
-            tilt: 45,
-            heading: 0,
             mapTypeId: 'roadmap',
             gestureHandling: 'greedy',
-            rotateControl: true,
+            rotateControl: false,
           }}
         >
           {directions && (
@@ -264,7 +269,7 @@ const BookingMap = () => {
                   style={{ transform: `rotate(${heading}deg)` }}
                 >
                   <img
-                    src="/rider.png"
+                    src="/rider-3D.png"
                     alt="Rider"
                     className="w-full h-full object-contain drop-shadow-xl"
                   />
@@ -329,10 +334,10 @@ const BookingMap = () => {
             <h3 className="font-bold text-gray-900 mb-0.5 truncate">Address</h3>
             <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
               {(() => {
-                const addr = booking?.location?.address || booking?.address;
+                const addr = booking?.address;
                 if (!addr) return 'Address loading...';
                 if (typeof addr === 'string') return addr;
-                return `${addr.addressLine1 || ''}, ${addr.city || ''} ${addr.pincode || ''}`;
+                return `${addr.addressLine2 ? addr.addressLine2 + ', ' : ''}${addr.addressLine1 || ''}, ${addr.city || ''} ${addr.pincode || ''}`;
               })()}
             </p>
           </div>
@@ -347,7 +352,9 @@ const BookingMap = () => {
           )}
           <button
             onClick={() => {
-              const dest = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(booking?.location?.address);
+              const bAddr = booking?.address;
+              const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}`;
+              const dest = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(addressStr);
               window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
             }}
             className="w-14 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl flex items-center justify-center transition-all active:scale-95"

@@ -29,6 +29,7 @@ const mapStyles = [
 ];
 
 const defaultCenter = { lat: 20.5937, lng: 78.9629 };
+const libraries = ['places', 'geometry'];
 
 const JobMap = () => {
   const { id } = useParams();
@@ -51,7 +52,7 @@ const JobMap = () => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
-    libraries: ['places', 'geometry']
+    libraries
   });
 
   const mapRef = useRef(null);
@@ -62,24 +63,21 @@ const JobMap = () => {
         const response = await workerService.getJobById(id);
         if (response.success) {
           setJob(response.data);
-          // Use saved coordinates if available
-          const address = response.data.address || {};
+          // 1. Destination: Fixed Booking Address from DB
+          const bAddr = response.data.address || {};
 
-          if (address.lat && address.lng) {
-            setCoords({
-              lat: parseFloat(address.lat),
-              lng: parseFloat(address.lng)
-            });
+          if (bAddr.lat && bAddr.lng) {
+            setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
           } else {
-            // Geocode address fallback
-            const geocoder = new window.google.maps.Geocoder();
-            const fullAddress = `${address.addressLine1 || ''}, ${address.city || ''}, ${address.state || ''} ${address.pincode || ''}`;
-
-            geocoder.geocode({ address: fullAddress }, (results, status) => {
-              if (status === 'OK' && results[0]) {
-                setCoords(results[0].geometry.location.toJSON());
-              }
-            });
+            const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
+            if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
+              const geocoder = new window.google.maps.Geocoder();
+              geocoder.geocode({ address: addressStr }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  setCoords(results[0].geometry.location.toJSON());
+                }
+              });
+            }
           }
         }
       } catch (error) {
@@ -163,16 +161,30 @@ const JobMap = () => {
   }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
 
   const [heading, setHeading] = useState(0);
+  const prevLocationRef = useRef(null);
 
-  // Calculate Heading (Orientation)
+  // Calculate Heading based on movement (Direction Sense)
   useEffect(() => {
-    if (isLoaded && currentLocation && coords && window.google) {
-      const start = new window.google.maps.LatLng(currentLocation);
-      const end = new window.google.maps.LatLng(coords);
-      const headingVal = window.google.maps.geometry.spherical.computeHeading(start, end);
-      setHeading(headingVal);
+    if (isLoaded && currentLocation && window.google) {
+      if (prevLocationRef.current) {
+        const start = new window.google.maps.LatLng(prevLocationRef.current);
+        const end = new window.google.maps.LatLng(currentLocation);
+        const distanceMoved = window.google.maps.geometry.spherical.computeDistanceBetween(start, end);
+
+        // Update heading only if movement is significant (> 2 meters) to prevent jitter
+        if (distanceMoved > 2) {
+          const newHeading = window.google.maps.geometry.spherical.computeHeading(start, end);
+          setHeading(newHeading);
+        }
+      } else if (coords) {
+        // Initial heading towards job location
+        const start = new window.google.maps.LatLng(currentLocation);
+        const end = new window.google.maps.LatLng(coords);
+        setHeading(window.google.maps.geometry.spherical.computeHeading(start, end));
+      }
+      prevLocationRef.current = currentLocation;
     }
-  }, [isLoaded, currentLocation, coords]);
+  }, [currentLocation, isLoaded, coords]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
@@ -199,12 +211,9 @@ const JobMap = () => {
             styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
-            // Rotational & Premium Map Features
-            tilt: 45,
-            heading: 0,
             mapTypeId: 'roadmap',
             gestureHandling: 'greedy',
-            rotateControl: true,
+            rotateControl: false,
           }}
         >
           {directions && (
@@ -258,7 +267,7 @@ const JobMap = () => {
                   style={{ transform: `rotate(${heading}deg)` }}
                 >
                   <img
-                    src="/rider.png"
+                    src="/rider-3D.png"
                     alt="Rider"
                     className="w-full h-full object-contain drop-shadow-xl"
                   />
@@ -336,7 +345,9 @@ const JobMap = () => {
           )}
           <button
             onClick={() => {
-              const dest = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(job?.address?.addressLine1);
+              const bAddr = job?.address;
+              const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}`;
+              const dest = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(addressStr);
               window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
             }}
             className="w-14 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl flex items-center justify-center transition-all active:scale-95"
@@ -345,7 +356,7 @@ const JobMap = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

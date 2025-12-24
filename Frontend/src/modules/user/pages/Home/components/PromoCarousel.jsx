@@ -19,139 +19,41 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
 
   const promotionalCards = promos || [];
 
-  // Optimized auto-scroll functionality - use setInterval instead of continuous RAF
+  // Simple auto-scroll functionality
   useEffect(() => {
     if (isHovered || promotionalCards.length <= 1) return;
 
-    // Use setInterval instead of continuous requestAnimationFrame loop for better performance
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % promotionalCards.length;
-        return nextIndex;
-      });
-    }, 8000); // 8 seconds interval
+    const interval = setInterval(() => {
+      if (!scrollContainerRef.current) return;
 
-    // Pause when page is hidden
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      } else {
-        intervalRef.current = setInterval(() => {
-          setCurrentIndex((prevIndex) => {
-            const nextIndex = (prevIndex + 1) % promotionalCards.length;
-            return nextIndex;
-          });
-        }, 8000);
+      const container = scrollContainerRef.current;
+      const cardWidth = container.offsetWidth; // Scroll by one screen/card width
+
+      // Calculate next scroll position
+      let nextScrollLeft = container.scrollLeft + cardWidth;
+
+      // If we reached the end, loop back (smoothly if possible, or instant)
+      if (nextScrollLeft >= container.scrollWidth - 10) { // Tolerance
+        nextScrollLeft = 0;
       }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isHovered, promotionalCards.length]);
-
-  // Optimized scroll to current index - use requestAnimationFrame
-  useEffect(() => {
-    if (!scrollContainerRef.current) return;
-
-    const container = scrollContainerRef.current;
-    const firstCard = container.querySelector('[data-promo-card]');
-    if (!firstCard) return;
-
-    // Use requestAnimationFrame for smooth scrolling
-    const rafId = requestAnimationFrame(() => {
-      const cardWidth = firstCard.offsetWidth;
-      const gap = 16; // gap-4 = 16px
-      const scrollPosition = currentIndex * (cardWidth + gap);
 
       container.scrollTo({
-        left: scrollPosition,
+        left: nextScrollLeft,
         behavior: 'smooth'
       });
-    });
 
-    return () => cancelAnimationFrame(rafId);
-  }, [currentIndex]);
+    }, 5000); // 5 seconds interval
 
-  // Optimized sync currentIndex when user manually scrolls - use passive listener with throttling
+    return () => clearInterval(interval);
+  }, [isHovered, promotionalCards.length]);
+
+  // Entrance animation
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    let scrollTimeout;
-    let rafId = null;
-    let lastScrollTime = 0;
-    const throttleDelay = 200; // Throttle to 200ms for better performance
-
-    const handleScroll = () => {
-      const now = Date.now();
-      if (now - lastScrollTime < throttleDelay) return;
-      lastScrollTime = now;
-
-      // Cancel previous RAF
-      if (rafId) cancelAnimationFrame(rafId);
-
-      // Debounce scroll events
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        rafId = requestAnimationFrame(() => {
-          const firstCard = container.querySelector('[data-promo-card]');
-          if (!firstCard) return;
-
-          const cardWidth = firstCard.offsetWidth;
-          const gap = 16;
-          const scrollLeft = container.scrollLeft;
-          const newIndex = Math.round(scrollLeft / (cardWidth + gap));
-
-          if (newIndex !== currentIndex && newIndex >= 0 && newIndex < promotionalCards.length) {
-            setCurrentIndex(newIndex);
-          }
-        });
-      }, 200); // Increased debounce delay for better performance
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [currentIndex, promotionalCards.length]);
-
-  // Defer GSAP entrance animation until after initial render
-  useEffect(() => {
-    if (!carouselRef.current) return;
-
-    // Show immediately without animation for better performance
-    carouselRef.current.style.opacity = '1';
-    carouselRef.current.style.transform = 'translateY(0)';
-
-    // Optionally add animation later if needed (deferred)
-    const initAnimation = () => {
-      if (carouselRef.current) {
-        gsap.fromTo(
-          carouselRef.current,
-          { y: 30, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.6,
-            ease: 'power2.out',
-          }
-        );
-      }
-    };
-
-    // Defer animation initialization
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(initAnimation, { timeout: 2000 });
-    } else {
-      setTimeout(initAnimation, 300);
+    if (carouselRef.current) {
+      gsap.fromTo(carouselRef.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }
+      );
     }
   }, []);
 
@@ -162,18 +64,18 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
   return (
     <div
       ref={carouselRef}
-      className="pb-6"
+      className=""
       style={{ opacity: 1 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
         ref={scrollContainerRef}
-        className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide"
+        className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide snap-x snap-mandatory"
         style={{ scrollBehavior: 'smooth' }}
       >
         {promotionalCards.map((promo) => (
-          <div key={promo.id} data-promo-card className="flex-shrink-0">
+          <div key={promo.id} data-promo-card className="flex-shrink-0 snap-center">
             <PromoCard
               title={promo.title}
               subtitle={promo.subtitle}

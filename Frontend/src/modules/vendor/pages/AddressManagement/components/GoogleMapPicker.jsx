@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 
-const libraries = ['places'];
+const libraries = ['places', 'geometry'];
 
 const mapContainerStyle = {
   width: '100%',
@@ -19,6 +19,7 @@ const GoogleMapPicker = ({ onLocationSelect, initialPosition = null }) => {
   const [loading, setLoading] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries
   });
@@ -135,7 +136,9 @@ const GoogleMapPicker = ({ onLocationSelect, initialPosition = null }) => {
           options={{
             streetViewControl: false,
             mapTypeControl: false,
-            fullscreenControl: false
+            fullscreenControl: false,
+            gestureHandling: 'greedy',
+            rotateControl: false
           }}
         >
           {marker && <Marker position={marker} />}

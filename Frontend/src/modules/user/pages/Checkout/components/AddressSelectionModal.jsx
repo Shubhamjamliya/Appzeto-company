@@ -4,7 +4,7 @@ import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { themeColors } from '../../../../../theme';
 import LocationPicker from './LocationPicker';
 
-const libraries = ['places'];
+const libraries = ['places', 'geometry'];
 
 const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseNumberChange, onSave }) => {
   const [isClosing, setIsClosing] = useState(false);
@@ -14,6 +14,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
   const [autocomplete, setAutocomplete] = useState(null);
 
   const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries
   });
@@ -130,7 +131,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
 
           {/* Address Details - Scrollable */}
           <div
-            className="px-4 py-2 overflow-y-auto flex-1"
+            className="px-4 py-2 pb-8 overflow-y-auto flex-1"
             style={{
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain'
@@ -200,7 +201,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
             <button
               onClick={() => onSave(houseNumber, selectedLocation)}
               disabled={!houseNumber.trim() || !mapAddress}
-              className="w-full py-4 rounded-xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg mb-4"
+              className="w-full py-4 rounded-xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg mb-8"
               style={{
                 backgroundColor: themeColors.button,
                 boxShadow: `0 4px 12px ${themeColors.button}40`

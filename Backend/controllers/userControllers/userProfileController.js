@@ -55,7 +55,7 @@ const updateProfile = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { name, email } = req.body;
+    const { name, email, addresses } = req.body;
 
     const user = await User.findById(userId);
 
@@ -78,6 +78,11 @@ const updateProfile = async (req, res) => {
         });
       }
       user.email = email.toLowerCase();
+    }
+
+    // Update addresses
+    if (addresses && Array.isArray(addresses)) {
+      user.addresses = addresses;
     }
 
     await user.save();

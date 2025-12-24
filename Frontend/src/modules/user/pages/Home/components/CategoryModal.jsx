@@ -70,7 +70,7 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-[9998] transition-opacity ${isClosing ? 'opacity-0' : 'opacity-100'
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998] transition-opacity ${isClosing ? 'opacity-0' : 'opacity-100'
           }`}
         onClick={handleClose}
         style={{

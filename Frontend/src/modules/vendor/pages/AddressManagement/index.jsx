@@ -9,7 +9,7 @@ import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 import GoogleMapPicker from './components/GoogleMapPicker';
 
-const libraries = ['places'];
+const libraries = ['places', 'geometry'];
 
 const AddressManagement = () => {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ const AddressManagement = () => {
   const [loading, setLoading] = useState(false);
 
   const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries
   });

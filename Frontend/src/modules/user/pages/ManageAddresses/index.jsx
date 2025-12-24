@@ -2,127 +2,151 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { FiArrowLeft, FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiMapPin, FiNavigation } from 'react-icons/fi';
-import AddressFormModal from '../../components/common/AddressFormModal';
+import AddressSelectionModal from '../Checkout/components/AddressSelectionModal';
 import { userAuthService } from '../../../../services/authService';
 
 const ManageAddresses = () => {
   const navigate = useNavigate();
-  const [addresses, setAddresses] = useState([]);
+  const [addresses, setAddresses] = useState([]); // Stores Red raw DB address objects
   const [loading, setLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [isDetecting, setIsDetecting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showMenu, setShowMenu] = useState(null); // Address ID for which menu is open
+  const [showMenu, setShowMenu] = useState(null);
   const [editingAddress, setEditingAddress] = useState(null);
+  const [houseNumber, setHouseNumber] = useState('');
 
   // Fetch addresses on mount
   useEffect(() => {
-    const fetchAddresses = async () => {
-      try {
-        setLoading(true);
-        const response = await userAuthService.getProfile();
-        if (response.success && response.user?.addresses) {
-          // Map DB addresses to frontend format
-          const mapped = response.user.addresses.map(addr => ({
-            id: addr._id || addr.id,
-            label: addr.type.charAt(0).toUpperCase() + addr.type.slice(1),
-            address: `${addr.addressLine1}${addr.addressLine2 ? ', ' + addr.addressLine2 : ''}, ${addr.city}, ${addr.state} - ${addr.pincode}`,
-            name: response.user.name,
-            phone: response.user.phone
-          }));
-          setAddresses(mapped);
-        }
-      } catch (error) {
-        toast.error('Failed to load addresses');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAddresses();
   }, []);
 
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
-      return;
-    }
-
-    setIsDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          // Reverse geocode using Google Maps API
-          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
-          );
-          const data = await response.json();
-
-          if (data.status === 'OK' && data.results.length > 0) {
-            setCurrentLocation(data.results[0].formatted_address);
-            toast.success('Current location detected!');
-          } else {
-            toast.error('Could not determine address from location');
-          }
-        } catch (error) {
-          toast.error('Error detecting address');
-        } finally {
-          setIsDetecting(false);
-        }
-      },
-      (error) => {
-        setIsDetecting(false);
-        toast.error('Permission denied or location toggle off');
+  const fetchAddresses = async () => {
+    try {
+      setLoading(true);
+      const response = await userAuthService.getProfile();
+      if (response.success && response.user?.addresses) {
+        setAddresses(response.user.addresses);
       }
-    );
+    } catch (error) {
+      toast.error('Failed to load addresses');
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   const handleAddAddress = () => {
     setEditingAddress(null);
+    setHouseNumber('');
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (address) => {
+    setEditingAddress(address);
+    setHouseNumber(address.addressLine2 || '');
+    setShowMenu(null);
     setShowAddModal(true);
   };
 
   const handleCloseModal = () => {
     setShowAddModal(false);
     setEditingAddress(null);
+    setHouseNumber('');
   };
 
-  const handleSaveAddress = (formData) => {
-    if (editingAddress) {
-      // Update existing address
-      setAddresses(addresses.map(addr =>
-        addr.id === editingAddress.id
-          ? { ...editingAddress, ...formData }
-          : addr
-      ));
-      toast.success('Address updated successfully!');
-    } else {
-      // Add new address
+  const getComponent = (components, type) => {
+    return components?.find(c => c.types.includes(type))?.long_name || '';
+  };
+
+  const handleSaveAddress = async (savedHouseNumber, locationObj) => {
+    try {
+      if (!locationObj) {
+        toast.error('Please select a location on the map');
+        return;
+      }
+
+      // Extract details
+      const components = locationObj.components || [];
+      const city = getComponent(components, 'locality') || getComponent(components, 'administrative_area_level_2') || '';
+      const state = getComponent(components, 'administrative_area_level_1') || '';
+      const pincode = getComponent(components, 'postal_code') || '';
+
       const newAddress = {
-        id: Date.now(),
-        ...formData
+        type: 'home', // Default type
+        addressLine1: locationObj.address,
+        addressLine2: savedHouseNumber,
+        city,
+        state,
+        pincode,
+        lat: locationObj.lat,
+        lng: locationObj.lng,
+        isDefault: addresses.length === 0 // Make first address default
       };
-      setAddresses([...addresses, newAddress]);
-      toast.success('Address added successfully!');
+
+      let updatedAddresses;
+      if (editingAddress) {
+        updatedAddresses = addresses.map(addr =>
+          (addr._id === editingAddress._id || addr.id === editingAddress.id)
+            ? { ...newAddress, _id: addr._id || addr.id } // Keep ID
+            : addr
+        );
+      } else {
+        updatedAddresses = [...addresses, newAddress];
+      }
+
+      // Call API
+      toast.loading('Saving address...');
+      const response = await userAuthService.updateProfile({ addresses: updatedAddresses });
+      toast.dismiss();
+
+      if (response.success) {
+        setAddresses(response.user.addresses || updatedAddresses);
+        toast.success(editingAddress ? 'Address updated!' : 'Address added!');
+        handleCloseModal();
+      } else {
+        toast.error(response.message || 'Failed to save address');
+      }
+
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Something went wrong');
     }
   };
 
-  const handleEdit = (address) => {
-    setEditingAddress(address);
-    setShowMenu(null);
-    setShowAddModal(true);
-  };
+  const handleDelete = async (addressId) => {
+    try {
+      const updatedAddresses = addresses.filter(addr => (addr._id || addr.id) !== addressId);
 
-  const handleDelete = (addressId) => {
-    setAddresses(addresses.filter(addr => addr.id !== addressId));
-    setShowMenu(null);
-    toast.success('Address deleted successfully!');
+      toast.loading('Deleting address...');
+      const response = await userAuthService.updateProfile({ addresses: updatedAddresses });
+      toast.dismiss();
+
+      if (response.success) {
+        setAddresses(response.user.addresses || updatedAddresses);
+        setShowMenu(null);
+        toast.success('Address deleted successfully!');
+      } else {
+        toast.error('Failed to delete address');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to delete address');
+    }
   };
 
   const handleMenuToggle = (addressId) => {
     setShowMenu(showMenu === addressId ? null : addressId);
+  };
+
+  // Helper to format address for display
+  const formatAddress = (addr) => {
+    const parts = [
+      addr.addressLine2,
+      addr.addressLine1,
+      addr.city,
+      addr.state,
+      addr.pincode
+    ].filter(Boolean);
+    return parts.join(', ');
   };
 
   return (
@@ -143,26 +167,7 @@ const ManageAddresses = () => {
       </header>
 
       <main className="px-4 py-4">
-        {/* Current Location Section */}
-        <div className="mb-6">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Current Location</h2>
-          <div
-            className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
-            onClick={handleGetCurrentLocation}
-          >
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-              <FiNavigation className={`w-5 h-5 text-blue-600 ${isDetecting ? 'animate-pulse' : ''}`} />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-base font-bold text-blue-900">
-                {isDetecting ? 'Detecting location...' : 'Use current location'}
-              </h3>
-              <p className="text-sm text-blue-700 mt-0.5 line-clamp-2">
-                {currentLocation || 'Allow access to your device location for accurate service delivery.'}
-              </p>
-            </div>
-          </div>
-        </div>
+
 
         {/* Saved Addresses Section */}
         <div className="flex items-center justify-between mb-3">
@@ -196,19 +201,19 @@ const ManageAddresses = () => {
         <div className="space-y-4">
           {addresses.map((address) => (
             <div
-              key={address.id}
+              key={address._id || address.id}
               className="bg-white border border-gray-200 rounded-xl p-4 relative"
             >
               {/* Menu Button */}
               <button
-                onClick={() => handleMenuToggle(address.id)}
+                onClick={() => handleMenuToggle(address._id || address.id)}
                 className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <FiMoreVertical className="w-5 h-5 text-gray-600" />
               </button>
 
               {/* Menu Dropdown */}
-              {showMenu === address.id && (
+              {showMenu === (address._id || address.id) && (
                 <div className="absolute top-12 right-4 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                   <button
                     onClick={() => handleEdit(address)}
@@ -218,7 +223,7 @@ const ManageAddresses = () => {
                     <span className="text-sm text-gray-700">Edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(address.id)}
+                    onClick={() => handleDelete(address._id || address.id)}
                     className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-left text-red-600"
                   >
                     <FiTrash2 className="w-4 h-4" />
@@ -229,24 +234,35 @@ const ManageAddresses = () => {
 
               {/* Address Content */}
               <div className="pr-12">
-                <h3 className="text-base font-bold text-black mb-2">{address.label}</h3>
-                <p className="text-sm text-gray-700 mb-3 leading-relaxed">{address.address}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>{address.name}</span>
-                  <span>•</span>
-                  <span>{address.phone}</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-bold uppercase text-gray-600">
+                    {address.type || 'HOME'}
+                  </span>
+                  {address.isDefault && (
+                    <span className="px-2 py-0.5 bg-green-100 rounded text-xs font-bold uppercase text-green-700">
+                      Default
+                    </span>
+                  )}
                 </div>
+                <p className="text-sm text-gray-700 mb-2 leading-relaxed font-medium">
+                  {/* Combined line 1 & 2 for title-like display if needed, or just full address */}
+                  {address.addressLine2 ? `${address.addressLine2}, ` : ''}{address.addressLine1}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {address.city}, {address.state} - {address.pincode}
+                </p>
               </div>
             </div>
           ))}
         </div>
       </main>
 
-      {/* Add/Edit Address Modal */}
-      <AddressFormModal
+      {/* Address Selection Modal (Reuse from Checkout) */}
+      <AddressSelectionModal
         isOpen={showAddModal}
         onClose={handleCloseModal}
-        address={editingAddress}
+        houseNumber={houseNumber}
+        onHouseNumberChange={setHouseNumber}
         onSave={handleSaveAddress}
       />
 

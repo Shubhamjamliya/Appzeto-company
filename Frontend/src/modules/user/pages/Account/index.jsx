@@ -4,7 +4,10 @@ import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import { userAuthService } from '../../../../services/authService';
 import BottomNav from '../../components/layout/BottomNav';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import {
+  FiArrowLeft,
+  FiUser,
   FiEdit3,
   FiClipboard,
   FiHeadphones,
@@ -162,241 +165,206 @@ const Account = () => {
   };
 
 
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div className="min-h-screen pb-20 bg-white">
-      <main>
-        {/* Top Section with Homepage Gradient - User Profile + Three Tabs */}
-        <div style={{
-          background: themeColors.gradient,
-        }}>
-          {/* Top Section - Customer Info */}
-          <div className="px-4 pt-4 pb-5 mb-3">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base"
-                    style={{
-                      backgroundColor: themeColors.button,
-                      boxShadow: `0 4px 12px rgba(0, 166, 166, 0.3)`,
-                    }}
-                  >
-                    {isLoading ? '...' : getInitials()}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-xl font-bold text-black">
-                        {isLoading ? 'Loading...' : userProfile.name}
-                      </h1>
-                      {userProfile.isPhoneVerified && (
-                        <div
-                          className="w-4 h-4 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}
-                        >
-                          <div
-                            className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: '#22c55e' }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {isLoading ? 'Loading...' : (userProfile.phone ? formatPhoneNumber(userProfile.phone) : 'No phone number')}
-                    </p>
-                  </div>
-                </div>
+    <div
+      className="min-h-screen pb-24"
+      style={{ background: themeColors.backgroundGradient }}
+    >
+      {/* 1. Header Section */}
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <FiArrowLeft className="w-5 h-5 text-gray-800" />
+        </button>
+        <div className="flex items-center gap-2">
+          <FiUser className="w-5 h-5" style={{ color: '#00A6A6' }} />
+          <h1 className="text-lg font-bold text-gray-900">Account</h1>
+        </div>
+      </div>
+
+      <main className="pt-4 space-y-4">
+        {/* 2. Customer Profile Card */}
+        <div className="px-4">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
+                style={{ backgroundColor: '#00A6A6' }}
+              >
+                {isLoading ? '...' : getInitials()}
               </div>
-              <button
-                onClick={handleEditClick}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <FiEdit3 className="w-4 h-4" style={{ color: themeColors.button }} />
-              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {isLoading ? 'Loading...' : userProfile.name}
+                  </h2>
+                  {userProfile.isPhoneVerified && (
+                    <div className="w-4 h-4 rounded-full bg-teal-50 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-[#00A6A6]" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 font-medium">
+                  {isLoading ? 'Loading...' : (userProfile.phone ? formatPhoneNumber(userProfile.phone) : 'No phone number')}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Three Cards Section with Modern Design */}
-          <div className="px-4 mb-3 pb-4">
-            <div className="grid grid-cols-3 gap-2">
-              {/* My Bookings */}
-              <button
-                onClick={() => handleCardClick('bookings')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
-                >
-                  <FiClipboard className="w-4 h-4" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                  My bookings
-                </span>
-              </button>
-
-              {/* Wallet */}
-              <button
-                onClick={() => handleCardClick('wallet')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
-                >
-                  <MdAccountBalanceWallet className="w-4 h-4" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                  Wallet
-                </span>
-              </button>
-
-              {/* Help & Support */}
-              <button
-                onClick={() => handleCardClick('support')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-200"
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
-                  style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
-                >
-                  <FiHeadphones className="w-4 h-4" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-800 text-center leading-tight">
-                  Help & support
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={handleEditClick}
+              className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center text-[#00A6A6] hover:bg-teal-50 transition-colors border border-gray-100"
+            >
+              <FiEdit3 className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Menu List Section with Modern Design */}
-        <div className="px-4 mb-3">
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-              boxShadow: '0 4px 12px rgba(41, 173, 129, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)',
-              border: '1px solid rgba(41, 173, 129, 0.1)',
-            }}
-          >
-            {menuItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleMenuClick(item)}
-                  className={`w-full flex items-center justify-between p-3 transition-all ${index !== menuItems.length - 1 ? 'border-b border-gray-100' : ''
-                    } active:bg-gray-50 hover:bg-white/30`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.customIcon ? (
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{
-                          backgroundColor: 'rgba(0, 166, 166, 0.15)',
-                          border: '2px solid rgba(0, 166, 166, 0.2)',
-                        }}
-                      >
-                        <span className="text-[10px] font-bold" style={{ color: themeColors.button }}>A</span>
-                      </div>
-                    ) : (
-                      IconComponent && (
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}
-                        >
-                          <IconComponent className="w-4 h-4" style={{ color: themeColors.button }} />
-                        </div>
-                      )
-                    )}
-                    <span className="text-sm font-semibold text-gray-800">
-                      {item.label}
-                    </span>
-                  </div>
-                  <FiChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                </button>
-              );
-            })}
+        {/* Three Cards Section with Modern Design */}
+        {/* Three Cards Section with Modern Design */}
+        <div className="px-4 mb-4 pb-2">
+          <div className="grid grid-cols-3 gap-3">
+            {/* My Bookings */}
+            <button
+              onClick={() => handleCardClick('bookings')}
+              className="flex flex-col items-center justify-center p-4 rounded-2xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-100 hover:border-teal-100 hover:shadow-md"
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
+                style={{ backgroundColor: '#F0FDFA' }}
+              >
+                <FiClipboard className="w-6 h-6 text-[#00A6A6]" />
+              </div>
+              <span className="text-xs font-bold text-gray-800 text-center leading-tight">
+                My bookings
+              </span>
+            </button>
+
+            {/* Wallet */}
+            <button
+              onClick={() => handleCardClick('wallet')}
+              className="flex flex-col items-center justify-center p-4 rounded-2xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-100 hover:border-teal-100 hover:shadow-md"
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
+                style={{ backgroundColor: '#F0FDFA' }}
+              >
+                <MdAccountBalanceWallet className="w-6 h-6 text-[#00A6A6]" />
+              </div>
+              <span className="text-xs font-bold text-gray-800 text-center leading-tight">
+                Wallet
+              </span>
+            </button>
+
+            {/* Help & Support */}
+            <button
+              onClick={() => handleCardClick('support')}
+              className="flex flex-col items-center justify-center p-4 rounded-2xl active:scale-95 transition-all relative overflow-hidden bg-white shadow-sm border border-gray-100 hover:border-teal-100 hover:shadow-md"
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
+                style={{ backgroundColor: '#F0FDFA' }}
+              >
+                <FiHeadphones className="w-6 h-6 text-[#00A6A6]" />
+              </div>
+              <span className="text-xs font-bold text-gray-800 text-center leading-tight">
+                Help & support
+              </span>
+            </button>
           </div>
+        </div>
+
+        {/* Menu List Section with Separated Mobile-Friendly Cards */}
+        <div className="px-4 mb-4 space-y-3">
+          {menuItems.map((item, index) => {
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleMenuClick(item)}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-teal-200 hover:shadow-md transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-4">
+                  {item.customIcon ? (
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-teal-50"
+                      style={{
+                        backgroundColor: '#F0FDFA',
+                        border: '1px solid #CCFBF1',
+                      }}
+                    >
+                      <span className="text-sm font-bold text-[#00A6A6]">A</span>
+                    </div>
+                  ) : (
+                    IconComponent && (
+                      <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-teal-50"
+                        style={{ backgroundColor: '#F0FDFA' }}
+                      >
+                        <IconComponent className="w-6 h-6 text-[#00A6A6]" />
+                      </div>
+                    )
+                  )}
+                  <span className="text-[15px] font-bold text-gray-800 text-left">
+                    {item.label}
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                  <FiChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Refer & Earn Card with Enhanced Design */}
         <div className="px-4 mb-3">
           <div
-            className="relative rounded-xl overflow-hidden p-4"
+            className="relative rounded-2xl overflow-hidden p-5"
             style={{
-              background: `linear-gradient(135deg, rgba(41, 173, 129, 0.12) 0%, rgba(0, 166, 166, 0.08) 50%, rgba(41, 173, 129, 0.12) 100%)`,
-              boxShadow: '0 4px 16px rgba(41, 173, 129, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
-              border: '1px solid rgba(41, 173, 129, 0.2)',
+              background: 'linear-gradient(135deg, #F0FDFA 0%, #E6FFFA 100%)',
+              boxShadow: '0 10px 30px -4px rgba(0, 166, 166, 0.15)',
+              border: '1px solid #CCFBF1',
             }}
           >
             {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-24 h-24 opacity-10">
-              <div
-                className="absolute top-2 right-2 w-16 h-16 rounded-full"
-                style={{ background: `linear-gradient(135deg, ${themeColors.icon} 0%, ${themeColors.button} 100%)` }}
-              />
-              <div
-                className="absolute top-4 right-4 w-10 h-10 rounded-full"
-                style={{ background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)` }}
-              />
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-20 pointer-events-none">
+              <div className="absolute top-[-20px] right-[-20px] w-24 h-24 rounded-full bg-[#00A6A6] blur-2xl"></div>
             </div>
 
             {/* Gift Box Illustration */}
-            <div className="absolute right-3 top-2">
-              <div className="relative">
+            <div className="absolute right-4 top-4">
+              <div className="relative animate-bounce-slow">
                 <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center transform rotate-12"
-                  style={{
-                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
-                  }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center transform rotate-6 shadow-sm bg-white"
                 >
-                  <span className="text-3xl">🎁</span>
+                  <span className="text-2xl">🎁</span>
                 </div>
-                <div
-                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%)',
-                    boxShadow: '0 2px 6px rgba(251, 191, 36, 0.5)',
-                  }}
-                />
-                <div
-                  className="absolute -bottom-1 -left-1 w-2.5 h-2.5 rounded-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #fde68a 0%, #fcd34d 100%)',
-                    boxShadow: '0 2px 4px rgba(251, 191, 36, 0.4)',
-                  }}
-                />
               </div>
             </div>
 
-            <div className="relative pr-20">
-              <h3 className="text-lg font-bold text-black mb-1">
+            <div className="relative pr-16">
+              <h3 className="text-lg font-bold text-teal-900 mb-1">
                 Refer & earn ₹100
               </h3>
-              <p className="text-xs text-gray-700 mb-3 leading-relaxed">
-                Get ₹100 when your friend completes their first booking
+              <p className="text-xs text-teal-700 font-medium mb-3 leading-relaxed max-w-[200px]">
+                Invite your friends and earn rewards when they book a service.
               </p>
               <button
                 onClick={() => handleMenuClick({ label: 'Refer & Earn' })}
-                className="text-white font-bold px-5 py-2 rounded-lg active:scale-95 transition-all shadow-lg"
+                className="text-white text-xs font-bold px-5 py-2.5 rounded-xl active:scale-95 transition-all shadow-md hover:shadow-lg"
                 style={{
-                  backgroundColor: themeColors.button,
-                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)',
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.5)';
-                  e.target.style.backgroundColor = '#008a8a';
-                  e.target.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
-                  e.target.style.backgroundColor = themeColors.button;
-                  e.target.style.transform = 'translateY(0)';
+                  backgroundColor: '#00A6A6',
+                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.3)',
                 }}
               >
-                Refer now
+                Refer Now
               </button>
             </div>
           </div>
@@ -408,16 +376,16 @@ const Account = () => {
             onClick={handleLogout}
             className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all text-white"
             style={{
-              backgroundColor: '#2874F0',
-              boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)',
+              backgroundColor: '#EF4444',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#1e5fd4';
-              e.target.style.boxShadow = '0 6px 16px rgba(40, 116, 240, 0.4)';
+              e.target.style.backgroundColor = '#DC2626';
+              e.target.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#2874F0';
-              e.target.style.boxShadow = '0 4px 12px rgba(40, 116, 240, 0.3)';
+              e.target.style.backgroundColor = '#EF4444';
+              e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
             }}
           >
             Logout

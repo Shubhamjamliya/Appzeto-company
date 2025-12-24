@@ -47,9 +47,14 @@ const BookingDetails = () => {
           customerPhone: apiData.userId?.phone || apiData.customerPhone || 'Hidden',
           serviceType: apiData.serviceId?.title || apiData.serviceName || apiData.serviceType || 'Service',
           location: {
-            address: apiData.address?.addressLine1 || apiData.location?.address || 'Address not available',
-            lat: apiData.address?.lat || apiData.location?.lat || 0,
-            lng: apiData.address?.lng || apiData.location?.lng || 0,
+            address: (() => {
+              const a = apiData.address;
+              if (!a) return 'Address not available';
+              if (typeof a === 'string') return a;
+              return `${a.addressLine2 ? a.addressLine2 + ', ' : ''}${a.addressLine1 || ''}, ${a.city || ''}`;
+            })(),
+            lat: apiData.address?.lat || 0,
+            lng: apiData.address?.lng || 0,
             distance: apiData.distance ? `${apiData.distance.toFixed(1)} km` : 'N/A'
           },
           price: apiData.finalAmount || apiData.price || 0,

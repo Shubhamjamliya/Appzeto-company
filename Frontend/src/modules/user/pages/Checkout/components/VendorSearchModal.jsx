@@ -68,17 +68,17 @@ const VendorSearchModal = ({ isOpen, onClose, currentStep, acceptedVendor }) => 
               <h4 className="font-bold text-green-900 text-xl mb-3">{acceptedVendor.businessName}</h4>
               <div className="flex items-center justify-center gap-6 text-sm text-green-700 mb-4">
                 <span className="flex items-center gap-1">
-                  ⭐ {acceptedVendor.rating}
+                  ⭐ {acceptedVendor.rating || '4.8'}
                 </span>
                 <span className="flex items-center gap-1">
-                  📍 {acceptedVendor.distance}
+                  📍 {acceptedVendor.distance || 'nearby'}
                 </span>
                 <span className="flex items-center gap-1">
-                  🕐 {acceptedVendor.estimatedTime}
+                  🕐 {acceptedVendor.estimatedTime || '15-20 min'}
                 </span>
               </div>
               <div className="text-3xl font-bold text-green-900">
-                ₹{acceptedVendor.price}
+                ₹{acceptedVendor.price || '0'}
               </div>
             </div>
 

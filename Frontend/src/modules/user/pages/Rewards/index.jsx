@@ -1,10 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import BottomNav from '../../components/layout/BottomNav';
-import { FiCopy } from 'react-icons/fi';
+import { FiCopy, FiArrowLeft, FiGift } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebookMessenger } from 'react-icons/fa';
+import { themeColors } from '../../../../theme';
 
 const Rewards = () => {
+  const navigate = useNavigate();
+
   const handleCopyLink = () => {
     // Copy referral link to clipboard
     const referralLink = 'https://appzeto.com/refer/your-link';
@@ -25,17 +29,27 @@ const Rewards = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div
+      className="min-h-screen pb-20"
+      style={{ background: themeColors.backgroundGradient }}
+    >
       {/* Header */}
-      <header className="bg-black text-white py-3">
-        <div className="px-4 text-center">
-          <h1 className="text-base font-semibold">Refer & Earn</h1>
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <FiArrowLeft className="w-5 h-5 text-gray-800" />
+        </button>
+        <div className="flex items-center gap-2">
+          <FiGift className="w-5 h-5" style={{ color: '#00A6A6' }} />
+          <h1 className="text-lg font-bold text-gray-900">Refer & Earn</h1>
         </div>
-      </header>
+      </div>
 
       <main>
         {/* Main Referral Section */}
-        <div className="bg-blue-50 relative overflow-hidden">
+        <div className="bg-gray-50 relative overflow-hidden" style={{ background: 'transparent' }}>
           {/* Dotted Pattern Background */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_black_1px,_transparent_1px)] bg-[length:20px_20px]"></div>
@@ -70,7 +84,7 @@ const Rewards = () => {
                   onClick={handleShareWhatsApp}
                   className="flex flex-col items-center gap-1.5"
                 >
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center">
                     <FaWhatsapp className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-[10px] text-gray-700">Whatsapp</span>
@@ -81,7 +95,7 @@ const Rewards = () => {
                   onClick={handleShareMessenger}
                   className="flex flex-col items-center gap-1.5"
                 >
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#0084FF] rounded-full flex items-center justify-center">
                     <FaFacebookMessenger className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-[10px] text-gray-700">Messenger</span>
@@ -92,7 +106,7 @@ const Rewards = () => {
                   onClick={handleCopyLink}
                   className="flex flex-col items-center gap-1.5"
                 >
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00A6A6' }}>
                     <FiCopy className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-[10px] text-gray-700">Copy Link</span>
@@ -103,33 +117,33 @@ const Rewards = () => {
         </div>
 
         {/* How it works Section */}
-        <div className="px-4 py-4 bg-white">
+        <div className="px-4 py-4 bg-white rounded-t-3xl shadow-sm border-t border-gray-100">
           <h3 className="text-base font-bold text-black mb-3">How it works?</h3>
-          
+
           <div className="relative pl-7">
             {/* Vertical Line */}
-            <div className="absolute left-3.5 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+            <div className="absolute left-3.5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
 
             {/* Step 1 */}
             <div className="relative mb-4">
-              <div className="absolute -left-7 w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-gray-700">1</span>
+              <div className="absolute -left-7 w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-700">
+                1
               </div>
               <p className="text-xs text-gray-700">Invite your friends & get rewarded</p>
             </div>
 
             {/* Step 2 */}
             <div className="relative mb-4">
-              <div className="absolute -left-7 w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-gray-700">2</span>
+              <div className="absolute -left-7 w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-700">
+                2
               </div>
               <p className="text-xs text-gray-700">They get ₹100 on their first service</p>
             </div>
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="absolute -left-7 w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-gray-700">3</span>
+              <div className="absolute -left-7 w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-700">
+                3
               </div>
               <p className="text-xs text-gray-700">You get ₹100 once their service is completed</p>
             </div>
@@ -137,17 +151,17 @@ const Rewards = () => {
         </div>
 
         {/* Links Section */}
-        <div className="px-4 py-3 border-t border-gray-200">
-          <div className="flex items-center gap-2 text-blue-600 text-xs">
-            <span className="text-blue-600">•</span>
+        <div className="px-4 py-3 border-t border-gray-100 bg-white">
+          <div className="flex items-center gap-2 text-[#00A6A6] text-xs">
+            <span className="text-[#00A6A6]">•</span>
             <button className="hover:underline">Terms and conditions</button>
-            <span className="text-blue-600">•</span>
+            <span className="text-[#00A6A6]">•</span>
             <button className="hover:underline">FAQs</button>
           </div>
         </div>
 
         {/* Scratch Cards Section - New Addition */}
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 bg-white border-t border-gray-100">
           <h2 className="text-base font-bold text-gray-800 mb-1.5">
             You are yet to earn any scratch cards
           </h2>
@@ -176,4 +190,3 @@ const Rewards = () => {
 };
 
 export default Rewards;
-

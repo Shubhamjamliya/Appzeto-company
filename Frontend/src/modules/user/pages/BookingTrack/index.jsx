@@ -89,14 +89,13 @@ const BookingTrack = () => {
           if (isFirstLoad) {
             const geocoder = new window.google.maps.Geocoder();
 
-            // 1. Geocode User/Destination Address (Prioritize Saved Coords)
-            const addr = response.data.address || {};
-
-            if (addr.lat && addr.lng) {
-              setCoords({ lat: parseFloat(addr.lat), lng: parseFloat(addr.lng) });
+            // 1. Destination: Fixed Booking Address from DB
+            const bAddr = response.data.address || {};
+            if (bAddr.lat && bAddr.lng) {
+              setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
             } else {
-              const addressStr = typeof addr === 'string' ? addr : `${addr.addressLine1 || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.pincode || ''}`;
-              if (addressStr.replaceAll(',', '').trim()) {
+              const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
+              if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
                 geocoder.geocode({ address: addressStr }, (results, status) => {
                   if (status === 'OK' && results[0]) {
                     setCoords(results[0].geometry.location.toJSON());
@@ -105,29 +104,12 @@ const BookingTrack = () => {
               }
             }
 
-            // 2. Geocode Worker/Vendor for Initial "Current Location" (Start Point)
-            // Use workerId (Worker) or vendorId (Vendor)
-            // Workers usually have 'location', Vendors have 'address' populated
-            const provider = response.data.workerId || response.data.vendorId;
-
-            if (provider) {
-              const pAddr = provider.location || provider.address || {};
-
-              if (pAddr.lat && pAddr.lng) {
-                const startLoc = { lat: parseFloat(pAddr.lat), lng: parseFloat(pAddr.lng) };
-                setCurrentLocation(prev => prev || startLoc);
-              } else {
-                const providerAddressStr = typeof pAddr === 'string' ? pAddr : `${pAddr.addressLine1 || ''}, ${pAddr.city || ''}, ${pAddr.state || ''} ${pAddr.pincode || ''}`;
-                if (providerAddressStr.replaceAll(',', '').trim()) {
-                  geocoder.geocode({ address: providerAddressStr }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                      const startLoc = results[0].geometry.location.toJSON();
-                      // Only update if still null (socket might have fired already)
-                      setCurrentLocation(prev => prev || startLoc);
-                    }
-                  });
-                }
-              }
+            // 2. Source: Live Provider Location (Initial set)
+            const provider = response.data.workerId || response.data.vendorId || response.data.assignedTo || {};
+            const pLoc = provider.location || provider.address || {};
+            if (pLoc.lat && pLoc.lng) {
+              const startLoc = { lat: parseFloat(pLoc.lat), lng: parseFloat(pLoc.lng) };
+              setCurrentLocation(startLoc);
             }
           }
         }
@@ -146,16 +128,30 @@ const BookingTrack = () => {
   }, [id, isLoaded]);
 
   const [heading, setHeading] = useState(0);
+  const prevLocationRef = useRef(null);
 
-  // Calculate Heading
+  // Calculate Heading based on movement (Direction Sense)
   useEffect(() => {
-    if (isLoaded && currentLocation && coords && window.google) {
-      const start = new window.google.maps.LatLng(currentLocation);
-      const end = new window.google.maps.LatLng(coords);
-      const headingVal = window.google.maps.geometry.spherical.computeHeading(start, end);
-      setHeading(headingVal);
+    if (isLoaded && currentLocation && window.google) {
+      if (prevLocationRef.current) {
+        const start = new window.google.maps.LatLng(prevLocationRef.current);
+        const end = new window.google.maps.LatLng(currentLocation);
+        const distanceMoved = window.google.maps.geometry.spherical.computeDistanceBetween(start, end);
+
+        // Update heading only if movement is significant (> 2 meters) to prevent jitter
+        if (distanceMoved > 2) {
+          const newHeading = window.google.maps.geometry.spherical.computeHeading(start, end);
+          setHeading(newHeading);
+        }
+      } else if (coords) {
+        // Initial heading towards destination
+        const start = new window.google.maps.LatLng(currentLocation);
+        const end = new window.google.maps.LatLng(coords);
+        setHeading(window.google.maps.geometry.spherical.computeHeading(start, end));
+      }
+      prevLocationRef.current = currentLocation;
     }
-  }, [isLoaded, currentLocation, coords]);
+  }, [currentLocation, isLoaded, coords]);
 
   // Simulate Rider Location (Since we don't have real rider GPS stream yet for User App)
   // Ideally this would come from a websocket or Firebase subscription
@@ -232,12 +228,9 @@ const BookingTrack = () => {
             styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
-            // Rotational & Premium Map Features
-            tilt: 45,
-            heading: 0,
             mapTypeId: 'roadmap',
-            gestureHandling: 'greedy', // Better for mobile tracking
-            rotateControl: true,
+            gestureHandling: 'greedy', // Allows one-finger pan and two-finger rotate
+            rotateControl: false, // Hidden UI, but gestures work
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false
@@ -256,8 +249,8 @@ const BookingTrack = () => {
                 path={routePath}
                 options={{
                   strokeColor: "#0F766E",
-                  strokeWeight: 6,
-                  strokeOpacity: 0.8,
+                  strokeWeight: 8,
+                  strokeOpacity: 1,
                   zIndex: 50
                 }}
               />
@@ -271,7 +264,7 @@ const BookingTrack = () => {
               mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               <div className="relative -translate-x-1/2 -translate-y-full">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-white relative z-10">
+                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-white relative z-10 animate-bounce">
                   <FiMapPin className="w-5 h-5 fill-current" />
                 </div>
                 <div className="w-4 h-4 bg-teal-600 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 z-0"></div>
@@ -300,7 +293,7 @@ const BookingTrack = () => {
                   style={{ transform: `rotate(${heading}deg)` }}
                 >
                   <img
-                    src="/rider.png"
+                    src="/rider-3D.png"
                     alt="Rider"
                     className="w-full h-full object-contain drop-shadow-xl"
                   />
@@ -380,7 +373,12 @@ const BookingTrack = () => {
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 mb-0.5">Your Location</h3>
             <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
-              {booking?.address?.addressLine1 || booking?.address || 'Loading address...'}
+              {(() => {
+                const addr = booking?.address;
+                if (!addr) return 'Loading destination...';
+                if (typeof addr === 'string') return addr;
+                return `${addr.addressLine1 || ''}, ${addr.city || ''} ${addr.pincode || ''}`;
+              })()}
             </p>
           </div>
         </div>
