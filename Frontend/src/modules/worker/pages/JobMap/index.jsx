@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, OverlayViewF, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, MarkerF } from '@react-google-maps/api';
 import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiClock, FiMaximize2 } from 'react-icons/fi';
 import { FaMotorcycle } from 'react-icons/fa';
 import workerService from '../../../../services/workerService';
@@ -44,6 +44,8 @@ const JobMap = () => {
   const [duration, setDuration] = useState('');
   const [routePath, setRoutePath] = useState(null);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
+  const [isNavigationMode, setIsNavigationMode] = useState(false);
+  const [mapHeading, setMapHeading] = useState(0);
 
   const socket = useAppNotifications('worker');
 
@@ -132,6 +134,9 @@ const JobMap = () => {
 
 
 
+  const [heading, setHeading] = useState(0);
+  const prevLocationRef = useRef(null);
+
   // Calculate Route - Run ONCE
   // Calculate Route & Adjust Bounds
   useEffect(() => {
@@ -156,18 +161,20 @@ const JobMap = () => {
           }
         );
       } else if (isAutoCenter) {
-        // Continuous Focus: Update bounds to include both worker and job destination
-        // Only if user hasn't manually moved the map
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend(currentLocation);
-        bounds.extend(coords);
-        map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
+        if (isNavigationMode) {
+          map.panTo(currentLocation);
+          map.setZoom(18);
+          map.setTilt(45);
+          map.setHeading(heading);
+        } else {
+          const bounds = new window.google.maps.LatLngBounds();
+          bounds.extend(currentLocation);
+          bounds.extend(coords);
+          map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
+        }
       }
     }
-  }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
-
-  const [heading, setHeading] = useState(0);
-  const prevLocationRef = useRef(null);
+  }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter, isNavigationMode, heading]);
 
   // Calculate Heading based on movement (Direction Sense)
   useEffect(() => {
@@ -214,7 +221,7 @@ const JobMap = () => {
         </button>
       </div>
 
-      <div className="flex-1 w-full h-full">
+      <div className="flex-1 w-full h-full relative">
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%' }}
           defaultCenter={defaultCenter}
@@ -228,7 +235,8 @@ const JobMap = () => {
             gestureHandling: 'greedy',
             rotateControl: true,
             tiltControl: true,
-            mapId: '8e0a97af9386fefc',
+            isFractionalZoomEnabled: true,
+            mapId: '8e0a97af9386fefc', // Required for Rotation/Tilt
           }}
         >
           {directions && (
@@ -248,9 +256,9 @@ const JobMap = () => {
 
           {/* Destination Marker - Premium Pin */}
           {coords && (
-            <OverlayViewF
+            <OverlayView
               position={coords}
-              mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               <div className="relative -translate-x-1/2 -translate-y-full">
                 <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-white relative z-10 animate-bounce">
@@ -259,14 +267,14 @@ const JobMap = () => {
                 <div className="w-4 h-4 bg-teal-600 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 z-0"></div>
                 <div className="w-8 h-2 bg-black/20 rounded-[100%] absolute -bottom-3 left-1/2 -translate-x-1/2 blur-sm"></div>
               </div>
-            </OverlayViewF>
+            </OverlayView>
           )}
 
           {/* Service Rider Marker */}
           {currentLocation && (
-            <OverlayViewF
+            <OverlayView
               position={currentLocation}
-              mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
             >
               {/* Container - centered on the coordinate */}
               <div
@@ -294,26 +302,57 @@ const JobMap = () => {
                 {/* Shadow */}
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
               </div>
-            </OverlayViewF>
+            </OverlayView>
           )}
         </GoogleMap>
+
+        {/* Recenter Button */}
+        {/* Recenter / Start Navigation Button */}
+        {/* 3D / Rotate Button */}
+        <button
+          onClick={() => {
+            if (map) {
+              const currentTilt = map.getTilt();
+              if (currentTilt > 0 || isNavigationMode) {
+                // Switch to 2D / Exit Nav
+                map.setTilt(0);
+                map.setHeading(0);
+                map.setZoom(14);
+                setIsNavigationMode(false);
+                toast("Switched to 2D Mode");
+              } else {
+                // Switch to 3D / Start Nav
+                map.setTilt(45);
+                setIsNavigationMode(true);
+                setIsAutoCenter(true);
+                toast.success("Switched to 3D Mode");
+              }
+            }
+          }}
+          className="absolute top-24 right-4 p-4 rounded-full shadow-2xl bg-white text-gray-700 z-50 active:scale-90 transition-all font-bold w-14 h-14 flex items-center justify-center border-2 border-gray-100"
+          style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
+        >
+          <span className="text-sm font-black text-gray-800">{isNavigationMode ? '2D' : '3D'}</span>
+        </button>
 
         {/* Recenter Button */}
         <button
           onClick={() => {
             setIsAutoCenter(true);
-            if (map && (currentLocation || coords)) {
-              const bounds = new window.google.maps.LatLngBounds();
-              if (currentLocation) bounds.extend(currentLocation);
-              if (coords) bounds.extend(coords);
-              map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
+            if (map && currentLocation) {
+              map.panTo(currentLocation);
+              // Do NOT change zoom/tilt here, respect user's current mode
+              if (!isNavigationMode) {
+                map.setZoom(15);
+              } else {
+                map.setZoom(18); // If in nav mode, ensure close zoom
+              }
             }
           }}
-          className={`absolute bottom-64 right-4 p-4 rounded-full shadow-2xl transition-all active:scale-90 z-20 ${isAutoCenter ? 'bg-teal-600 text-white' : 'bg-white text-gray-700'
-            }`}
+          className={`absolute top-40 right-4 p-4 rounded-full shadow-2xl transition-all active:scale-90 z-50 ${isAutoCenter ? 'bg-teal-600 text-white animate-pulse' : 'bg-white text-gray-700'}`}
           style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
         >
-          <FiCrosshair className={`w-6 h-6 ${isAutoCenter ? 'animate-pulse' : ''}`} />
+          <FiCrosshair className="w-6 h-6" />
         </button>
       </div>
 

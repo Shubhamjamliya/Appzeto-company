@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, OverlayViewF, PolylineF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, PolylineF } from '@react-google-maps/api';
 import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone } from 'react-icons/fi';
 import { bookingService } from '../../../../services/bookingService';
 import { toast } from 'react-hot-toast';
@@ -246,21 +246,21 @@ const BookingTrack = () => {
 
   // Memoize Map Markers to prevent flickering/blinking
   const destinationMarker = useMemo(() => coords && (
-    <OverlayViewF
+    <OverlayView
       position={coords}
-      mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
     >
       <div className="relative -translate-x-1/2 -translate-y-[90%] pointer-events-none flex flex-col items-center">
         <FiMapPin className="w-10 h-10 text-red-600 drop-shadow-xl fill-red-600 stroke-white stroke-[1.5px]" />
         <div className="w-3 h-1 bg-black/20 rounded-full blur-[2px] mt-[-2px]"></div>
       </div>
-    </OverlayViewF>
+    </OverlayView>
   ), [coords]);
 
   const riderMarker = useMemo(() => currentLocation && (
-    <OverlayViewF
+    <OverlayView
       position={currentLocation}
-      mapPaneName={OverlayViewF.OVERLAY_MOUSE_TARGET}
+      mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
     >
       <div
         style={{
@@ -283,7 +283,7 @@ const BookingTrack = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-teal-500/30 rounded-full animate-ping z-10 pointer-events-none"></div>
         <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
       </div>
-    </OverlayViewF>
+    </OverlayView>
   ), [currentLocation, heading]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -313,14 +313,14 @@ const BookingTrack = () => {
             // However, fitBounds triggers zoom changed. So we check user interaction.
           }}
           options={{
+            styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
             mapTypeId: 'roadmap',
-            gestureHandling: 'greedy',
+            gestureHandling: 'greedy', // Allows one-finger pan and two-finger rotate
             rotateControl: true,
             tiltControl: true,
-            isFractionalZoomEnabled: true,
-            mapId: '8e0a97af9386fefc',
+            isFractionalZoomEnabled: true, // Smoother zoom transitions
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false
