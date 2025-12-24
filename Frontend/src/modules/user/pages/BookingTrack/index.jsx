@@ -106,10 +106,31 @@ const BookingTrack = () => {
 
             // 2. Source: Live Provider Location (Initial set)
             const provider = response.data.workerId || response.data.vendorId || response.data.assignedTo || {};
-            const pLoc = provider.location || provider.address || {};
-            if (pLoc.lat && pLoc.lng) {
-              const startLoc = { lat: parseFloat(pLoc.lat), lng: parseFloat(pLoc.lng) };
+
+            // Prioritize live location field
+            if (provider.location && provider.location.lat && provider.location.lng) {
+              const startLoc = { lat: parseFloat(provider.location.lat), lng: parseFloat(provider.location.lng) };
               setCurrentLocation(startLoc);
+            }
+            // Only fallback to address for VENDORS (who have a fixed shop/store with lat/lng)
+            // WORKERS' address field usually doesn't have coordinates
+            else if (response.data.vendorId && provider.address && provider.address.lat && provider.address.lng) {
+              const addrLoc = { lat: parseFloat(provider.address.lat), lng: parseFloat(provider.address.lng) };
+
+              // Check if the vendor's address is within a reasonable distance (e.g., 100km)
+              // to avoid showing a provider far away if live location isn't available yet.
+              if (coords && window.google.maps.geometry) {
+                const distanceToDestination = window.google.maps.geometry.spherical.computeDistanceBetween(
+                  new window.google.maps.LatLng(addrLoc),
+                  new window.google.maps.LatLng(coords)
+                );
+                if (distanceToDestination < 100000) { // 100,000 meters = 100 km
+                  setCurrentLocation(addrLoc);
+                } else {
+                  console.warn("Vendor's address is too far from destination, waiting for live location.");
+                }
+              }
+              // Removed the unsafe else that bypassed the distance check
             }
           }
         }
@@ -129,6 +150,7 @@ const BookingTrack = () => {
 
   const [heading, setHeading] = useState(0);
   const prevLocationRef = useRef(null);
+  const lastRouteOriginRef = useRef(null);
 
   // Calculate Heading based on movement (Direction Sense)
   useEffect(() => {
@@ -153,6 +175,14 @@ const BookingTrack = () => {
     }
   }, [currentLocation, isLoaded, coords]);
 
+  // Sync Map Heading & Tilt for Navigation Feel
+  useEffect(() => {
+    if (map && currentLocation && heading && isAutoCenter) {
+      map.setHeading(heading);
+      map.setTilt(45); // 45 degree tilt for 3D feel
+    }
+  }, [map, heading, isAutoCenter, currentLocation]);
+
   // Simulate Rider Location (Since we don't have real rider GPS stream yet for User App)
   // Ideally this would come from a websocket or Firebase subscription
   // Fallback: Set initial position to allow route calculation
@@ -165,8 +195,24 @@ const BookingTrack = () => {
   // Calculate Route & Adjust Bounds
   useEffect(() => {
     if (isLoaded && currentLocation && coords && map) {
-      // 1. Calculate directions if not done
-      if (!directions) {
+
+      // Calculate or Recalculate directions if:
+      // 1. Directions haven't been calculated yet
+      // 2. Worker has moved significant distance (> 500m) from previous route origin
+
+      let shouldCalculate = !directions;
+
+      if (directions && lastRouteOriginRef.current) {
+        const distFromLastOrigin = window.google.maps.geometry.spherical.computeDistanceBetween(
+          new window.google.maps.LatLng(currentLocation),
+          new window.google.maps.LatLng(lastRouteOriginRef.current)
+        );
+        if (distFromLastOrigin > 500) { // Recalculate if moved > 500m
+          shouldCalculate = true;
+        }
+      }
+
+      if (shouldCalculate) {
         const directionsService = new window.google.maps.DirectionsService();
         directionsService.route(
           {
@@ -177,26 +223,27 @@ const BookingTrack = () => {
           (result, status) => {
             if (status === window.google.maps.DirectionsStatus.OK) {
               setDirections(result);
+              lastRouteOriginRef.current = currentLocation;
               const leg = result.routes[0].legs[0];
               setDistance(leg.distance.text);
               setDuration(leg.duration.text);
               setRoutePath(result.routes[0].overview_path);
-              map.fitBounds(result.routes[0].bounds);
+
+              if (isAutoCenter) {
+                map.fitBounds(result.routes[0].bounds);
+              }
             }
           }
         );
       } else if (isAutoCenter) {
         // 2. Continuous Focus: Update bounds to include both rider and destination
-        // This ensures the "pure track" is always visible without "jumping" solely to rider
         const bounds = new window.google.maps.LatLngBounds();
         bounds.extend(currentLocation);
         bounds.extend(coords);
-
-        // Add some padding
         map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
       }
     }
-  }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter]);
+  }, [isLoaded, coords, map, currentLocation, isAutoCenter]);
 
   if (!isLoaded || loading) return <div className="h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
@@ -230,7 +277,8 @@ const BookingTrack = () => {
             zoomControl: false,
             mapTypeId: 'roadmap',
             gestureHandling: 'greedy', // Allows one-finger pan and two-finger rotate
-            rotateControl: false, // Hidden UI, but gestures work
+            rotateControl: true, // Enabled for manual and programmatic control
+            tiltControl: true,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false
@@ -360,7 +408,9 @@ const BookingTrack = () => {
           {distance && (
             <div className="text-right">
               <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Distance</p>
-              <p className="text-xl font-bold text-gray-800">{distance}</p>
+              <p className="text-xl font-bold text-gray-800">
+                {parseFloat(distance) > 100 ? 'Calculating...' : distance}
+              </p>
             </div>
           )}
         </div>

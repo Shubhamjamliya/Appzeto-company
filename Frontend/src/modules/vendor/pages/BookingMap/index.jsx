@@ -111,6 +111,12 @@ const BookingMap = () => {
 
   // Sync Location to Backend (Periodic)
   useEffect(() => {
+    if (socket && id) {
+      socket.emit('join_tracking', id);
+    }
+  }, [socket, id]);
+
+  useEffect(() => {
     if (currentLocation && socket && id) {
       const syncInterval = setInterval(() => {
         if (currentLocation.lat && currentLocation.lng) {
@@ -188,6 +194,14 @@ const BookingMap = () => {
     }
   }, [currentLocation, isLoaded, coords]);
 
+  // Sync Map Heading & Tilt for Navigation Feel
+  useEffect(() => {
+    if (map && currentLocation && heading && isAutoCenter) {
+      map.setHeading(heading);
+      map.setTilt(45); // 45 degree tilt for 3D feel
+    }
+  }, [map, heading, isAutoCenter, currentLocation]);
+
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
@@ -215,7 +229,8 @@ const BookingMap = () => {
             zoomControl: false,
             mapTypeId: 'roadmap',
             gestureHandling: 'greedy',
-            rotateControl: false,
+            rotateControl: true,
+            tiltControl: true,
           }}
         >
           {directions && (

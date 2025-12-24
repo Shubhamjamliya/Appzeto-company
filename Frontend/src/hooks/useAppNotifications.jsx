@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'ht
  * Connects to Socket.IO and listens for 'notification' and custom events
  */
 export const useAppNotifications = (userType) => {
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,23 +36,16 @@ export const useAppNotifications = (userType) => {
     // If no token, we don't connect
     if (!token) return;
 
-    // Initialize Socket.IO connection
-    // Backend uses token to auth and identify user
-    // Make sure to clean up previous socket if exists
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-    }
-
-    const socket = io(SOCKET_URL, {
+    const newSocket = io(SOCKET_URL, {
       auth: {
         token: token
       },
       transports: ['websocket', 'polling']
     });
 
-    socketRef.current = socket;
+    setSocket(newSocket);
 
-    socket.on('connect', () => {
+    newSocket.on('connect', () => {
       console.log(`✅ ${userType.toUpperCase()} App Socket connected`);
 
       // If vendor, join vendor-specific room just in case backend expects it
@@ -60,21 +53,21 @@ export const useAppNotifications = (userType) => {
         const vendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
         const vendorId = vendorData.id || vendorData._id;
         if (vendorId) {
-          socket.emit('join_vendor_room', vendorId);
+          newSocket.emit('join_vendor_room', vendorId);
         }
       }
     });
 
-    socket.on('disconnect', () => {
+    newSocket.on('disconnect', () => {
       console.log(`❌ ${userType.toUpperCase()} App Socket disconnected`);
     });
 
-    socket.on('connect_error', (err) => {
+    newSocket.on('connect_error', (err) => {
       console.error(`Socket connection error (${userType}):`, err);
     });
 
     // Listen for generic notifications
-    socket.on('notification', (data) => {
+    newSocket.on('notification', (data) => {
       console.log('🔔 App Notification received:', data);
 
       if (isSoundEnabled(userType)) {
@@ -137,7 +130,7 @@ export const useAppNotifications = (userType) => {
 
     // Listen for special Vendor Booking Requests
     if (userType === 'vendor') {
-      socket.on('new_booking_request', (data) => {
+      newSocket.on('new_booking_request', (data) => {
         console.log('🚨 New Booking Request Alert:', data);
 
         // Play urgent alert ring
@@ -183,14 +176,12 @@ export const useAppNotifications = (userType) => {
     }
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      newSocket.disconnect();
     };
 
   }, [userType, navigate]);
 
-  return socketRef.current;
+  return socket;
 };
 
 export default useAppNotifications;

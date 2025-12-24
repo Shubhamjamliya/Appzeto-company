@@ -54,14 +54,41 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} joined tracking for booking_${bookingId}`);
     });
 
-    socket.on('update_location', (data) => {
+    socket.on('update_location', async (data) => {
       // data: { bookingId, lat, lng }
-      // Broadcast to everyone in the booking room (User is listening)
+      const lat = parseFloat(data.lat);
+      const lng = parseFloat(data.lng);
+
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      // 1. Broadcast to everyone in the booking room (User is listening)
       socket.to(`booking_${data.bookingId}`).emit('live_location_update', {
-        lat: data.lat,
-        lng: data.lng,
+        lat,
+        lng,
         role: socket.userRole
       });
+
+      // 2. Save latest location to Database (optional but helps for initial tracking load)
+      try {
+        const Vendor = require('../models/Vendor');
+        const Worker = require('../models/Worker');
+
+        const updateData = {
+          location: {
+            lat,
+            lng,
+            updatedAt: new Date()
+          }
+        };
+
+        if (socket.userRole === 'VENDOR') {
+          await Vendor.findByIdAndUpdate(socket.userId, updateData);
+        } else if (socket.userRole === 'WORKER') {
+          await Worker.findByIdAndUpdate(socket.userId, updateData);
+        }
+      } catch (error) {
+        console.error('Error saving live location:', error);
+      }
     });
 
     socket.on('disconnect', () => {

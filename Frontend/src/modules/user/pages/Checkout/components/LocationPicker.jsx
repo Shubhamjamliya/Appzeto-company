@@ -163,7 +163,8 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
             mapTypeControl: false,
             fullscreenControl: false,
             gestureHandling: 'greedy',
-            rotateControl: false
+            rotateControl: true,
+            tiltControl: true
           }}
         >
           {marker && <Marker position={marker} />}
