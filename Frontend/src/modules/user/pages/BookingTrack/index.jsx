@@ -43,6 +43,7 @@ const BookingTrack = () => {
   const [duration, setDuration] = useState('');
   const [routePath, setRoutePath] = useState([]);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
+  const [isNavigationMode, setIsNavigationMode] = useState(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -238,11 +239,17 @@ const BookingTrack = () => {
           }
         );
       } else if (isAutoCenter) {
-        // Continuous Track: Pan to keep rider in view without resetting rotation
-        map.panTo(currentLocation);
+        if (isNavigationMode && heading) {
+          map.panTo(currentLocation);
+          map.setZoom(18);
+          map.setTilt(45);
+          map.setHeading(heading);
+        } else {
+          map.panTo(currentLocation);
+        }
       }
     }
-  }, [isLoaded, coords, map, currentLocation, isAutoCenter]);
+  }, [isLoaded, coords, map, currentLocation, isAutoCenter, isNavigationMode, heading]);
 
   // Memoize Map Markers to prevent flickering/blinking
   const destinationMarker = useMemo(() => coords && (
@@ -313,7 +320,6 @@ const BookingTrack = () => {
             // However, fitBounds triggers zoom changed. So we check user interaction.
           }}
           options={{
-            styles: mapStyles,
             disableDefaultUI: true,
             zoomControl: false,
             mapTypeId: 'roadmap',
@@ -323,7 +329,8 @@ const BookingTrack = () => {
             isFractionalZoomEnabled: true, // Smoother zoom transitions
             mapTypeControl: false,
             streetViewControl: false,
-            fullscreenControl: false
+            fullscreenControl: false,
+            mapId: '8e0a97af9386fefc', // Enabled Vector Map
           }}
           onHeadingChanged={() => {
             if (map && isAutoCenter) {
@@ -368,6 +375,33 @@ const BookingTrack = () => {
           {riderMarker}
         </GoogleMap>
 
+        {/* 3D / Rotate Button */}
+        <button
+          onClick={() => {
+            if (map) {
+              const currentTilt = map.getTilt();
+              if (currentTilt > 0 || isNavigationMode) {
+                // Switch to 2D
+                map.setTilt(0);
+                map.setHeading(0);
+                map.setZoom(14);
+                setIsNavigationMode(false);
+                toast("Switched to 2D Mode");
+              } else {
+                // Switch to 3D
+                map.setTilt(45);
+                setIsNavigationMode(true);
+                setIsAutoCenter(true);
+                toast.success("Switched to 3D Mode");
+              }
+            }
+          }}
+          className="absolute top-24 right-4 p-4 rounded-full shadow-2xl bg-white text-gray-700 z-50 active:scale-90 transition-all font-bold w-14 h-14 flex items-center justify-center border-2 border-gray-100"
+          style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
+        >
+          <span className="text-sm font-black text-gray-800">{isNavigationMode ? '2D' : '3D'}</span>
+        </button>
+
         {/* Floating Action Buttons */}
         <div className="absolute bottom-32 right-4 flex flex-col gap-3 z-20">
           <button
@@ -380,28 +414,13 @@ const BookingTrack = () => {
                 map.fitBounds(bounds, { top: 100, bottom: 250, left: 50, right: 50 });
               }
             }}
-            className={`p-4 rounded-full shadow-2xl transition-all active:scale-90 ${isAutoCenter ? 'bg-teal-600 text-white' : 'bg-white text-gray-700'
-              }`}
-            style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
           >
             <FiCrosshair className={`w-6 h-6 ${isAutoCenter ? 'animate-pulse' : ''}`} />
           </button>
         </div>
 
         {/* Recenter Button */}
-        <button
-          onClick={() => {
-            if (map && (currentLocation || coords)) {
-              const bounds = new window.google.maps.LatLngBounds();
-              if (currentLocation) bounds.extend(currentLocation);
-              if (coords) bounds.extend(coords);
-              map.fitBounds(bounds);
-            }
-          }}
-          className="absolute bottom-60 right-4 p-3 bg-white rounded-full shadow-lg text-gray-700 z-10 active:scale-95"
-        >
-          <FiCrosshair className="w-6 h-6" />
-        </button>
+
       </div>
 
       {/* Bottom Status Card */}
@@ -420,7 +439,7 @@ const BookingTrack = () => {
             <div className="text-right">
               <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Distance</p>
               <p className="text-xl font-bold text-gray-800">
-                {parseFloat(distance) > 100 ? 'Calculating...' : distance}
+                {distance}
               </p>
             </div>
           )}
