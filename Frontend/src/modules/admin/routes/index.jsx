@@ -19,6 +19,7 @@ const Bookings = lazy(() => import('../pages/Bookings'));
 const Payments = lazy(() => import('../pages/Payments'));
 const Reports = lazy(() => import('../pages/Reports'));
 const Notifications = lazy(() => import('../pages/Notifications'));
+const Plans = lazy(() => import('../pages/Plans/Plans'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -32,7 +33,8 @@ const LoadingFallback = () => (
 
 const AdminRoutes = () => {
   // Enable global notifications for admin
-  useAppNotifications('admin');
+  // Global notifications are now handled by SocketProvider at App level
+  // useAppNotifications('admin');
 
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -56,6 +58,7 @@ const AdminRoutes = () => {
           <Route path="payments/*" element={<Payments />} />
           <Route path="reports/*" element={<Reports />} />
           <Route path="notifications/*" element={<Notifications />} />
+          <Route path="plans" element={<Plans />} />
           <Route path="settings/*" element={<Settings />} />
         </Route>
       </Routes>

@@ -300,10 +300,11 @@ const assignWorker = async (req, res) => {
     booking.workerId = workerId;
     booking.assignedAt = new Date();
 
-    // If booking was confirmed, update to in_progress when worker is assigned
+    // If booking was confirmed, update to assigned when worker is assigned
     if (booking.status === BOOKING_STATUS.CONFIRMED) {
-      booking.status = BOOKING_STATUS.IN_PROGRESS;
-      booking.startedAt = new Date();
+      booking.status = BOOKING_STATUS.ASSIGNED;
+      booking.startedAt = new Date(); // Or maybe keep startedAt for when actual work starts? Frontend uses it for 'Visited Sites'?
+      // Let's keep startedAt for IN_PROGRESS/VISITED usually. But maybe ASSIGNED is fine.
     }
 
     await booking.save();
@@ -358,7 +359,7 @@ const updateBookingStatus = async (req, res) => {
 
     const vendorId = req.user.id;
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, workerPaymentStatus, finalSettlementStatus } = req.body;
 
     const booking = await Booking.findOne({ _id: id, vendorId });
 
@@ -369,34 +370,48 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Validate status transition
-    const validTransitions = {
-      [BOOKING_STATUS.PENDING]: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.REJECTED],
-      [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
-      [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED]
-    };
+    // Validate status transition if status is changing
+    if (status && status !== booking.status) {
+      const validTransitions = {
+        [BOOKING_STATUS.PENDING]: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.REJECTED, BOOKING_STATUS.CANCELLED],
+        [BOOKING_STATUS.AWAITING_PAYMENT]: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.REJECTED],
+        [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
+        [BOOKING_STATUS.ASSIGNED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
+        [BOOKING_STATUS.VISITED]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
+        [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED],
+        [BOOKING_STATUS.WORK_DONE]: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED]
+      };
 
-    if (!validTransitions[booking.status]?.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid status transition from ${booking.status} to ${status}`
-      });
+      if (!validTransitions[booking.status]?.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status transition from ${booking.status} to ${status}`
+        });
+      }
+
+      // Update booking status
+      booking.status = status;
+
+      if (status === BOOKING_STATUS.IN_PROGRESS && !booking.startedAt) {
+        booking.startedAt = new Date();
+      }
+
+      if (status === BOOKING_STATUS.WORK_DONE && !booking.completedAt) {
+        // Work done timestamp? Maybe reuse/add field? For now leave it.
+      }
+
+      if (status === BOOKING_STATUS.COMPLETED) {
+        booking.completedAt = new Date();
+      }
     }
 
-    // Update booking
-    booking.status = status;
-
-    if (status === BOOKING_STATUS.IN_PROGRESS && !booking.startedAt) {
-      booking.startedAt = new Date();
-    }
-
-    if (status === BOOKING_STATUS.COMPLETED) {
-      booking.completedAt = new Date();
-    }
+    // Update other fields
+    if (workerPaymentStatus) booking.workerPaymentStatus = workerPaymentStatus;
+    if (finalSettlementStatus) booking.finalSettlementStatus = finalSettlementStatus;
 
     await booking.save();
 
-    // Send notification based on status
+    // Send notification
     if (status === BOOKING_STATUS.COMPLETED) {
       await createNotification({
         userId: booking.userId,

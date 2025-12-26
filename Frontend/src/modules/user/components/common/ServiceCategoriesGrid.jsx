@@ -1,4 +1,5 @@
 import React from 'react';
+import { themeColors } from '../../../../theme';
 
 const ServiceCategoriesGrid = ({ categories = [], onCategoryClick, layout = 'grid' }) => {
   if (!categories || categories.length === 0) {
@@ -19,7 +20,14 @@ const ServiceCategoriesGrid = ({ categories = [], onCategoryClick, layout = 'gri
                 onClick={() => onCategoryClick?.(category)}
                 className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform w-full"
               >
-                <div className="relative w-full aspect-square mx-auto rounded-lg overflow-hidden mb-2 border border-gray-200 shadow-sm" style={{ backgroundColor: '#f5f5f5' }}>
+                <div
+                  className="relative w-full aspect-square mx-auto rounded-2xl overflow-hidden mb-2"
+                  style={{
+                    backgroundColor: '#f5f5f5',
+                    boxShadow: themeColors.cardShadow,
+                    border: themeColors.cardBorder
+                  }}
+                >
                   {category.image ? (
                     <img
                       src={category.image}
@@ -64,7 +72,14 @@ const ServiceCategoriesGrid = ({ categories = [], onCategoryClick, layout = 'gri
             className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform flex-shrink-0"
             onClick={() => onCategoryClick?.(category)}
           >
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden mb-2 border border-gray-200 shadow-sm" style={{ backgroundColor: '#f5f5f5' }}>
+            <div
+              className="relative w-20 h-20 rounded-2xl overflow-hidden mb-2"
+              style={{
+                backgroundColor: '#f5f5f5',
+                boxShadow: themeColors.cardShadow,
+                border: themeColors.cardBorder
+              }}
+            >
               {category.image ? (
                 <img
                   src={category.image}

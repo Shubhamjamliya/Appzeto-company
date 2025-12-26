@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { FiX, FiLayers } from 'react-icons/fi';
+import { themeColors } from '../../../../../theme';
 import { publicCatalogService } from '../../../../../services/catalogService';
 
 const toAssetUrl = (url) => {
@@ -114,12 +115,12 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
             {/* Title */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-xl font-bold text-gray-900">{category?.title || 'Service Category'}</h1>
-              {loading && <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>}
+              {loading && <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: themeColors.button }}></div>}
             </div>
 
             {loading ? (
               <div className="py-20 flex flex-col items-center justify-center gap-3">
-                <div className="w-12 h-12 border-4 border-gray-100 border-t-primary-600 rounded-full animate-spin"></div>
+                <div className="w-12 h-12 border-4 border-gray-100 rounded-full animate-spin" style={{ borderTopColor: themeColors.button }}></div>
                 <p className="text-sm font-medium text-gray-500">Loading services...</p>
               </div>
             ) : services.length > 0 ? (

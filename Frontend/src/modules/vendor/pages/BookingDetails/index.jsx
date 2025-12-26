@@ -90,24 +90,24 @@ const BookingDetails = () => {
     const finalSettlementDone = booking?.finalSettlementStatus === 'DONE';
 
     const statusFlow = {
-      'ACCEPTED': ['ASSIGNED', 'VISITED'],
-      'ASSIGNED': ['VISITED'],
-      'VISITED': ['WORK_DONE'],
-      'WORK_DONE': workerPaymentDone
-        ? (finalSettlementDone ? ['COMPLETED'] : ['FINAL_SETTLEMENT', 'COMPLETED'])
+      'confirmed': ['assigned', 'visited'],
+      'assigned': ['visited'],
+      'visited': ['work_done'],
+      'work_done': workerPaymentDone
+        ? (finalSettlementDone ? ['completed'] : ['final_settlement', 'completed'])
         : [],
-      'FINAL_SETTLEMENT': ['COMPLETED'],
-      'COMPLETED': [],
+      'final_settlement': ['completed'],
+      'completed': [],
     };
     return statusFlow[currentStatus] || [];
   };
 
   const canPayWorker = (booking) => {
-    return booking?.status === 'WORK_DONE' && booking?.workerPaymentStatus !== 'PAID';
+    return booking?.status === 'work_done' && booking?.workerPaymentStatus !== 'PAID';
   };
 
   const canDoFinalSettlement = (booking) => {
-    return booking?.status === 'WORK_DONE' &&
+    return booking?.status === 'work_done' &&
       booking?.workerPaymentStatus === 'PAID' &&
       booking?.finalSettlementStatus !== 'DONE';
   };
@@ -562,7 +562,7 @@ const BookingDetails = () => {
             <FiArrowRight className="w-5 h-5" />
           </button>
 
-          {(booking.status === 'ACCEPTED' || (booking.assignedTo && booking.workerResponse === 'REJECTED')) && (
+          {(booking.status === 'confirmed' || (booking.assignedTo && booking.workerResponse === 'rejected')) && (
             <button
               onClick={handleAssignWorker}
               className="w-full py-4 rounded-xl font-semibold border-2 transition-all active:scale-95"
@@ -572,7 +572,7 @@ const BookingDetails = () => {
                 background: 'white',
               }}
             >
-              {booking.workerResponse === 'REJECTED' ? 'Reassign Worker' : 'Assign Worker'}
+              {booking.workerResponse === 'rejected' ? 'Reassign Worker' : 'Assign Worker'}
             </button>
           )}
         </div>

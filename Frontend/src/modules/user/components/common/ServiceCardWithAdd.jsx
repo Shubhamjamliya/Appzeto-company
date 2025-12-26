@@ -4,35 +4,35 @@ import { themeColors } from '../../../../theme';
 
 const ServiceCardWithAdd = memo(({ image, title, rating, reviews, price, onAddClick, onClick }) => {
   return (
-    <div 
+    <div
       className="min-w-[200px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
       style={{
-        boxShadow: '0 8px 16px -2px rgba(0, 166, 166, 0.15), 0 4px 8px -1px rgba(0, 166, 166, 0.1)',
-        border: '1px solid rgba(0, 166, 166, 0.15)'
+        boxShadow: themeColors.cardShadow,
+        border: themeColors.cardBorder
       }}
       onClick={onClick}
     >
       {image ? (
-        <img 
-          src={image} 
-          alt={title} 
+        <img
+          src={image}
+          alt={title}
           className="w-full h-40 object-cover"
           loading="lazy"
           decoding="async"
         />
       ) : (
         <div className="w-full h-40 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-          <svg 
-            className="w-12 h-12 text-gray-400" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-12 h-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
         </div>
@@ -49,7 +49,7 @@ const ServiceCardWithAdd = memo(({ image, title, rating, reviews, price, onAddCl
           </div>
         )}
         <div className="flex items-center justify-between">
-          <span 
+          <span
             className="text-base font-bold text-black"
           >
             ₹{price}
@@ -60,7 +60,7 @@ const ServiceCardWithAdd = memo(({ image, title, rating, reviews, price, onAddCl
               onAddClick?.();
             }}
             className="text-xs font-semibold px-4 py-1.5 rounded-full active:scale-95 transition-all shadow-sm"
-            style={{ 
+            style={{
               backgroundColor: themeColors.button,
               color: 'white',
               border: 'none',

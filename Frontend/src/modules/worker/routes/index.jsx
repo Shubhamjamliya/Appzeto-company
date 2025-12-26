@@ -61,7 +61,8 @@ const WorkerRoutes = () => {
   const location = useLocation();
 
   // Enable global notifications for worker
-  useAppNotifications('worker');
+  // Global notifications are now handled by SocketProvider at App level
+  // useAppNotifications('worker');
 
   // Check if current route should hide bottom nav
   const shouldHideBottomNav =

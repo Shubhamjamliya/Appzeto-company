@@ -95,26 +95,32 @@ const JobDetails = () => {
   const getStatusLabel = (status) => {
     const labels = {
       'pending': 'Pending',
-      'confirmed': 'Assigned',
+      'confirmed': 'Assigned', // Legacy?
+      'assigned': 'Assigned',
+      'visited': 'In Progress',
       'in_progress': 'In Progress',
+      'work_done': 'Work Done',
       'completed': 'Completed',
       'cancelled': 'Cancelled',
     };
-    return labels[status] || status;
+    return labels[status.toLowerCase()] || status;
   };
 
   const getStatusColor = (status) => {
     const colors = {
       'pending': '#F59E0B',
       'confirmed': '#3B82F6',
+      'assigned': '#3B82F6',
+      'visited': '#F59E0B',
       'in_progress': '#F59E0B',
+      'work_done': '#10B981',
       'completed': '#10B981',
       'cancelled': '#EF4444',
     };
-    return colors[status] || '#6B7280';
+    return colors[status.toLowerCase()] || '#6B7280';
   };
 
-  const statusColor = getStatusColor(job.status);
+  const statusColor = getStatusColor(job.status || 'pending');
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
@@ -128,7 +134,7 @@ const JobDetails = () => {
         >
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Status</p>
-            <p className="text-lg font-bold" style={{ color: statusColor }}>{getStatusLabel(job.status).toUpperCase()}</p>
+            <p className="text-lg font-bold" style={{ color: statusColor }}>{getStatusLabel(job.status || '').toUpperCase()}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Earning</p>
@@ -138,7 +144,7 @@ const JobDetails = () => {
 
         {/* Action Button Section */}
         <div className="mb-6">
-          {job.status === 'confirmed' && (
+          {(job.status === 'confirmed' || job.status === 'assigned') && (
             <button
               onClick={() => handleStatusUpdate('start')}
               disabled={actionLoading}
@@ -149,7 +155,7 @@ const JobDetails = () => {
             </button>
           )}
 
-          {job.status === 'in_progress' && (
+          {(job.status === 'visited' || job.status === 'in_progress') && (
             <button
               onClick={() => handleStatusUpdate('complete')}
               disabled={actionLoading}
@@ -160,10 +166,10 @@ const JobDetails = () => {
             </button>
           )}
 
-          {job.status === 'completed' && (
+          {(job.status === 'completed' || job.status === 'work_done') && (
             <div className="bg-green-100 border-2 border-green-500 rounded-2xl p-4 text-center text-green-700 font-bold shadow-md">
               <FiCheckCircle className="w-8 h-8 mx-auto mb-2" />
-              JOB COMPLETED SUCCESSFULLY
+              JOB COMPLETED - PENDING SETTLEMENT
             </div>
           )}
         </div>

@@ -684,7 +684,7 @@ const Checkout = () => {
                   <button
                     onClick={() => handleQuantityChange(item._id, -1)}
                     className="p-2 transition-colors"
-                    onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     <FiMinus className="w-4 h-4" style={{ color: themeColors.button }} />
@@ -693,7 +693,7 @@ const Checkout = () => {
                   <button
                     onClick={() => handleQuantityChange(item._id, 1)}
                     className="p-2 transition-colors"
-                    onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     <FiPlus className="w-4 h-4" style={{ color: themeColors.button }} />
@@ -728,7 +728,7 @@ const Checkout = () => {
         </div>
 
         {/* Plus Membership Plan */}
-        <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
+        <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: `${themeColors.brand.teal}1A` }}>
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-start gap-3 flex-1">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: themeColors.button }}>
@@ -759,7 +759,7 @@ const Checkout = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isPlusAdded) {
-                    e.target.style.backgroundColor = 'rgba(0, 166, 166, 0.1)';
+                    e.target.style.backgroundColor = `${themeColors.brand.teal}1A`;
                   } else {
                     e.target.style.backgroundColor = themeColors.button;
                   }
@@ -801,10 +801,10 @@ const Checkout = () => {
         {/* Payment Summary */}
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden relative">
           {/* Decorative Background for Header */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 via-blue-500 to-teal-500"></div>
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: themeColors.gradient }}></div>
 
           <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
-            <FiShoppingCart className="w-5 h-5 text-teal-600" />
+            <FiShoppingCart className="w-5 h-5" style={{ color: themeColors.button }} />
             Payment Summary
           </h3>
 
@@ -822,14 +822,14 @@ const Checkout = () => {
             </div>
 
             {isPlusAdded && (
-              <div className="flex justify-between items-center bg-teal-50/50 -mx-5 px-5 py-3 border-y border-teal-100/50">
+              <div className="flex justify-between items-center -mx-5 px-5 py-3 border-y" style={{ backgroundColor: `${themeColors.brand.teal}0D`, borderColor: `${themeColors.brand.teal}1A` }}>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center">
-                    <MdStar className="w-4 h-4 text-teal-600" />
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}26` }}>
+                    <MdStar className="w-4 h-4" style={{ color: themeColors.button }} />
                   </div>
-                  <span className="text-sm font-semibold text-teal-700">Plus Membership</span>
+                  <span className="text-sm font-semibold" style={{ color: themeColors.button }}>Plus Membership</span>
                 </div>
-                <span className="text-sm font-bold text-teal-700">₹249</span>
+                <span className="text-sm font-bold" style={{ color: themeColors.button }}>₹249</span>
               </div>
             )}
 
@@ -881,9 +881,18 @@ const Checkout = () => {
           <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
             <h3 className="text-base font-bold text-black mb-4">Select Payment Method</h3>
             <div className="space-y-3">
-              <label className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'online' ? 'border-teal-600 bg-teal-50' : 'border-gray-100 hover:border-gray-200'}`}>
+              <label
+                className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer`}
+                style={{
+                  borderColor: paymentMethod === 'online' ? themeColors.button : '#F3F4F6',
+                  backgroundColor: paymentMethod === 'online' ? `${themeColors.brand.teal}0D` : 'transparent'
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'online' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'online' ? 'text-white' : 'bg-gray-100 text-gray-500'}`}
+                    style={paymentMethod === 'online' ? { backgroundColor: themeColors.button } : {}}
+                  >
                     <FiShoppingCart className="w-5 h-5" />
                   </div>
                   <div>
@@ -894,15 +903,25 @@ const Checkout = () => {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  className="w-5 h-5 accent-teal-600"
+                  className="w-5 h-5"
+                  style={{ accentColor: themeColors.button }}
                   checked={paymentMethod === 'online'}
                   onChange={() => setPaymentMethod('online')}
                 />
               </label>
 
-              <label className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'pay_at_home' ? 'border-teal-600 bg-teal-50' : 'border-gray-100 hover:border-gray-200'}`}>
+              <label
+                className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer`}
+                style={{
+                  borderColor: paymentMethod === 'pay_at_home' ? themeColors.button : '#F3F4F6',
+                  backgroundColor: paymentMethod === 'pay_at_home' ? `${themeColors.brand.teal}0D` : 'transparent'
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'pay_at_home' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'pay_at_home' ? 'text-white' : 'bg-gray-100 text-gray-500'}`}
+                    style={paymentMethod === 'pay_at_home' ? { backgroundColor: themeColors.button } : {}}
+                  >
                     <FiHome className="w-5 h-5" />
                   </div>
                   <div>
@@ -913,7 +932,8 @@ const Checkout = () => {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  className="w-5 h-5 accent-teal-600"
+                  className="w-5 h-5"
+                  style={{ accentColor: themeColors.button }}
                   checked={paymentMethod === 'pay_at_home'}
                   onChange={() => setPaymentMethod('pay_at_home')}
                 />

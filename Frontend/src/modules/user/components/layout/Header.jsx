@@ -3,6 +3,9 @@ import { HiLocationMarker } from 'react-icons/hi';
 import { gsap } from 'gsap';
 import LocationSelector from '../common/LocationSelector';
 import { animateLogo } from '../../../../utils/gsapAnimations';
+import Logo from '../../../../components/common/Logo';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { themeColors } from '../../../../theme';
 
 const Header = ({ location, onLocationClick }) => {
   const logoRef = useRef(null);
@@ -29,7 +32,7 @@ const Header = ({ location, onLocationClick }) => {
                 if (logoRef.current) {
                   gsap.to(logoRef.current, {
                     scale: 1.15,
-                    filter: 'drop-shadow(0 0 16px rgba(59, 130, 246, 0.5))',
+                    filter: `drop-shadow(0 0 16px ${themeColors.brand.teal}40)`,
                     duration: 0.3,
                     ease: 'power2.out',
                   });
@@ -46,18 +49,31 @@ const Header = ({ location, onLocationClick }) => {
                 }
               }}
             >
-              <img
+              <Logo
                 ref={logoRef}
-                src="/Appzeto-logo.png"
-                alt="Appzeto"
-                className="h-8 w-auto object-contain"
+                className="h-12 w-auto"
               />
             </div>
 
             <div className="flex flex-col items-end cursor-pointer" onClick={onLocationClick}>
               <div className="flex items-center gap-1 mb-0.5">
-                <HiLocationMarker className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-gray-900 font-bold truncate max-w-[160px]">
+                {/* Gradient Definition for Icons */}
+                <svg width="0" height="0" className="absolute">
+                  <linearGradient id="homster-location-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={themeColors.brand.teal} />
+                    <stop offset="50%" stopColor={themeColors.brand.yellow} />
+                    <stop offset="100%" stopColor={themeColors.brand.orange} />
+                  </linearGradient>
+                </svg>
+                <HiLocationMarker
+                  className="w-4 h-4"
+                  style={{ fill: 'url(#homster-location-gradient)' }}
+                />
+                <span className="text-sm font-bold truncate max-w-[160px]" style={{
+                  background: themeColors.gradient,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}>
                   {location && location !== '...' ? location.split('-')[0].trim() : 'Select Location'}
                 </span>
               </div>

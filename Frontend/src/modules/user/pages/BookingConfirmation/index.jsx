@@ -13,7 +13,6 @@ import {
   FiArrowRight,
   FiLoader
 } from 'react-icons/fi';
-import BottomNav from '../../components/layout/BottomNav';
 import { bookingService } from '../../../../services/bookingService';
 
 const BookingConfirmation = () => {
@@ -224,8 +223,6 @@ const BookingConfirmation = () => {
           </button>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 };

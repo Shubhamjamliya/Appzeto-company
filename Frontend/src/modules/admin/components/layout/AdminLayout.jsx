@@ -8,10 +8,10 @@ import useAdminHeaderHeight from '../../hooks/useAdminHeaderHeight';
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const headerHeight = useAdminHeaderHeight();
-  
+
   // Bottom nav height is 64px (h-16)
   const bottomNavHeight = 64;
-  
+
   // Add small buffer to prevent content overlap (8px)
   const topPadding = headerHeight + 8;
   const bottomPadding = bottomNavHeight + 8;
@@ -22,12 +22,12 @@ const AdminLayout = () => {
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64 min-w-0 max-w-full overflow-x-hidden">
+      <div className="flex-1 flex flex-col lg:ml-[278px] min-w-0 max-w-full overflow-x-hidden transition-all duration-300">
         {/* Header */}
         <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page Content - with dynamic padding to account for fixed header and bottom nav */}
-        <main 
+        <main
           className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto overflow-x-hidden lg:pb-6 lg:pt-24 scrollbar-admin w-full min-w-0"
           style={{
             // Mobile: Use calculated heights with safe area support

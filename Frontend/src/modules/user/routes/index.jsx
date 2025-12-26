@@ -52,7 +52,7 @@ const MySubscription = lazyLoad(() => import('../pages/MySubscription'));
 const Wallet = lazyLoad(() => import('../pages/Wallet'));
 const MyPlan = lazyLoad(() => import('../pages/MyPlan'));
 const MyRating = lazyLoad(() => import('../pages/MyRating'));
-const AboutAppzeto = lazyLoad(() => import('../pages/AboutAppzeto'));
+const AboutHomster = lazyLoad(() => import('../pages/AboutHomster'));
 const UpdateProfile = lazyLoad(() => import('../pages/UpdateProfile'));
 const Login = lazyLoad(() => import('../pages/login'));
 const Signup = lazyLoad(() => import('../pages/signup'));
@@ -72,7 +72,8 @@ const UserRoutes = () => {
   const location = useLocation();
 
   // Enable global notifications for user
-  useAppNotifications('user');
+  // Global notifications are now handled by SocketProvider at App level
+  // useAppNotifications('user');
 
   // Pages where BottomNav should be shown
   const bottomNavPages = ['/user', '/user/', '/user/rewards', '/user/cart', '/user/account'];
@@ -106,7 +107,7 @@ const UserRoutes = () => {
             <Route path="/wallet" element={<ProtectedRoute userType="user"><Wallet /></ProtectedRoute>} />
             <Route path="/my-plan" element={<ProtectedRoute userType="user"><MyPlan /></ProtectedRoute>} />
             <Route path="/my-rating" element={<ProtectedRoute userType="user"><MyRating /></ProtectedRoute>} />
-            <Route path="/about-appzeto" element={<ProtectedRoute userType="user"><AboutAppzeto /></ProtectedRoute>} />
+            <Route path="/about-homster" element={<ProtectedRoute userType="user"><AboutHomster /></ProtectedRoute>} />
             <Route path="/update-profile" element={<ProtectedRoute userType="user"><UpdateProfile /></ProtectedRoute>} />
           </Routes>
         </PageTransition>

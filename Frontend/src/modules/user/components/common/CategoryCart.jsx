@@ -148,7 +148,8 @@ const CategoryCart = ({
                 key={item._id || item.id}
                 className="bg-white rounded-2xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow"
                 style={{
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
+                  boxShadow: themeColors.cardShadow,
+                  border: themeColors.cardBorder,
                   padding: '16px'
                 }}
               >

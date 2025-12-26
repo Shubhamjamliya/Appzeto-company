@@ -7,8 +7,8 @@ const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, orig
     <div
       className="min-w-[180px] w-[180px] bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95 group"
       style={{
-        boxShadow: '0 8px 25px -5px rgba(0, 0, 0, 0.05), 0 2px 10px -3px rgba(0, 0, 0, 0.01)',
-        border: '1px solid rgba(229, 231, 235, 0.4)'
+        boxShadow: themeColors.cardShadow,
+        border: themeColors.cardBorder
       }}
       onClick={onClick}
     >
@@ -16,7 +16,7 @@ const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, orig
         {discount && (
           <div
             className="absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md z-10"
-            style={{ backgroundColor: '#00A6A6' }}
+            style={{ backgroundColor: themeColors.button }}
           >
             {discount} OFF
           </div>
@@ -30,9 +30,10 @@ const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, orig
             decoding="async"
           />
         ) : (
-          <div className="w-full h-36 bg-[#F0FDFA] flex items-center justify-center">
+          <div className="w-full h-36 flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}1A` }}>
             <svg
-              className="w-12 h-12 text-[#00A6A6]/30"
+              className="w-12 h-12"
+              style={{ color: `${themeColors.brand.teal}4D` }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -74,7 +75,20 @@ const ServiceWithRatingCard = memo(({ image, title, rating, reviews, price, orig
               e.stopPropagation();
               onAddClick?.();
             }}
-            className="px-5 py-1.5 h-8 rounded-lg text-xs font-bold bg-[#F0FDFA] text-[#00A6A6] hover:bg-[#00A6A6] hover:text-white active:scale-95 transition-all"
+            className="px-5 py-1.5 h-8 rounded-lg text-xs font-bold transition-all active:scale-95 border"
+            style={{
+              backgroundColor: `${themeColors.brand.teal}0D`,
+              color: themeColors.button,
+              borderColor: `${themeColors.brand.teal}1A`
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = themeColors.button;
+              e.target.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = `${themeColors.brand.teal}0D`;
+              e.target.style.color = themeColors.button;
+            }}
           >
             Add
           </button>

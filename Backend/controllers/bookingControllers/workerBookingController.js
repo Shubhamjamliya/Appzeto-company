@@ -114,8 +114,11 @@ const updateJobStatus = async (req, res) => {
 
     // Validate status transition
     const validTransitions = {
-      [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.IN_PROGRESS],
-      [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.COMPLETED]
+      [BOOKING_STATUS.ASSIGNED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS],
+      [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS], // Allow confirmed->progress legacy
+      [BOOKING_STATUS.VISITED]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
+      [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
+      [BOOKING_STATUS.WORK_DONE]: [BOOKING_STATUS.COMPLETED]
     };
 
     if (!validTransitions[booking.status]?.includes(status)) {
@@ -130,6 +133,11 @@ const updateJobStatus = async (req, res) => {
 
     if (status === BOOKING_STATUS.IN_PROGRESS && !booking.startedAt) {
       booking.startedAt = new Date();
+    }
+
+    // Use startedAt for visited as well if needed, or maybe add visitedAt? 
+    if (status === BOOKING_STATUS.VISITED && !booking.startedAt) {
+      booking.startedAt = new Date(); // Using startedAt for visit time
     }
 
     if (status === BOOKING_STATUS.COMPLETED) {
@@ -153,7 +161,7 @@ const updateJobStatus = async (req, res) => {
 };
 
 /**
- * Mark job as started
+ * Mark job as started (Visited)
  */
 const startJob = async (req, res) => {
   try {
@@ -169,16 +177,16 @@ const startJob = async (req, res) => {
       });
     }
 
-    if (booking.status !== BOOKING_STATUS.CONFIRMED && booking.status !== BOOKING_STATUS.IN_PROGRESS) {
+    if (booking.status !== BOOKING_STATUS.ASSIGNED && booking.status !== BOOKING_STATUS.CONFIRMED) {
       return res.status(400).json({
         success: false,
         message: `Cannot start job with status: ${booking.status}`
       });
     }
 
-    // Update booking
-    booking.status = BOOKING_STATUS.IN_PROGRESS;
-    booking.startedAt = new Date();
+    // Update booking to VISITED (Start Journey implies going to site)
+    booking.status = BOOKING_STATUS.VISITED;
+    booking.startedAt = new Date(); // Reusing startedAt
 
     await booking.save();
 
@@ -187,8 +195,8 @@ const startJob = async (req, res) => {
     await createNotification({
       userId: booking.userId,
       type: 'worker_started',
-      title: 'Worker Started Service',
-      message: `The worker has started the service for booking ${booking.bookingNumber}.`,
+      title: 'Worker On The Way',
+      message: `The worker has started the journey for booking ${booking.bookingNumber}.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
@@ -197,8 +205,8 @@ const startJob = async (req, res) => {
     await createNotification({
       vendorId: booking.vendorId,
       type: 'worker_started',
-      title: 'Worker Started Service',
-      message: `Your worker has started the service for booking ${booking.bookingNumber}.`,
+      title: 'Worker Started Journey',
+      message: `Your worker has started the journey for booking ${booking.bookingNumber}.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
@@ -218,7 +226,7 @@ const startJob = async (req, res) => {
 };
 
 /**
- * Mark job as completed
+ * Mark job as completed (Work Done)
  */
 const completeJob = async (req, res) => {
   try {
@@ -234,46 +242,33 @@ const completeJob = async (req, res) => {
       });
     }
 
-    if (booking.status !== BOOKING_STATUS.IN_PROGRESS) {
+    if (booking.status !== BOOKING_STATUS.VISITED && booking.status !== BOOKING_STATUS.IN_PROGRESS) {
       return res.status(400).json({
         success: false,
         message: `Cannot complete job with status: ${booking.status}`
       });
     }
 
-    // Update booking
-    booking.status = BOOKING_STATUS.COMPLETED;
-    booking.completedAt = new Date();
+    // Update booking to WORK_DONE (Wait for Vendor Payment/Settlement)
+    booking.status = BOOKING_STATUS.WORK_DONE;
+    // booking.completedAt = new Date(); // Don't set completedAt yet, wait for settlement
 
     await booking.save();
 
-    // Notify user
-    const { createNotification } = require('../notificationControllers/notificationController');
-    await createNotification({
-      userId: booking.userId,
-      type: 'worker_completed',
-      title: 'Service Completed',
-      message: `The service for booking ${booking.bookingNumber} has been completed.`,
-      relatedId: booking._id,
-      relatedType: 'booking'
-    });
-
     // Notify vendor
+    const { createNotification } = require('../notificationControllers/notificationController');
     await createNotification({
       vendorId: booking.vendorId,
       type: 'worker_completed',
-      title: 'Service Completed',
-      message: `Your worker has completed the service for booking ${booking.bookingNumber}.`,
+      title: 'Work Done',
+      message: `Your worker has marked work as done for booking ${booking.bookingNumber}. Please review.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
 
-    // Update worker stats (totalJobs, completedJobs)
-    // TODO: Update worker document with stats if needed
-
     res.status(200).json({
       success: true,
-      message: 'Job completed successfully',
+      message: 'Work marked as done',
       data: booking
     });
   } catch (error) {

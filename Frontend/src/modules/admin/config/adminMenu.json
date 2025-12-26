@@ -83,6 +83,11 @@
     ]
   },
   {
+    "title": "Plans",
+    "route": "/admin/plans",
+    "children": []
+  },
+  {
     "title": "Settings",
     "route": "/admin/settings",
     "children": [

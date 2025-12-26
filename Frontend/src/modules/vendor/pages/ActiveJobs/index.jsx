@@ -4,7 +4,7 @@ import { FiBriefcase, FiMapPin, FiClock, FiUser, FiFilter, FiSearch } from 'reac
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { autoInitDummyData } from '../../utils/initDummyData';
+
 import { getBookings } from '../../services/bookingService';
 
 const ActiveJobs = () => {
@@ -31,8 +31,7 @@ const ActiveJobs = () => {
   }, []);
 
   useEffect(() => {
-    // Initialize dummy data if needed
-    autoInitDummyData();
+
 
     const loadJobs = async () => {
       try {

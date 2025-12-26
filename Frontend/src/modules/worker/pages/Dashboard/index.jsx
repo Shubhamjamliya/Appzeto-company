@@ -74,10 +74,10 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
-        // Fetch Profile and Jobs in parallel
-        const [profileRes, jobsRes] = await Promise.all([
+        // Fetch Profile, Stats and Recent Jobs in parallel (Stats also includes recent jobs but let's be robust)
+        const [profileRes, statsRes] = await Promise.all([
           workerService.getProfile(),
-          workerService.getAssignedJobs({ limit: 5 })
+          workerService.getDashboardStats()
         ]);
 
         if (profileRes.success) {
@@ -88,36 +88,33 @@ const Dashboard = () => {
             photo: profile.profilePhoto || null,
             category: profile.serviceCategory || '',
           });
-
-          setStats(prev => ({
-            ...prev,
-            completedJobs: profile.completedJobs || 0,
-            rating: profile.rating || 0,
-          }));
         }
 
-        if (jobsRes.success) {
-          const jobs = jobsRes.data;
-
-          // Compute stats from jobs if not provided by profile
-          const pendingCount = jobs.filter(j => j.status === 'confirmed').length;
-          const acceptedCount = jobs.filter(j => j.status === 'in_progress').length;
+        if (statsRes.success) {
+          const { totalEarnings, activeJobs, completedJobs, rating, recentJobs: apiRecentJobs } = statsRes.data;
 
           setStats(prev => ({
             ...prev,
-            pendingJobs: pendingCount,
-            acceptedJobs: acceptedCount,
+            totalEarnings: totalEarnings || 0,
+            thisMonthEarnings: totalEarnings || 0, // Assuming total is this month for now or total
+            pendingJobs: activeJobs || 0, // Using active for pending display for now, or map specifically if needed
+            acceptedJobs: activeJobs || 0, // Overlap in meaning, simplify
+            completedJobs: completedJobs || 0,
+            rating: rating || 0
           }));
 
-          setRecentJobs(jobs.map(job => ({
-            id: job._id,
-            serviceType: job.serviceName,
-            customerName: job.userId?.name || 'Customer',
-            location: job.address?.city || 'Location N/A',
-            time: job.scheduledTime || 'N/A',
-            status: job.status,
-            price: job.finalAmount,
-          })));
+          // Use recent jobs from stats API
+          if (apiRecentJobs && apiRecentJobs.length > 0) {
+            setRecentJobs(apiRecentJobs.map(job => ({
+              id: job._id,
+              serviceType: job.serviceId?.title || job.serviceName || 'Service',
+              customerName: job.userId?.name || 'Customer',
+              location: job.address?.city || 'Location N/A',
+              time: job.scheduledTime || 'N/A',
+              status: job.status,
+              price: job.finalAmount,
+            })));
+          }
         }
 
         setLoading(false);

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock, FiMapPin, FiCheckCircle, FiXCircle, FiLoader, FiCalendar, FiChevronRight } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
-import BottomNav from '../../components/layout/BottomNav';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { bookingService } from '../../../../services/bookingService';
 
@@ -265,8 +264,6 @@ const MyBookings = () => {
           </div>
         )}
       </main>
-
-      <BottomNav />
     </div>
   );
 };

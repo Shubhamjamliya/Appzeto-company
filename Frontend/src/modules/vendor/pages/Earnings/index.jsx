@@ -4,7 +4,7 @@ import { FiDollarSign, FiTrendingUp, FiCalendar, FiArrowRight } from 'react-icon
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { autoInitDummyData } from '../../utils/initDummyData';
+
 
 const Earnings = () => {
   const navigate = useNavigate();
@@ -35,8 +35,7 @@ const Earnings = () => {
   }, []);
 
   useEffect(() => {
-    // Initialize dummy data if needed
-    autoInitDummyData();
+
 
     const loadEarnings = () => {
       try {
@@ -59,7 +58,7 @@ const Earnings = () => {
     // Load immediately and after a delay
     loadEarnings();
     setTimeout(loadEarnings, 200);
-    
+
     window.addEventListener('vendorEarningsUpdated', loadEarnings);
 
     return () => {
@@ -71,7 +70,7 @@ const Earnings = () => {
     if (filter === 'all') return true;
     const itemDate = new Date(item.date);
     const now = new Date();
-    
+
     if (filter === 'today') {
       return itemDate.toDateString() === now.toDateString();
     }
@@ -164,20 +163,19 @@ const Earnings = () => {
             <button
               key={filterOption.id}
               onClick={() => setFilter(filterOption.id)}
-              className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
-                filter === filterOption.id
+              className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${filter === filterOption.id
                   ? 'text-white'
                   : 'bg-white text-gray-700'
-              }`}
+                }`}
               style={
                 filter === filterOption.id
                   ? {
-                      background: themeColors.button,
-                      boxShadow: `0 2px 8px ${themeColors.button}40`,
-                    }
+                    background: themeColors.button,
+                    boxShadow: `0 2px 8px ${themeColors.button}40`,
+                  }
                   : {
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    }
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                  }
               }
             >
               {filterOption.label}

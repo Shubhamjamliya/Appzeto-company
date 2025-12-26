@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiX } from 'react-icons/fi';
 import { themeColors } from '../../../../../theme';
 
-const TimeSlotModal = ({ 
-  isOpen, 
-  onClose, 
-  selectedDate, 
-  selectedTime, 
-  onDateSelect, 
-  onTimeSelect, 
+const TimeSlotModal = ({
+  isOpen,
+  onClose,
+  selectedDate,
+  selectedTime,
+  onDateSelect,
+  onTimeSelect,
   onSave,
   getDates,
   getTimeSlots,
@@ -51,9 +51,8 @@ const TimeSlotModal = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-50 transition-opacity ${
-          isClosing ? 'opacity-0' : 'opacity-100'
-        }`}
+        className={`fixed inset-0 bg-black/50 z-50 transition-opacity ${isClosing ? 'opacity-0' : 'opacity-100'
+          }`}
         onClick={handleClose}
       />
 
@@ -61,9 +60,8 @@ const TimeSlotModal = ({
       <div className="fixed bottom-0 left-0 right-0 z-50">
         {/* Modal */}
         <div
-          className={`bg-white rounded-t-3xl ${
-            isClosing ? 'animate-slide-down' : 'animate-slide-up'
-          }`}
+          className={`bg-white rounded-t-3xl ${isClosing ? 'animate-slide-down' : 'animate-slide-up'
+            }`}
           style={{
             maxHeight: '90vh',
             display: 'flex',
@@ -94,7 +92,7 @@ const TimeSlotModal = ({
           </div>
 
           {/* Content - Scrollable */}
-          <div 
+          <div
             className="px-4 py-4 overflow-y-auto flex-1"
             style={{
               WebkitOverflowScrolling: 'touch',
@@ -115,7 +113,7 @@ const TimeSlotModal = ({
                     onClick={() => onDateSelect(date)}
                     className="shrink-0 px-4 py-3 rounded-lg border-2 transition-all"
                     style={isSelected ? {
-                      backgroundColor: 'rgba(0, 166, 166, 0.1)',
+                      backgroundColor: `${themeColors.brand.teal}1A`,
                       borderColor: themeColors.button,
                       color: themeColors.button
                     } : {
@@ -144,7 +142,7 @@ const TimeSlotModal = ({
             {/* Time Selection */}
             <div className="mb-4">
               <h3 className="text-base font-semibold text-black mb-3">Select start time of service</h3>
-              <div 
+              <div
                 className="grid grid-cols-3 gap-2 pb-2"
                 style={{
                   maxHeight: '280px',
@@ -161,7 +159,7 @@ const TimeSlotModal = ({
                       onClick={() => onTimeSelect(slot.value)}
                       className="px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all"
                       style={isSelected ? {
-                        backgroundColor: 'rgba(0, 166, 166, 0.1)',
+                        backgroundColor: `${themeColors.brand.teal}1A`,
                         borderColor: themeColors.button,
                         color: themeColors.button
                       } : {

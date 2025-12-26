@@ -1,12 +1,13 @@
 import React, { memo } from 'react';
+import { themeColors } from '../../../../theme';
 
 const PromoCard = memo(({ title, subtitle, buttonText, image, onClick, className = '' }) => {
   return (
     <div
       className="relative rounded-2xl overflow-hidden min-w-[320px] md:min-w-[400px] h-48 md:h-56 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] active:scale-95"
       style={{
-        boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: themeColors.cardShadow,
+        border: themeColors.cardBorder,
         backdropFilter: 'blur(10px)'
       }}
       onClick={onClick}

@@ -1,13 +1,13 @@
 import React from 'react';
-import { theme } from '../../../../../theme';
+import { themeColors } from '../../../../../theme';
 
 const ReferEarnSection = ({ onReferClick }) => {
   return (
     <div
       className="rounded-2xl overflow-hidden shadow-lg mx-4 mt-2 bg-white"
       style={{
-        background: 'linear-gradient(135deg, rgba(0, 166, 166, 0.08) 0%, rgba(41, 173, 129, 0.08) 100%)',
-        border: '2px solid rgba(0, 166, 166, 0.2)'
+        background: `linear-gradient(135deg, ${themeColors.brand.teal}14 0%, ${themeColors.brand.yellow}14 100%)`,
+        border: `2px solid ${themeColors.brand.teal}33`
       }}
     >
       <div className="p-4 flex items-center justify-between">
@@ -27,8 +27,8 @@ const ReferEarnSection = ({ onReferClick }) => {
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center transform rotate-12 shadow-md"
             style={{
-              backgroundColor: 'rgba(0, 166, 166, 0.12)',
-              border: '2px solid rgba(0, 166, 166, 0.2)'
+              backgroundColor: `${themeColors.brand.teal}1F`,
+              border: `2px solid ${themeColors.brand.teal}33`
             }}
           >
             <span className="text-2xl">🎁</span>
@@ -36,8 +36,8 @@ const ReferEarnSection = ({ onReferClick }) => {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center transform -rotate-6 -ml-2 shadow-md"
             style={{
-              backgroundColor: 'rgba(41, 173, 129, 0.12)',
-              border: '2px solid rgba(41, 173, 129, 0.2)'
+              backgroundColor: `${themeColors.brand.yellow}1F`,
+              border: `2px solid ${themeColors.brand.yellow}33`
             }}
           >
             <span className="text-xl">🎁</span>
@@ -45,8 +45,8 @@ const ReferEarnSection = ({ onReferClick }) => {
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center transform rotate-12 -ml-2 shadow-md"
             style={{
-              backgroundColor: 'rgba(251, 251, 0, 0.2)',
-              border: '2px solid rgba(251, 251, 0, 0.3)'
+              backgroundColor: `${themeColors.brand.orange}1F`,
+              border: `2px solid ${themeColors.brand.orange}33`
             }}
           >
             <span className="text-lg">🎁</span>
@@ -57,18 +57,18 @@ const ReferEarnSection = ({ onReferClick }) => {
         onClick={onReferClick}
         className="w-full text-white font-bold py-3.5 active:scale-98 transition-all rounded-b-xl shadow-lg hover:shadow-xl"
         style={{
-          backgroundColor: '#00a6a6',
-          boxShadow: '0 4px 6px -1px rgba(0, 166, 166, 0.3), 0 2px 4px -1px rgba(0, 166, 166, 0.2)'
+          backgroundColor: themeColors.button,
+          boxShadow: `0 4px 6px -1px ${themeColors.brand.teal}4D, 0 2px 4px -1px ${themeColors.brand.teal}33`
         }}
         onMouseEnter={(e) => {
-          e.target.style.backgroundColor = '#008a8a';
+          e.target.style.backgroundColor = themeColors.brand.teal;
           e.target.style.transform = 'scale(0.98)';
-          e.target.style.boxShadow = '0 6px 12px -2px rgba(0, 166, 166, 0.4)';
+          e.target.style.boxShadow = `0 6px 12px -2px ${themeColors.brand.teal}66`;
         }}
         onMouseLeave={(e) => {
-          e.target.style.backgroundColor = '#00a6a6';
+          e.target.style.backgroundColor = themeColors.button;
           e.target.style.transform = 'scale(1)';
-          e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 166, 166, 0.3), 0 2px 4px -1px rgba(0, 166, 166, 0.2)';
+          e.target.style.boxShadow = `0 4px 6px -1px ${themeColors.brand.teal}4D, 0 2px 4px -1px ${themeColors.brand.teal}33`;
         }}
       >
         Refer Now

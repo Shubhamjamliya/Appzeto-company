@@ -214,8 +214,8 @@ const Cart = () => {
                       <div
                         className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
                         style={{
-                          backgroundColor: 'rgba(0, 166, 166, 0.08)',
-                          border: '2px solid rgba(0, 166, 166, 0.1)'
+                          backgroundColor: `${themeColors.brand.teal}15`,
+                          border: `2px solid ${themeColors.brand.teal}20`
                         }}
                       >
                         <img
@@ -299,15 +299,15 @@ const Cart = () => {
                       className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-95 shadow-md"
                       style={{
                         backgroundColor: themeColors.button,
-                        boxShadow: '0 2px 6px rgba(0, 166, 166, 0.3)'
+                        boxShadow: `0 2px 6px ${themeColors.brand.teal}4D`
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = themeColors.button;
-                        e.target.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.4)';
+                        e.target.style.backgroundColor = themeColors.brand.teal;
+                        e.target.style.boxShadow = `0 4px 12px ${themeColors.brand.teal}66`;
                       }}
                       onMouseLeave={(e) => {
                         e.target.style.backgroundColor = themeColors.button;
-                        e.target.style.boxShadow = '0 2px 6px rgba(0, 166, 166, 0.3)';
+                        e.target.style.boxShadow = `0 2px 6px ${themeColors.brand.teal}4D`;
                       }}
                     >
                       Checkout

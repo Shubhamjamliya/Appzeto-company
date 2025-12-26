@@ -41,7 +41,8 @@ const BottomNav = React.memo(() => {
 
     loadCartCount();
     // Refresh cart count every 10 seconds
-    const interval = setInterval(loadCartCount, 10000);
+    // const interval = setInterval(loadCartCount, 10000);
+    // Remove polling to prevent console spam - relying on focus and route changes instead
 
     // Also listen for focus to update when user returns to tab
     const handleFocus = () => {
@@ -50,7 +51,7 @@ const BottomNav = React.memo(() => {
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      clearInterval(interval);
+      // clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
@@ -67,7 +68,7 @@ const BottomNav = React.memo(() => {
   }, []);
 
   const navItems = [
-    { id: 'home', label: 'Appzeto', icon: FiHome, filledIcon: HiHome, path: '/user' },
+    { id: 'home', label: 'Home', icon: FiHome, filledIcon: HiHome, path: '/user' },
     { id: 'rewards', label: 'Rewards', icon: FiGift, filledIcon: HiGift, path: '/user/rewards' },
     { id: 'cart', label: 'Cart', icon: FiShoppingCart, filledIcon: HiShoppingCart, path: '/user/cart', isCart: true },
     { id: 'account', label: 'Account', icon: FiUser, filledIcon: HiUser, path: '/user/account' },
@@ -162,7 +163,9 @@ const BottomNav = React.memo(() => {
           borderTop: '1px solid rgba(229, 231, 235, 0.5)',
         }}
       >
-        <div className="flex items-center justify-around max-w-md mx-auto">
+        <div className="flex items-center justify-around max-w-md mx-auto relative">
+
+
           {navItems.map((item) => {
             const IconComponent = activeTab === item.id ? item.filledIcon : item.icon;
             const isActive = activeTab === item.id;
@@ -175,37 +178,44 @@ const BottomNav = React.memo(() => {
                 }}
                 className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all duration-300 relative group`}
               >
+                {/* Active Indicator Bar */}
                 {isActive && (
                   <div
                     className="absolute -top-2 w-8 h-1 rounded-b-full"
                     style={{
-                      backgroundColor: themeColors.button,
-                      boxShadow: '0 4px 12px rgba(0, 166, 166, 0.4)',
+                      background: themeColors.gradient,
+                      boxShadow: `0 2px 8px ${themeColors.brand.teal}4D`,
                     }}
                   />
                 )}
 
-                {/* Active Background - Optional, removing for a cleaner look or keeping minimal */}
+                {/* Active Background - Very Subtle Teal Tint */}
                 {isActive && (
-                  <div className="absolute inset-0 bg-[#F0FDFA] rounded-xl scale-90" />
+                  <div
+                    className="absolute inset-0 rounded-xl scale-90"
+                    style={{ backgroundColor: `${themeColors.brand.teal}0A` }}
+                  />
                 )}
 
                 <div className="relative z-10 flex flex-col items-center justify-center">
                   <div className="relative mb-1">
                     <IconComponent
-                      className={`w-6 h-6 transition-colors duration-300 ${!isActive ? 'text-gray-400 group-hover:text-gray-600' : ''}`}
-                      style={{ color: isActive ? themeColors.button : undefined }}
+                      className={`w-6 h-6 transition-all duration-300 ${isActive ? 'scale-110' : 'text-gray-400 group-hover:text-gray-600'}`}
+                      style={{
+                        color: isActive ? themeColors.button : undefined,
+                        filter: isActive ? `drop-shadow(0 2px 4px ${themeColors.brand.teal}1A)` : 'none'
+                      }}
                     />
                     {item.isCart && cartCount > 0 && (
                       <span
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center border-2 border-white"
+                        className="absolute -top-1.5 -right-1.5 bg-gradient-to-br from-red-500 to-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center border-2 border-white shadow-sm"
                       >
                         {cartCount > 9 ? '9+' : cartCount}
                       </span>
                     )}
                   </div>
                   <span
-                    className={`text-[10px] font-medium transition-colors duration-300 ${!isActive ? 'text-gray-500' : ''}`}
+                    className={`text-[10px] transition-colors duration-300 ${isActive ? 'font-bold' : 'font-medium text-gray-500'}`}
                     style={{ color: isActive ? themeColors.button : undefined }}
                   >
                     {item.label}

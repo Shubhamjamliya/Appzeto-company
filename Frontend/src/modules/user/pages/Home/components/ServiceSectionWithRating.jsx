@@ -96,7 +96,20 @@ const ServiceSectionWithRating = React.memo(({ title, subtitle, services, onSeeA
         {onSeeAllClick && (
           <button
             onClick={onSeeAllClick}
-            className="font-bold text-xs px-4 py-2 rounded-full transition-all hover:bg-gray-100 active:scale-95 bg-gray-50 text-gray-700 border border-gray-100"
+            className="font-bold text-xs px-4 py-2 rounded-full transition-all active:scale-95 border"
+            style={{
+              backgroundColor: `${themeColors.brand.teal}0D`,
+              color: themeColors.button,
+              borderColor: `${themeColors.brand.teal}1A`
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = themeColors.button;
+              e.target.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = `${themeColors.brand.teal}0D`;
+              e.target.style.color = themeColors.button;
+            }}
           >
             See all
           </button>

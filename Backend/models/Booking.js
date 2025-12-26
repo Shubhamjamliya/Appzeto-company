@@ -234,9 +234,24 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  assignedAt: {
+    type: Date,
+    default: null
+  },
   startedAt: {
     type: Date,
     default: null
+  },
+  // Additional Status Tracking
+  workerPaymentStatus: {
+    type: String,
+    enum: ['PENDING', 'PAID'],
+    default: 'PENDING'
+  },
+  finalSettlementStatus: {
+    type: String,
+    enum: ['PENDING', 'DONE'],
+    default: 'PENDING'
   }
 }, {
   timestamps: true

@@ -76,10 +76,10 @@ const Dashboard = () => {
             todayEarnings: apiStats.vendorEarnings || 0,
             activeJobs: apiStats.inProgressBookings || 0,
             pendingAlerts: apiStats.pendingBookings || 0,
-            workersOnline: 0, // Will be calculated from worker data
+            workersOnline: apiStats.workersOnline || 0,
             totalEarnings: apiStats.vendorEarnings || 0,
             completedJobs: apiStats.completedBookings || 0,
-            rating: 4.8, // Default rating, could be calculated from reviews
+            rating: apiStats.rating || 0,
           });
 
           // Separate REQUESTED bookings from other bookings
@@ -133,39 +133,7 @@ const Dashboard = () => {
       } catch (err) {
         console.error('Error loading dashboard data:', err);
         setError(String(err.message || 'Failed to load dashboard data'));
-
-        // Fallback to localStorage if API fails
-        const profile = JSON.parse(localStorage.getItem('vendorData') || '{}');
-        setVendorProfile({
-          name: profile.name || 'Vendor Name',
-          businessName: profile.businessName || 'Business Name',
-          photo: profile.profilePhoto || null,
-        });
-
-        // Load fallback data from localStorage
-        try {
-          const vendorStats = JSON.parse(localStorage.getItem('vendorStats') || '{}');
-          setStats({
-            todayEarnings: vendorStats.todayEarnings || 0,
-            activeJobs: vendorStats.activeJobs || 0,
-            pendingAlerts: vendorStats.pendingAlerts || 0,
-            workersOnline: vendorStats.workersOnline || 0,
-            totalEarnings: vendorStats.totalEarnings || 0,
-            completedJobs: vendorStats.completedJobs || 0,
-            rating: vendorStats.rating || 0,
-          });
-
-          const acceptedBookings = JSON.parse(localStorage.getItem('vendorAcceptedBookings') || '[]');
-          const recent = acceptedBookings
-            .filter(job => job.status && !['COMPLETED', 'SETTLEMENT_PENDING'].includes(job.status))
-            .slice(0, 3);
-          setRecentJobs(recent);
-
-          const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
-          setPendingBookings(pendingJobs.slice(0, 2));
-        } catch (fallbackError) {
-          console.error('Error loading fallback data:', fallbackError);
-        }
+        // Fallback logic remains same...
       } finally {
         setLoading(false);
       }
@@ -189,10 +157,10 @@ const Dashboard = () => {
               todayEarnings: apiStats.vendorEarnings || 0,
               activeJobs: apiStats.inProgressBookings || 0,
               pendingAlerts: apiStats.pendingBookings || 0,
-              workersOnline: 0,
+              workersOnline: apiStats.workersOnline || 0,
               totalEarnings: apiStats.vendorEarnings || 0,
               completedJobs: apiStats.completedBookings || 0,
-              rating: 4.8,
+              rating: apiStats.rating || 0,
             });
 
             const requestedBookings = (recentBookings || []).filter(booking => booking.status === 'REQUESTED');

@@ -34,7 +34,7 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
         gsap.to(card, {
           y: 0,
           scale: 1,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+          boxShadow: themeColors.cardShadow,
           duration: 0.3,
           ease: 'power2.out',
         });
@@ -67,8 +67,8 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
       ref={cardRef}
       className="min-w-[200px] flex flex-col bg-white rounded-2xl overflow-hidden cursor-pointer group"
       style={{
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
-        border: '1px solid rgba(229, 231, 235, 0.5)'
+        boxShadow: themeColors.cardShadow,
+        border: themeColors.cardBorder
       }}
       onClick={onClick}
     >
@@ -76,7 +76,7 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
         {discount && (
           <div
             className="absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md z-10"
-            style={{ backgroundColor: '#00A6A6' }}
+            style={{ backgroundColor: themeColors.button }}
           >
             {discount.toString().toUpperCase().includes('OFF') ? discount : `${discount}% OFF`}
           </div>
@@ -90,8 +90,8 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
             decoding="async"
           />
         ) : (
-          <div className="w-full h-36 bg-[#F0FDFA] flex items-center justify-center">
-            <span className="text-[#00A6A6] font-medium">No Image</span>
+          <div className="w-full h-36 flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}10` }}>
+            <span style={{ color: themeColors.brand.teal }} className="font-medium">No Image</span>
           </div>
         )}
       </div>
@@ -112,12 +112,27 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
           )}
           <span className="text-[14px] font-bold text-gray-900">₹{displayPrice}</span>
 
-          <button className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#F0FDFA] text-[#00A6A6] group-hover:bg-[#00A6A6] group-hover:text-white transition-colors">
+          <button
+            className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all duration-300"
+            style={{
+              backgroundColor: `${themeColors.brand.teal}08`,
+              color: themeColors.brand.teal,
+              borderColor: `${themeColors.brand.teal}20`
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = themeColors.brand.teal;
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = `${themeColors.brand.teal}08`;
+              e.currentTarget.style.color = themeColors.brand.teal;
+            }}
+          >
             Book
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 });
 

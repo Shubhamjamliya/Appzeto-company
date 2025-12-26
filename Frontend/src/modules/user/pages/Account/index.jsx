@@ -112,7 +112,7 @@ const Account = () => {
     { id: 5, label: 'Manage addresses', icon: FiMapPin },
     { id: 6, label: 'Manage payment methods', icon: FiCreditCard },
     { id: 7, label: 'Settings', icon: FiSettings },
-    { id: 8, label: 'About Appzeto', icon: null, customIcon: 'Appzeto' },
+    { id: 8, label: 'About Homster', icon: null, customIcon: 'Homster' },
   ];
 
   const handleCardClick = (cardType) => {
@@ -139,8 +139,8 @@ const Account = () => {
       navigate('/user/my-subscription');
     } else if (item.label === 'My rating') {
       navigate('/user/my-rating');
-    } else if (item.label === 'About Appzeto') {
-      navigate('/user/about-appzeto');
+    } else if (item.label === 'About Homster') {
+      navigate('/user/about-homster');
     }
     // Navigate to respective page
   };
@@ -184,7 +184,7 @@ const Account = () => {
           <FiArrowLeft className="w-5 h-5 text-gray-800" />
         </button>
         <div className="flex items-center gap-2">
-          <FiUser className="w-5 h-5" style={{ color: '#00A6A6' }} />
+          <FiUser className="w-5 h-5" style={{ color: themeColors.button }} />
           <h1 className="text-lg font-bold text-gray-900">Account</h1>
         </div>
       </div>
@@ -196,7 +196,7 @@ const Account = () => {
             <div className="flex items-center gap-4">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
-                style={{ backgroundColor: '#00A6A6' }}
+                style={{ backgroundColor: themeColors.button }}
               >
                 {isLoading ? '...' : getInitials()}
               </div>
@@ -206,8 +206,8 @@ const Account = () => {
                     {isLoading ? 'Loading...' : userProfile.name}
                   </h2>
                   {userProfile.isPhoneVerified && (
-                    <div className="w-4 h-4 rounded-full bg-teal-50 flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-[#00A6A6]" />
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}1A` }}>
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: themeColors.button }} />
                     </div>
                   )}
                 </div>
@@ -219,7 +219,10 @@ const Account = () => {
 
             <button
               onClick={handleEditClick}
-              className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center text-[#00A6A6] hover:bg-teal-50 transition-colors border border-gray-100"
+              className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center transition-colors border border-gray-100"
+              style={{ color: themeColors.button }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${themeColors.brand.teal}1A`}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <FiEdit3 className="w-4 h-4" />
             </button>
@@ -237,9 +240,9 @@ const Account = () => {
             >
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-                style={{ backgroundColor: '#F0FDFA' }}
+                style={{ backgroundColor: `${themeColors.brand.teal}1A` }}
               >
-                <FiClipboard className="w-6 h-6 text-[#00A6A6]" />
+                <FiClipboard className="w-6 h-6" style={{ color: themeColors.button }} />
               </div>
               <span className="text-xs font-bold text-gray-800 text-center leading-tight">
                 My bookings
@@ -253,9 +256,9 @@ const Account = () => {
             >
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-                style={{ backgroundColor: '#F0FDFA' }}
+                style={{ backgroundColor: `${themeColors.brand.teal}1A` }}
               >
-                <MdAccountBalanceWallet className="w-6 h-6 text-[#00A6A6]" />
+                <MdAccountBalanceWallet className="w-6 h-6" style={{ color: themeColors.button }} />
               </div>
               <span className="text-xs font-bold text-gray-800 text-center leading-tight">
                 Wallet
@@ -269,9 +272,9 @@ const Account = () => {
             >
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-                style={{ backgroundColor: '#F0FDFA' }}
+                style={{ backgroundColor: `${themeColors.brand.teal}1A` }}
               >
-                <FiHeadphones className="w-6 h-6 text-[#00A6A6]" />
+                <FiHeadphones className="w-6 h-6" style={{ color: themeColors.button }} />
               </div>
               <span className="text-xs font-bold text-gray-800 text-center leading-tight">
                 Help & support
@@ -295,19 +298,19 @@ const Account = () => {
                     <div
                       className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-teal-50"
                       style={{
-                        backgroundColor: '#F0FDFA',
-                        border: '1px solid #CCFBF1',
+                        backgroundColor: `${themeColors.brand.teal}10`,
+                        border: `1px solid ${themeColors.brand.teal}20`,
                       }}
                     >
-                      <span className="text-sm font-bold text-[#00A6A6]">A</span>
+                      <span className="text-sm font-bold" style={{ color: themeColors.button }}>{item.customIcon[0]}</span>
                     </div>
                   ) : (
                     IconComponent && (
                       <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-teal-50"
-                        style={{ backgroundColor: '#F0FDFA' }}
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors"
+                        style={{ backgroundColor: `${themeColors.brand.teal}10` }}
                       >
-                        <IconComponent className="w-6 h-6 text-[#00A6A6]" />
+                        <IconComponent className="w-6 h-6" style={{ color: themeColors.button }} />
                       </div>
                     )
                   )}
@@ -328,14 +331,14 @@ const Account = () => {
           <div
             className="relative rounded-2xl overflow-hidden p-5"
             style={{
-              background: 'linear-gradient(135deg, #F0FDFA 0%, #E6FFFA 100%)',
-              boxShadow: '0 10px 30px -4px rgba(0, 166, 166, 0.15)',
-              border: '1px solid #CCFBF1',
+              background: `linear-gradient(135deg, ${themeColors.brand.teal}0D 0%, ${themeColors.brand.teal}14 100%)`,
+              boxShadow: `0 10px 30px -4px ${themeColors.brand.teal}26`,
+              border: `1px solid ${themeColors.brand.teal}33`,
             }}
           >
             {/* Decorative Elements */}
             <div className="absolute top-0 right-0 w-32 h-32 opacity-20 pointer-events-none">
-              <div className="absolute top-[-20px] right-[-20px] w-24 h-24 rounded-full bg-[#00A6A6] blur-2xl"></div>
+              <div className="absolute top-[-20px] right-[-20px] w-24 h-24 rounded-full blur-2xl" style={{ backgroundColor: themeColors.button }}></div>
             </div>
 
             {/* Gift Box Illustration */}
@@ -350,18 +353,18 @@ const Account = () => {
             </div>
 
             <div className="relative pr-16">
-              <h3 className="text-lg font-bold text-teal-900 mb-1">
+              <h3 className="text-lg font-bold mb-1" style={{ color: themeColors.brand.teal }}>
                 Refer & earn ₹100
               </h3>
-              <p className="text-xs text-teal-700 font-medium mb-3 leading-relaxed max-w-[200px]">
+              <p className="text-xs font-medium mb-3 leading-relaxed max-w-[200px]" style={{ color: `${themeColors.brand.teal}CC` }}>
                 Invite your friends and earn rewards when they book a service.
               </p>
               <button
                 onClick={() => handleMenuClick({ label: 'Refer & Earn' })}
                 className="text-white text-xs font-bold px-5 py-2.5 rounded-xl active:scale-95 transition-all shadow-md hover:shadow-lg"
                 style={{
-                  backgroundColor: '#00A6A6',
-                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.3)',
+                  backgroundColor: themeColors.button,
+                  boxShadow: `0 4px 12px ${themeColors.brand.teal}4D`,
                 }}
               >
                 Refer Now

@@ -4,6 +4,7 @@ import { FiArrowLeft, FiBell, FiSearch } from 'react-icons/fi';
 import { gsap } from 'gsap';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { animateLogo } from '../../../../utils/gsapAnimations';
+import Logo from '../../../../components/common/Logo';
 
 const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifications = true, notificationCount = 0 }) => {
   const navigate = useNavigate();
@@ -15,14 +16,14 @@ const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifi
     if (logoRef.current && !showBack) {
       animateLogo(logoRef.current);
       // Additional entrance animation for more visibility
-      gsap.fromTo(logoRef.current, 
-        { 
-          opacity: 0, 
+      gsap.fromTo(logoRef.current,
+        {
+          opacity: 0,
           scale: 0.8,
           y: -10
         },
-        { 
-          opacity: 1, 
+        {
+          opacity: 1,
           scale: 1.0,
           y: 0,
           duration: 0.6,
@@ -91,11 +92,9 @@ const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifi
                 }
               }}
             >
-              <img
+              <Logo
                 ref={logoRef}
-                src="/Appzeto-logo.png"
-                alt="Appzeto"
-                className="h-12 w-auto object-contain"
+                className="h-12 w-auto"
               />
             </div>
           )}
@@ -113,31 +112,40 @@ const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifi
             </button>
           )}
           {showNotifications && (
-            <button
+            <div
               ref={bellButtonRef}
-              onClick={handleNotifications}
-              className="relative p-2.5 rounded-full transition-all duration-300 active:scale-95"
+              className="relative rounded-full cursor-pointer group active:scale-95 transition-transform duration-300"
               style={{
-                background: notificationCount > 0 
-                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.12) 100%)'
-                  : 'linear-gradient(135deg, rgba(0, 166, 166, 0.08) 0%, rgba(0, 166, 166, 0.05) 100%)',
-                boxShadow: notificationCount > 0 
-                  ? '0 3px 12px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
-                  : '0 2px 6px rgba(0, 166, 166, 0.15)',
-                border: notificationCount > 0 
-                  ? '1px solid rgba(239, 68, 68, 0.3)'
-                  : '1px solid rgba(0, 166, 166, 0.2)',
+                width: '42px',
+                height: '42px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '2px' // Spacing for border
               }}
               onMouseEnter={() => {
                 if (bellButtonRef.current && bellRef.current) {
+                  const btn = bellButtonRef.current.querySelector('button');
+
+                  // Scale Wrapper
                   gsap.to(bellButtonRef.current, {
                     scale: 1.15,
-                    boxShadow: notificationCount > 0 
-                      ? '0 6px 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)'
-                      : '0 4px 12px rgba(0, 166, 166, 0.25)',
                     duration: 0.3,
                     ease: 'power2.out',
                   });
+
+                  // Shadow on inner button
+                  if (btn) {
+                    gsap.to(btn, {
+                      boxShadow: notificationCount > 0
+                        ? '0 6px 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)'
+                        : `0 4px 12px ${themeColors.brand.teal}40`,
+                      duration: 0.3,
+                      ease: 'power2.out',
+                    });
+                  }
+
+                  // Rotate Bell
                   gsap.to(bellRef.current, {
                     rotation: 15,
                     scale: 1.1,
@@ -148,14 +156,24 @@ const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifi
               }}
               onMouseLeave={() => {
                 if (bellButtonRef.current && bellRef.current) {
+                  const btn = bellButtonRef.current.querySelector('button');
+
                   gsap.to(bellButtonRef.current, {
                     scale: 1.0,
-                    boxShadow: notificationCount > 0 
-                      ? '0 3px 12px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
-                      : '0 2px 6px rgba(0, 166, 166, 0.15)',
                     duration: 0.3,
                     ease: 'power2.out',
                   });
+
+                  if (btn) {
+                    gsap.to(btn, {
+                      boxShadow: notificationCount > 0
+                        ? '0 3px 12px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                        : `0 2px 6px ${themeColors.brand.teal}26`,
+                      duration: 0.3,
+                      ease: 'power2.out',
+                    });
+                  }
+
                   gsap.to(bellRef.current, {
                     rotation: 0,
                     scale: 1.0,
@@ -165,32 +183,68 @@ const Header = ({ title, onBack, showBack = true, showSearch = false, showNotifi
                 }
               }}
             >
-              <FiBell 
-                ref={bellRef}
-                className="w-6 h-6 transition-all duration-300" 
-                style={{ 
-                  color: notificationCount > 0 ? '#EF4444' : themeColors.button,
-                  filter: notificationCount > 0 
-                    ? 'drop-shadow(0 2px 6px rgba(239, 68, 68, 0.4))' 
-                    : 'drop-shadow(0 1px 3px rgba(0, 166, 166, 0.3))',
-                }} 
+              {/* 1. Animated Running Border */}
+              <div
+                className="absolute inset-[-2px] rounded-full z-0"
+                style={{
+                  background: themeColors.brand.conic,
+                  animation: 'spin 2s linear infinite',
+                  boxShadow: `0 0 8px ${themeColors.brand.orange}26`
+                }}
               />
-              {notificationCount > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center"
+
+              {/* 2. White Mask (to hide center of conic gradient) */}
+              <div className="absolute inset-[1px] rounded-full bg-white z-0" />
+
+              {/* 3. Inner Button */}
+              <button
+                onClick={handleNotifications}
+                className="relative z-10 w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+                style={{
+                  background: notificationCount > 0
+                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.12) 100%)'
+                    : 'linear-gradient(135deg, rgba(52, 121, 137, 0.1) 0%, rgba(187, 95, 54, 0.1) 100%)',
+                  boxShadow: notificationCount > 0
+                    ? '0 3px 12px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                    : '0 2px 6px rgba(52, 121, 137, 0.15)',
+                }}
+              >
+                {/* Define Gradient for Icon */}
+                <svg width="0" height="0" className="absolute">
+                  <linearGradient id="homster-bell-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={themeColors.brand.teal} />
+                    <stop offset="50%" stopColor={themeColors.brand.yellow} />
+                    <stop offset="100%" stopColor={themeColors.brand.orange} />
+                  </linearGradient>
+                </svg>
+
+                <FiBell
+                  ref={bellRef}
+                  className="w-5 h-5 transition-all duration-300"
                   style={{
-                    minWidth: '22px',
-                    height: '22px',
-                    padding: '0 6px',
-                    fontSize: '11px',
-                    boxShadow: '0 3px 10px rgba(239, 68, 68, 0.6), 0 0 0 2.5px rgba(255, 255, 255, 0.9)',
-                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    stroke: notificationCount > 0 ? '#EF4444' : 'url(#homster-bell-gradient)',
+                    strokeWidth: '2.5',
+                    color: 'transparent',
+                    filter: notificationCount > 0
+                      ? 'drop-shadow(0 2px 6px rgba(239, 68, 68, 0.4))'
+                      : 'drop-shadow(0 1px 3px rgba(52, 121, 137, 0.3))',
                   }}
-                >
-                  {notificationCount > 9 ? '9+' : notificationCount}
-                </span>
-              )}
-            </button>
+                />
+                {notificationCount > 0 && (
+                  <span
+                    className="absolute top-2 right-2 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center transform translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      minWidth: '18px',
+                      height: '18px',
+                      fontSize: '10px',
+                      boxShadow: '0 2px 5px rgba(239, 68, 68, 0.5), 0 0 0 2px #fff',
+                    }}
+                  >
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </span>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </div>

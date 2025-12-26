@@ -14,6 +14,7 @@ import {
   FiSettings,
   FiChevronDown,
   FiX,
+  FiPackage,
 } from "react-icons/fi";
 import adminMenu from "../../config/adminMenu.json";
 
@@ -28,7 +29,9 @@ const iconMap = {
   Payments: FiDollarSign,
   Reports: FiFileText,
   Notifications: FiBell,
+  Notifications: FiBell,
   Settings: FiSettings,
+  Plans: FiPackage,
 };
 
 // Helper function to convert child name to route path
@@ -259,9 +262,9 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
   // Sidebar content
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full w-full flex flex-col bg-slate-800">
       {/* Header Section */}
-      <div className="p-4 border-b border-slate-700 bg-slate-900">
+      <div className="px-4 py-6 border-b border-slate-700 bg-slate-900">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div
@@ -318,18 +321,21 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: -300 }}
+            initial={{ x: -320 }}
             animate={{ x: 0 }}
-            exit={{ x: -300 }}
+            exit={{ x: -320 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 w-64 z-[10000] lg:hidden">
+            className="fixed left-0 top-0 bottom-0 w-80 z-[10000] lg:hidden">
             {sidebarContent}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Sidebar - Desktop Fixed */}
-      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 z-30">
+      <div
+        className="hidden lg:flex fixed left-0 top-0 bottom-0 z-30"
+        style={{ width: '278px' }}
+      >
         {sidebarContent}
       </div>
     </>

@@ -164,8 +164,9 @@ const Home = () => {
           publicCatalogService.getHomeContent()
         ]);
 
+        let hasData = false;
+
         if (categoriesRes.success) {
-          // Map API response to component format
           const mappedCategories = categoriesRes.categories.map(cat => ({
             id: cat.id,
             title: cat.title,
@@ -175,15 +176,42 @@ const Home = () => {
             badge: cat.badge
           }));
           setCategories(mappedCategories);
+          if (mappedCategories.length > 0) hasData = true;
         }
 
         if (homeContentRes.success) {
           setHomeContent(homeContentRes.homeContent);
+          if (homeContentRes.homeContent) hasData = true;
         }
-      } catch (error) {
-        toast.error('Failed to load content. Please refresh the page.');
-      } finally {
+
+        // If no data loaded at all, keep loading true to prevent partial render or use error state
+        if (!hasData) {
+          // Option: Keep loading or better, retry or show specific empty state
+          // For now, per request "if no data loads ....keep loader ruuning", we just don't set loading false?
+          // But that might hang forever. Better to set a flag or keep checking.
+          // Let's keep it strictly loading as requested if NO data.
+          // BUT usually categories should exist.
+          // If API fails it goes to catch.
+          // If API returns success but empty, that's different.
+
+          // If we have absolutely nothing, maybe retry? 
+          // For now, let's respect the "keep loader running" if we strictly have empty content to avoid blank screen.
+          if (categoriesRes.categories?.length === 0 && !homeContentRes.homeContent) {
+            // keep loading
+            return;
+          }
+        }
+
         setLoading(false);
+
+      } catch (error) {
+        console.error('Home content load error:', error);
+        // If error, maybe keep loading or show error? 
+        // Request says "if no data loads ....keep loader ruuning"
+        // So we won't set loading(false) on error? 
+        // That seems to be what is asked.
+        // toast.error('Failed to load content. Please refresh the page.');
+        // setLoading(false); // Do not stop loading on error to hide broken UI
       }
     };
 
@@ -348,7 +376,10 @@ const Home = () => {
         zIndex: 1
       }}
     >
-      <div className="bg-[#EBF8FF]/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 rounded-b-[20px] shadow-sm transition-all duration-300">
+      <div
+        className="backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 rounded-b-[20px] shadow-sm transition-all duration-300"
+        style={{ backgroundColor: `${themeColors.headerBg}F2` }} // F2 is ~95% opacity
+      >
         <Header
           location={address}
           onLocationClick={handleLocationClick}

@@ -42,7 +42,10 @@ const BOOKING_STATUS = {
   AWAITING_PAYMENT: 'awaiting_payment', // Accepted by vendor, waiting for user payment
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
+  ASSIGNED: 'assigned',
+  VISITED: 'visited',
   IN_PROGRESS: 'in_progress',
+  WORK_DONE: 'work_done',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   REJECTED: 'rejected'

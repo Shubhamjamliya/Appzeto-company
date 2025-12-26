@@ -1,14 +1,11 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { autoInitDummyData } from '../utils/initDummyData';
-// Import test helpers (makes window.initVendorData() available)
-import '../utils/testDummyData';
 import PageTransition from '../components/common/PageTransition';
 import BottomNav from '../components/layout/BottomNav';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import ProtectedRoute from '../../../components/auth/ProtectedRoute';
 import PublicRoute from '../../../components/auth/PublicRoute';
-import useAppNotifications from '../../../hooks/useAppNotifications.jsx';
+// import useAppNotifications from '../../../hooks/useAppNotifications.jsx'; // Handled globally
 
 // Lazy load vendor pages for code splitting
 const Login = lazy(() => import('../pages/login'));
@@ -45,28 +42,8 @@ const LoadingFallback = () => (
 const VendorRoutes = () => {
   const location = useLocation();
 
-  // Enable global notifications for vendor
-  useAppNotifications('vendor');
-
   // Check if current route should hide bottom nav (auth routes or map)
   const shouldHideBottomNav = location.pathname === '/vendor/login' || location.pathname === '/vendor/signup' || location.pathname.endsWith('/map');
-
-  // Initialize dummy data when vendor routes load
-  useEffect(() => {
-    try {
-      autoInitDummyData();
-    } catch (error) {
-      console.error('Failed to initialize vendor data:', error);
-      // Try to initialize again after a delay
-      setTimeout(() => {
-        try {
-          autoInitDummyData();
-        } catch (retryError) {
-          console.error('Retry failed to initialize vendor data:', retryError);
-        }
-      }, 500);
-    }
-  }, []);
 
   return (
     <ErrorBoundary>
@@ -107,4 +84,3 @@ const VendorRoutes = () => {
 };
 
 export default VendorRoutes;
-

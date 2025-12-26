@@ -104,14 +104,14 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
             </button>
           </div>
 
-          {/* Info Card - Styled like Vendor */}
+          {/* Info Card - Styled with Brand Colors */}
           <div className="px-4 pt-4 shrink-0">
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-2">
+            <div className="rounded-xl p-3 mb-2 border" style={{ backgroundColor: `${themeColors.brand.teal}0D`, borderColor: `${themeColors.brand.teal}1A` }}>
               <div className="flex items-start gap-3">
-                <FiMapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <FiMapPin className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: themeColors.button }} />
                 <div>
-                  <h3 className="font-semibold text-blue-900 mb-1 text-sm">Set Delivery Location</h3>
-                  <p className="text-xs text-blue-700">
+                  <h3 className="font-semibold mb-1 text-sm" style={{ color: themeColors.button }}>Set Delivery Location</h3>
+                  <p className="text-xs" style={{ color: `${themeColors.brand.teal}CC` }}>
                     Place the pin accurately on the map to help the professional find you easily.
                   </p>
                 </div>

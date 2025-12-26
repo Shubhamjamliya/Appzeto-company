@@ -17,7 +17,6 @@ import {
   FiMail,
   FiHome
 } from 'react-icons/fi';
-import BottomNav from '../../components/layout/BottomNav';
 import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
 import { cartService } from '../../../../services/cartService';
@@ -503,8 +502,6 @@ const BookingDetails = () => {
           </div>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 };

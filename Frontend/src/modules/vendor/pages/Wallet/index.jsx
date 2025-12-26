@@ -4,7 +4,7 @@ import { FiDollarSign, FiArrowUp, FiArrowDown, FiArrowRight, FiSearch } from 're
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { autoInitDummyData } from '../../utils/initDummyData';
+
 import { getWalletBalance, getTransactions } from '../../services/walletService';
 
 const Wallet = () => {
@@ -35,8 +35,7 @@ const Wallet = () => {
   }, []);
 
   useEffect(() => {
-    // Initialize dummy data if needed
-    autoInitDummyData();
+
 
     const loadWallet = async () => {
       try {
@@ -229,8 +228,8 @@ const Wallet = () => {
               key={filterOption.id}
               onClick={() => setFilter(filterOption.id)}
               className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${filter === filterOption.id
-                  ? 'text-white'
-                  : 'bg-white text-gray-700'
+                ? 'text-white'
+                : 'bg-white text-gray-700'
                 }`}
               style={
                 filter === filterOption.id
@@ -318,8 +317,8 @@ const Wallet = () => {
                             <p className="text-xs text-gray-500">{txn.date}</p>
                             <span
                               className={`text-xs font-bold px-2 py-1 rounded-full ${txn.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                  txn.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                    'bg-gray-100 text-gray-600'
+                                txn.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                                  'bg-gray-100 text-gray-600'
                                 }`}
                             >
                               {txn.status}

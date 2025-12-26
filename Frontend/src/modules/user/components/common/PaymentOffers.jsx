@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { MdLocalOffer } from 'react-icons/md';
+import { themeColors } from '../../../../theme';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -56,7 +57,11 @@ const PaymentOffers = memo(({ offers = [] }) => {
         {formattedOffers.map((offer) => (
           <div
             key={offer.id}
-            className="min-w-[240px] bg-white border border-gray-200 rounded-lg p-3 flex items-center gap-3 shrink-0"
+            className="min-w-[240px] bg-white rounded-2xl p-3 flex items-center gap-3 shrink-0"
+            style={{
+              boxShadow: themeColors.cardShadow,
+              border: themeColors.cardBorder
+            }}
           >
             {offer.iconUrl ? (
               <img

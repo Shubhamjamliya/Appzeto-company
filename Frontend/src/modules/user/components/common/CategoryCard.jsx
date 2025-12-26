@@ -2,6 +2,8 @@ import React, { useState, useRef, memo, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { createRipple } from '../../../../utils/gsapAnimations';
 
+import { themeColors } from '../../../../theme';
+
 const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index = 0 }) => {
   const cardRef = useRef(null);
 
@@ -34,17 +36,23 @@ const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index =
       }}
     >
       <div
-        className="w-[64px] h-[64px] rounded-[20px] flex items-center justify-center mb-2 relative bg-gradient-to-br from-white to-[#F0FDFA]/30 border border-white flex-shrink-0 transition-all duration-300 group-hover:border-[#CCFBF1] group-hover:shadow-md group-hover:scale-105"
+        className="w-[64px] h-[64px] rounded-[20px] flex items-center justify-center mb-2 relative border border-white flex-shrink-0 transition-all duration-300 group-hover:shadow-md group-hover:scale-105"
         style={{
-          boxShadow: '0 10px 30px -4px rgba(0, 166, 166, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.02)',
+          background: `linear-gradient(135deg, #FFFFFF 0%, ${themeColors.brand.teal}10 100%)`,
+          boxShadow: themeColors.cardShadow,
         }}
+        onMouseEnter={(e) => e.currentTarget.style.borderColor = `${themeColors.brand.teal}33`}
+        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'white'}
       >
         {icon || (
           <svg
-            className="w-7 h-7 text-gray-400 group-hover:text-[#00A6A6] transition-colors duration-300"
+            className="w-7 h-7 text-gray-400 transition-colors duration-300"
+            style={{ color: 'inherit' }}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            onMouseEnter={(e) => e.currentTarget.style.color = themeColors.button}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
           >
             <path
               strokeLinecap="round"
@@ -56,18 +64,25 @@ const CategoryCard = memo(({ icon, title, onClick, hasSaleBadge = false, index =
         )}
         {hasSaleBadge && (
           <div
-            className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-[#00A6A6] to-[#008a8a] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-lg shadow-[#00A6A6]/30 z-10 border border-white"
+            className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-lg z-10 border border-white"
+            style={{
+              background: themeColors.gradient,
+              boxShadow: `0 4px 12px ${themeColors.brand.teal}4D`
+            }}
           >
             SALE
           </div>
         )}
       </div>
       <span
-        className="text-[11px] text-center text-gray-700 font-medium leading-snug tracking-tight group-hover:text-[#00A6A6] transition-colors duration-300"
+        className="text-[11px] text-center text-gray-700 font-medium leading-snug tracking-tight transition-colors duration-300"
         style={{
           wordWrap: 'break-word',
-          maxWidth: '76px'
+          maxWidth: '76px',
+          color: 'inherit'
         }}
+        onMouseEnter={(e) => e.currentTarget.style.color = themeColors.button}
+        onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
       >
         {title}
       </span>

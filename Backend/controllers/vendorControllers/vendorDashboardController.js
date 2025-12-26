@@ -1,7 +1,7 @@
 const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
 const Service = require('../../models/Service');
-const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
+const { BOOKING_STATUS, PAYMENT_STATUS, WORKER_STATUS } = require('../../utils/constants');
 
 /**
  * Get vendor dashboard stats
@@ -16,10 +16,10 @@ const getDashboardStats = async (req, res) => {
       status: { $ne: BOOKING_STATUS.AWAITING_PAYMENT }
     });
 
-    // Pending bookings
+    // Pending bookings (Alerts)
     const pendingBookings = await Booking.countDocuments({
       vendorId,
-      status: BOOKING_STATUS.PENDING
+      status: BOOKING_STATUS.REQUESTED
     });
 
     // Completed bookings
@@ -28,11 +28,42 @@ const getDashboardStats = async (req, res) => {
       status: BOOKING_STATUS.COMPLETED
     });
 
-    // In progress bookings
+    // Active Jobs (In Progress)
+    // Counts: Accepted (Awaiting Payment), Pending (Paid), Confirmed, In Progress
     const inProgressBookings = await Booking.countDocuments({
       vendorId,
-      status: BOOKING_STATUS.IN_PROGRESS
+      status: {
+        $in: [
+          BOOKING_STATUS.AWAITING_PAYMENT,
+          BOOKING_STATUS.PENDING,
+          BOOKING_STATUS.CONFIRMED,
+          BOOKING_STATUS.IN_PROGRESS
+        ]
+      }
     });
+
+    // Workers Online
+    const workersOnline = await Worker.countDocuments({
+      vendorId,
+      status: WORKER_STATUS.ONLINE
+    });
+
+    // Rating (Average from Bookings)
+    const ratingResult = await Booking.aggregate([
+      {
+        $match: {
+          vendorId: vendorId,
+          rating: { $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$rating" }
+        }
+      }
+    ]);
+    const rating = ratingResult.length > 0 ? parseFloat(ratingResult[0].avgRating.toFixed(1)) : 0;
 
     // Total revenue (from completed bookings with successful payments)
     const revenueResult = await Booking.aggregate([
@@ -74,7 +105,9 @@ const getDashboardStats = async (req, res) => {
           completedBookings,
           inProgressBookings,
           totalRevenue,
-          vendorEarnings
+          vendorEarnings,
+          workersOnline,
+          rating
         },
         recentBookings
       }

@@ -16,9 +16,13 @@ const workerService = {
     // Assuming backend accepts { location: { lat, lng } } or similar
     // We send partial update if supported, or implementation depends on backend
     return api.put('/workers/profile/location', { lat, lng });
-    // Note: If /location endpoint doesn't exist, we might need to use /profile
     // But for suggestion, specific endpoint is cleaner if available. 
     // If not, we fall back to generic profile update.
+  },
+
+  getDashboardStats: async () => {
+    const response = await api.get('/workers/stats');
+    return response.data;
   },
 
   // Jobs

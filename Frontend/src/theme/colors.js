@@ -6,71 +6,56 @@
  * Usage:
  * - User module: import { userTheme } from '../../../../theme'
  * - Vendor module: import { vendorTheme } from '../../../../theme'
- * - Backward compatibility: import themeColors from '../../../../theme' (uses userTheme)
+ * - Worker module: import { workerTheme } from '../../../../theme'
  */
 
+// Homster LOGO Core Brand Colors
+const brand = {
+  teal: '#347989',
+  yellow: '#D68F35',
+  orange: '#BB5F36',
+  gradient: 'linear-gradient(135deg, #347989 0%, #D68F35 50%, #BB5F36 100%)',
+  conic: 'conic-gradient(from 0deg, #347989, #D68F35, #BB5F36, #347989)'
+};
 
-// User Theme Colors
 // User Theme Colors
 const userTheme = {
-  // Background Gradient (for full page)
   backgroundGradient: 'linear-gradient(180deg, #F0FDFA 0%, #F5FAFF 15%, #FFFFFF 30%)',
-
-  // Top Section Gradient (Teal)
-  gradient: 'linear-gradient(135deg, #00A6A6 0%, #008a8a 50%, #006d6d 100%)',
-
-  // Header Gradient (Solid Teal)
-  headerGradient: '#00A6A6',
-
-  // Button Color
-  button: '#00A6A6',
-
-  // Icon Color
-  icon: '#00A6A6',
+  gradient: brand.gradient,
+  headerGradient: 'linear-gradient(135deg, #00a6a6 0%, #008a8a 50%, #006b6b 100%)',
+  headerBg: '#EBF8FF',
+  button: brand.teal,
+  icon: brand.teal,
+  cardShadow: '0 8px 16px -2px rgba(0, 166, 166, 0.15), 0 4px 8px -1px rgba(0, 166, 166, 0.1)',
+  cardBorder: '1px solid rgba(0, 166, 166, 0.15)',
+  brand: brand
 };
 
-
-// Vendor Theme Colors (currently same as user, can be changed independently)
+// Vendor Theme Colors
 const vendorTheme = {
-  // Background Gradient (for full page)
-  backgroundGradient: 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)',
-
-  // Top Section Gradient (yellow gradient - darker)
-  gradient: 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 50%, #FDE68A 100%)',
-
-  // Header Gradient (solid yellow - same as user dashboard)
-  headerGradient: '#FCD34D',
-
-  // Button Color
-  button: '#00a6a6',
-
-  // Icon Color
-  icon: '#29ad81',
+  backgroundGradient: 'linear-gradient(to bottom, rgba(52, 121, 137, 0.03) 0%, rgba(187, 95, 54, 0.02) 10%, #ffffff 20%)',
+  gradient: brand.gradient,
+  headerGradient: brand.teal,
+  button: brand.teal,
+  icon: brand.teal,
+  brand: brand
 };
 
-
-// Worker Theme Colors (same as vendor)
+// Worker Theme Colors
 const workerTheme = {
-  // Background Gradient (for full page)
-  backgroundGradient: 'linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%)',
-
-  // Top Section Gradient (yellow gradient - same as vendor)
-  gradient: 'linear-gradient(135deg, #FCD34D 0%, #FDE68A 50%, #FDE68A 100%)',
-
-  // Header Gradient (solid yellow - same as vendor)
-  headerGradient: '#FCD34D',
-
-  // Button Color (same as vendor)
-  button: '#00a6a6',
-
-  // Icon Color (same as vendor)
-  icon: '#29ad81',
+  backgroundGradient: 'linear-gradient(to bottom, rgba(52, 121, 137, 0.03) 0%, rgba(187, 95, 54, 0.02) 10%, #ffffff 20%)',
+  gradient: brand.gradient,
+  headerGradient: brand.teal,
+  button: brand.teal,
+  icon: brand.teal,
+  brand: brand
 };
 
-// Default theme (for backward compatibility - uses user theme)
+// Default theme (for backward compatibility)
 const themeColors = userTheme;
 
 // Export all themes
-export { userTheme, vendorTheme, workerTheme };
+export { userTheme, vendorTheme, workerTheme, brand };
 export default themeColors;
+
 

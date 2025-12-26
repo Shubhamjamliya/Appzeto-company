@@ -58,16 +58,16 @@ const BookingTimeline = () => {
 
         // Determine current stage based on status
         const statusMap = {
-          'REQUESTED': 1,
-          'SEARCHING': 1,
-          'ACCEPTED': 2,
-          'ASSIGNED': 3, // Worker assigned but not visited
-          'IN_PROGRESS': 4, // Visited/Started
-          'VISITED': 4, // Explicit visited status if used
-          'WORK_DONE': 5,
-          'WORKER_PAID': 6,
-          'SETTLEMENT_PENDING': 7,
-          'COMPLETED': 8,
+          'requested': 1,
+          'searching': 1,
+          'confirmed': 2,
+          'assigned': 3, // Worker assigned but not visited
+          'visited': 4, // Explicit visited status
+          'in_progress': 4, // Legacy support
+          'work_done': 5,
+          'worker_paid': 6, // Not a status typically, but stage
+          'settlement_pending': 7,
+          'completed': 8,
         };
         // Mapping might need adjustment based on validTransitions in backend
         setCurrentStage(statusMap[apiData.status] || 2);
@@ -143,8 +143,7 @@ const BookingTimeline = () => {
     window.open(url, '_blank');
 
     try {
-      // Assuming 'in_progress' covers the visit stage in backend
-      await updateBookingStatus(id, 'in_progress');
+      await updateBookingStatus(id, 'visited');
       setCurrentStage(4);
       // Reload booking to get latest state
       const response = await getBookingById(id);
@@ -158,9 +157,8 @@ const BookingTimeline = () => {
   async function handleWorkDone() {
     try {
       // Try to mark as completed or work_done if backend supports it
-      // Currently backend supports IN_PROGRESS -> COMPLETED
-      await updateBookingStatus(id, 'completed');
-      setCurrentStage(8); // Jump to completed for now as simplified flow
+      await updateBookingStatus(id, 'work_done');
+      setCurrentStage(5); // Update to stage 5
       window.location.reload();
     } catch (error) {
       console.error('Error updating status to work done:', error);

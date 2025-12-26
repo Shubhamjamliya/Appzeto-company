@@ -40,7 +40,9 @@ app.use(cookieParser());
 
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan('dev', {
+    skip: function (req, res) { return res.statusCode === 304 }
+  }));
 }
 
 // Rate limiting
@@ -78,6 +80,7 @@ app.use('/api/vendors/workers', require('./routes/vendor-routes/worker.routes'))
 app.use('/api/workers/auth', require('./routes/worker-routes/auth.routes'));
 app.use('/api/workers', require('./routes/worker-routes/profile.routes'));
 app.use('/api/workers', require('./routes/worker-routes/job.routes'));
+app.use('/api/workers', require('./routes/worker-routes/dashboard.routes'));
 
 // Admin routes
 app.use('/api/admin/auth', require('./routes/admin-routes/adminAuth.routes'));
@@ -90,6 +93,8 @@ app.use('/api/admin', require('./routes/admin-routes/homePageManagement.routes')
 app.use('/api/admin', require('./routes/admin-routes/bookingManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/paymentManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/upload.routes'));
+app.use('/api/admin', require('./routes/admin-routes/planManagement.routes'));
+app.use('/api/admin', require('./routes/admin-routes/settings.routes'));
 
 // Booking routes
 app.use('/api/bookings', require('./routes/booking-routes/userBooking.routes'));
@@ -103,6 +108,7 @@ app.use('/api/notifications', require('./routes/notification.routes'));
 
 // Public routes (no authentication required)
 app.use('/api/public', require('./routes/public-routes/catalog.routes'));
+app.use('/api/public', require('./routes/public-routes/plan.routes'));
 
 // 404 handler
 app.use((req, res) => {

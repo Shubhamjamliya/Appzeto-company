@@ -93,10 +93,10 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Top Section with Teal Gradient */}
-      <div 
+      <div
         className="relative h-64 overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #00a6a6 0%, #008a8a 50%, #006b6b 100%)'
+          background: themeColors.headerGradient
         }}
       >
         {/* Abstract Pattern */}
@@ -157,18 +157,18 @@ const Login = () => {
                 className="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: themeColors.button,
-                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.3)'
+                  boxShadow: `0 4px 12px ${themeColors.brand.teal}4D`
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.4)';
-                    e.currentTarget.style.backgroundColor = '#008a8a';
+                    e.currentTarget.style.boxShadow = `0 6px 16px ${themeColors.brand.teal}66`;
+                    e.currentTarget.style.backgroundColor = themeColors.brand.teal;
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.3)';
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${themeColors.brand.teal}4D`;
                   e.currentTarget.style.backgroundColor = themeColors.button;
                 }}
               >
@@ -249,18 +249,18 @@ const Login = () => {
                 className="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: themeColors.button,
-                  boxShadow: '0 4px 12px rgba(0, 166, 166, 0.3)'
+                  boxShadow: `0 4px 12px ${themeColors.brand.teal}4D`
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 166, 166, 0.4)';
-                    e.currentTarget.style.backgroundColor = '#008a8a';
+                    e.currentTarget.style.boxShadow = `0 6px 16px ${themeColors.brand.teal}66`;
+                    e.currentTarget.style.backgroundColor = themeColors.brand.teal;
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 166, 166, 0.3)';
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${themeColors.brand.teal}4D`;
                   e.currentTarget.style.backgroundColor = themeColors.button;
                 }}
               >

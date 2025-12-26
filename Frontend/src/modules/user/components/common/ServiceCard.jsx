@@ -1,8 +1,9 @@
 import React, { memo, useRef } from 'react';
+import { themeColors } from '../../../../theme';
 
 const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
   const cardRef = useRef(null);
-  // Extract YouTube video ID from URL (supports shorts and regular videos)
+  // ... (rest of the helper functions)
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
     // Remove whitespace
@@ -23,15 +24,13 @@ const ServiceCard = memo(({ image, title, onClick, gif, youtubeUrl }) => {
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1`
     : null;
 
-  // CSS-based hover animations (better performance than GSAP)
-  // No useEffect needed - using CSS transitions
-
   return (
     <div
       ref={cardRef}
       className="relative min-w-[200px] md:min-w-[240px] h-[350px] md:h-[420px] rounded-2xl overflow-hidden cursor-pointer transition-transform duration-300 ease-out hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98]"
       style={{
-        boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.15), 0 4px 12px -4px rgba(0, 0, 0, 0.1)',
+        boxShadow: themeColors.cardShadow,
+        border: themeColors.cardBorder,
         willChange: 'transform',
         backfaceVisibility: 'hidden',
         WebkitBackfaceVisibility: 'hidden',

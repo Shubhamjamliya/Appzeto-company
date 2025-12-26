@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { gsap } from 'gsap';
 import PromoCard from '../../../components/common/PromoCard';
+import { themeColors } from '../../../../../theme';
 import promo1 from '../../../../../assets/images/pages/Home/promo-carousel/1764052270908-bae94c.jpg';
 import promo2 from '../../../../../assets/images/pages/Home/promo-carousel/1678450687690-81f922.jpg';
 import promo3 from '../../../../../assets/images/pages/Home/promo-carousel/1745822547742-760034.jpg';
@@ -94,8 +95,8 @@ const PromoCarousel = memo(({ promos, onPromoClick }) => {
             key={index}
             className={`rounded-full transition-all ${index === currentIndex ? 'w-6 h-1.5' : 'w-1.5 h-1.5'}`}
             style={{
-              backgroundColor: index === currentIndex ? '#F59E0B' : 'rgba(245, 158, 11, 0.4)',
-              boxShadow: index === currentIndex ? '0 2px 6px rgba(245, 158, 11, 0.5)' : '0 1px 2px rgba(0, 0, 0, 0.2)'
+              backgroundColor: index === currentIndex ? themeColors.brand.yellow : `${themeColors.brand.yellow}66`,
+              boxShadow: index === currentIndex ? `0 2px 6px ${themeColors.brand.yellow}80` : '0 1px 2px rgba(0, 0, 0, 0.2)'
             }}
           />
         ))}

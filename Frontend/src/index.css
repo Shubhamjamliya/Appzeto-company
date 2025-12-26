@@ -5,6 +5,7 @@
   from {
     transform: translateY(100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -19,6 +20,7 @@
   from {
     transform: translateY(0);
   }
+
   to {
     transform: translateY(100%);
   }
@@ -34,6 +36,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -43,6 +46,7 @@
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -62,6 +66,7 @@
     transform: translateX(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -69,18 +74,24 @@
 }
 
 @keyframes logo-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.03);
   }
 }
 
 @keyframes logo-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     filter: drop-shadow(0 0 0px rgba(245, 158, 11, 0));
   }
+
   50% {
     filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
   }
@@ -102,6 +113,7 @@
     transform: translateX(-30px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -113,6 +125,7 @@
     transform: scale(0);
     opacity: 1;
   }
+
   100% {
     transform: scale(2.5);
     opacity: 0;
@@ -130,10 +143,10 @@
 }
 
 .category-card-icon-wrapper {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              box-shadow 0.3s ease,
-              border-color 0.3s ease,
-              background-color 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease;
 }
 
 .category-card-icon-wrapper:hover {
@@ -181,11 +194,12 @@
   /* box-sizing: border-box; */
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background-color: #ffffff !important;
-  background: linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%) !important;
+  background: linear-gradient(to bottom, rgba(52, 121, 137, 0.03) 0%, rgba(187, 95, 54, 0.02) 10%, #ffffff 20%) !important;
   background-attachment: fixed;
 }
 
@@ -200,7 +214,7 @@ body {
 
 #root {
   background-color: #ffffff !important;
-  background: linear-gradient(to bottom, rgba(0, 166, 166, 0.03) 0%, rgba(41, 173, 129, 0.02) 10%, #ffffff 20%) !important;
+  background: linear-gradient(to bottom, rgba(52, 121, 137, 0.03) 0%, rgba(187, 95, 54, 0.02) 10%, #ffffff 20%) !important;
   min-height: 100vh;
 }
 
@@ -233,49 +247,52 @@ html {
   transform: scale(0.98);
 }
 
-/* Custom brand color */
+/* Custom brand color - Homster Update */
 .bg-brand {
-  background-color: #00a6a6;
+  background-color: #347989;
 }
 
 .bg-brand-hover:hover {
-  background-color: #008a8a;
+  background-color: #2d6977;
 }
 
 .text-brand {
-  color: #00a6a6;
+  color: #347989;
 }
 
 .border-brand {
-  border-color: #00a6a6;
+  border-color: #347989;
 }
 
 .bg-brand-light {
-  background-color: rgba(0, 166, 166, 0.1);
+  background-color: rgba(52, 121, 137, 0.1);
 }
 
 .hover\:bg-brand-light:hover {
-  background-color: rgba(0, 166, 166, 0.15);
+  background-color: rgba(52, 121, 137, 0.15);
 }
 
 /* Admin Panel Styles */
 .scrollbar-admin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  /* Slightly thinner for elegance */
+  height: 6px;
 }
 
 .scrollbar-admin::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+  background: #1e293b;
+  /* slate-800 to match sidebar bg */
 }
 
 .scrollbar-admin::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #334155;
+  /* slate-700 */
   border-radius: 4px;
 }
 
 .scrollbar-admin::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #475569;
+  /* slate-600 */
 }
 
 /* Primary color utilities for admin panel */

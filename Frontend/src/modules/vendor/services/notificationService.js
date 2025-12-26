@@ -1,12 +1,11 @@
+import api from '../../../services/api';
+
 /**
  * Notification Service
  * Handles all notification-related API calls
- * 
- * Note: This is a structure file for backend integration.
- * Replace localStorage calls with actual API endpoints.
  */
 
-const API_BASE_URL = '/api/vendors';
+const BASE_URL = '/notifications';
 
 /**
  * Get all notifications
@@ -15,16 +14,26 @@ const API_BASE_URL = '/api/vendors';
  */
 export const getNotifications = async (filters = {}) => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications?${new URLSearchParams(filters)}`);
-    // return await response.json();
+    const params = new URLSearchParams();
+    if (filters.isRead !== undefined) params.append('isRead', filters.isRead);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
 
-    // Mock implementation
-    const notifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-    return notifications;
+    const response = await api.get(`${BASE_URL}/vendor?${params.toString()}`);
+
+    if (response.data.success) {
+      return response.data.data.map(n => ({
+        ...n,
+        id: n._id,
+        read: n.isRead,
+        time: new Date(n.createdAt).toLocaleString()
+      }));
+    }
+    return [];
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    throw error;
+    // Fallback to empty array to prevents app crash
+    return [];
   }
 };
 
@@ -35,21 +44,17 @@ export const getNotifications = async (filters = {}) => {
  */
 export const markAsRead = async (notificationId) => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-    //   method: 'PATCH',
-    // });
-    // return await response.json();
-
-    // Mock implementation
-    const notifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-    const updated = notifications.map(n =>
-      n.id === notificationId
-        ? { ...n, read: true, readAt: new Date().toISOString() }
-        : n
-    );
-    localStorage.setItem('vendorNotifications', JSON.stringify(updated));
-    return updated.find(n => n.id === notificationId);
+    const response = await api.put(`${BASE_URL}/${notificationId}/read`);
+    if (response.data.success) {
+      const n = response.data.data;
+      return {
+        ...n,
+        id: n._id,
+        read: n.isRead,
+        time: new Date(n.createdAt).toLocaleString()
+      };
+    }
+    return null;
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
@@ -62,21 +67,8 @@ export const markAsRead = async (notificationId) => {
  */
 export const markAllAsRead = async () => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
-    //   method: 'PATCH',
-    // });
-    // return await response.json();
-
-    // Mock implementation
-    const notifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-    const updated = notifications.map(n => ({
-      ...n,
-      read: true,
-      readAt: new Date().toISOString(),
-    }));
-    localStorage.setItem('vendorNotifications', JSON.stringify(updated));
-    return true;
+    const response = await api.put(`${BASE_URL}/read-all`);
+    return response.data.success;
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
     throw error;
@@ -90,17 +82,8 @@ export const markAllAsRead = async () => {
  */
 export const deleteNotification = async (notificationId) => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
-    //   method: 'DELETE',
-    // });
-    // return await response.json();
-
-    // Mock implementation
-    const notifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-    const updated = notifications.filter(n => n.id !== notificationId);
-    localStorage.setItem('vendorNotifications', JSON.stringify(updated));
-    return true;
+    const response = await api.delete(`${BASE_URL}/${notificationId}`);
+    return response.data.success;
   } catch (error) {
     console.error('Error deleting notification:', error);
     throw error;
@@ -113,15 +96,10 @@ export const deleteNotification = async (notificationId) => {
  */
 export const clearAllNotifications = async () => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications/clear`, {
-    //   method: 'DELETE',
-    // });
-    // return await response.json();
-
-    // Mock implementation
-    localStorage.setItem('vendorNotifications', JSON.stringify([]));
-    return true;
+    // Backend doesn't support clear all yet, so we mark all as read or delete individually
+    // For now, let's just mark all as read as a safe fallback or throw not implemented
+    console.warn('Clear all not supported by backend yet');
+    return false;
   } catch (error) {
     console.error('Error clearing notifications:', error);
     throw error;
@@ -134,16 +112,14 @@ export const clearAllNotifications = async () => {
  */
 export const getUnreadCount = async () => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${API_BASE_URL}/notifications/unread-count`);
-    // return await response.json();
-
-    // Mock implementation
-    const notifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-    return notifications.filter(n => !n.read).length;
+    const response = await api.get(`${BASE_URL}/vendor?isRead=false&limit=1`);
+    if (response.data.success) {
+      return response.data.unreadCount;
+    }
+    return 0;
   } catch (error) {
     console.error('Error fetching unread count:', error);
-    throw error;
+    return 0;
   }
 };
 

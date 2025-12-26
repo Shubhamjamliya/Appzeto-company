@@ -4,11 +4,16 @@ import { FiBell, FiCheck, FiX, FiFilter } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { autoInitDummyData } from '../../utils/initDummyData';
+import {
+  getNotifications,
+  markAsRead,
+  markAllAsRead
+} from '../../services/notificationService';
 
 const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, alerts, jobs, payments
 
   useLayoutEffect(() => {
@@ -28,42 +33,48 @@ const Notifications = () => {
     };
   }, []);
 
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const data = await getNotifications();
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Initialize dummy data if needed
-    autoInitDummyData();
+    fetchNotifications();
 
-    const loadNotifications = () => {
-      try {
-        const vendorNotifications = JSON.parse(localStorage.getItem('vendorNotifications') || '[]');
-        setNotifications(vendorNotifications);
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-      }
-    };
-
-    // Load immediately and after a delay
-    loadNotifications();
-    setTimeout(loadNotifications, 200);
-
-    window.addEventListener('vendorNotificationsUpdated', loadNotifications);
+    // Listen for real-time updates (if implemented via window event)
+    const handleUpdate = () => fetchNotifications();
+    window.addEventListener('vendorNotificationsUpdated', handleUpdate);
 
     return () => {
-      window.removeEventListener('vendorNotificationsUpdated', loadNotifications);
+      window.removeEventListener('vendorNotificationsUpdated', handleUpdate);
     };
   }, []);
 
-  const handleMarkAsRead = (id) => {
-    const updated = notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    );
-    setNotifications(updated);
-    localStorage.setItem('vendorNotifications', JSON.stringify(updated));
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markAsRead(id);
+      // Update local state to reflect change immediately
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
+      );
+    } catch (error) {
+      console.error('Failed to mark as read', error);
+    }
   };
 
-  const handleClearAll = () => {
-    if (window.confirm('Clear all notifications?')) {
-      localStorage.setItem('vendorNotifications', JSON.stringify([]));
-      setNotifications([]);
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
     }
   };
 
@@ -115,8 +126,8 @@ const Notifications = () => {
               key={filterOption.id}
               onClick={() => setFilter(filterOption.id)}
               className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${filter === filterOption.id
-                  ? 'text-white'
-                  : 'bg-white text-gray-700'
+                ? 'text-white'
+                : 'bg-white text-gray-700'
                 }`}
               style={
                 filter === filterOption.id
@@ -138,11 +149,11 @@ const Notifications = () => {
         {notifications.length > 0 && (
           <div className="flex justify-end mb-4">
             <button
-              onClick={handleClearAll}
+              onClick={handleMarkAllRead}
               className="text-sm font-semibold"
               style={{ color: themeColors.button }}
             >
-              Clear All
+              Mark All as Read
             </button>
           </div>
         )}
