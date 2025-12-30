@@ -45,6 +45,9 @@ const HomePage = ({ catalog, setCatalog }) => {
   });
   const [editingCardId, setEditingCardId] = useState(null);
 
+  // Uploading state for all modals
+  const [uploading, setUploading] = useState(false);
+
   const categories = useMemo(() => {
     const list = ensureIds(catalog).categories || [];
     return [...list].sort((a, b) => {
@@ -73,8 +76,9 @@ const HomePage = ({ catalog, setCatalog }) => {
               targetCategoryId: item.targetCategoryId ? (typeof item.targetCategoryId === 'object' ? item.targetCategoryId.toString() : item.targetCategoryId) : item.targetCategoryId,
               seeAllTargetCategoryId: item.seeAllTargetCategoryId ? (typeof item.seeAllTargetCategoryId === 'object' ? item.seeAllTargetCategoryId.toString() : item.seeAllTargetCategoryId) : item.seeAllTargetCategoryId,
               // For category sections cards
-              cards: item.cards ? item.cards.map(card => ({
+              cards: item.cards ? item.cards.map((card, cIdx) => ({
                 ...card,
+                id: card.id || (card._id ? card._id.toString() : `hcard-${Date.now()}-${idx}-${cIdx}`),
                 targetCategoryId: card.targetCategoryId ? (typeof card.targetCategoryId === 'object' ? card.targetCategoryId.toString() : card.targetCategoryId) : card.targetCategoryId
               })) : item.cards
             }));
@@ -853,11 +857,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           </div>
 
           {/* Category Sections (Cleaning essentials style) */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-gray-200">
+          {/* Category Sections (Modern Card Grid) */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100">
               <div>
-                <div className="text-base font-bold text-gray-800">Category Sections (home)</div>
-                <div className="text-xs text-gray-600">Each section renders like â€œCleaning essentialsâ€: title + See all + horizontal cards</div>
+                <h3 className="text-xl font-bold text-gray-900">Category Sections</h3>
+                <p className="text-sm text-gray-500 mt-1">Horizontal scrollable sections like "Cleaning Essentials"</p>
               </div>
               <button
                 type="button"
@@ -865,82 +870,108 @@ const HomePage = ({ catalog, setCatalog }) => {
                   resetCategorySectionForm();
                   setIsCategorySectionModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'linear-gradient(to right, #2874F0, #1e5fd4)',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
+                className="px-5 py-2.5 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                style={{ backgroundColor: '#2874F0' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
               >
-                <FiPlus className="w-4 h-4" style={{ display: 'block', color: '#ffffff' }} />
+                <FiPlus className="w-5 h-5" />
                 <span>Add Section</span>
               </button>
             </div>
 
             {(home.categorySections || []).length === 0 ? (
-              <div className="text-base text-gray-500">No sections</div>
+              <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <FiGrid className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No category sections added yet</p>
+                <button
+                  onClick={() => setIsCategorySectionModalOpen(true)}
+                  className="mt-2 font-semibold hover:underline text-sm"
+                  style={{ color: '#2874F0' }}
+                >
+                  Create one now
+                </button>
+              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-12">#</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Section Title</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">See All Redirect</th>
-                      <th className="text-center py-3 px-4 text-sm font-bold text-gray-700 w-24">Cards</th>
-                      <th className="text-center py-3 px-4 text-sm font-bold text-gray-700 w-32">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(home.categorySections || []).map((sec, idx) => (
-                      <tr key={sec.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-sm font-semibold text-gray-600">{idx + 1}</td>
-                        <td className="py-4 px-4">
-                          <div className="text-sm font-semibold text-gray-900">{sec.title || "—"}</div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="text-sm text-gray-600">{sec.seeAllTargetCategoryId ? getCategoryTitle(sec.seeAllTargetCategoryId) : "—"}</div>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="inline-block px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded">
-                            {(sec.cards || []).length}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {(home.categorySections || []).map((sec) => (
+                  <div
+                    key={sec.id}
+                    className="group bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden relative"
+                    style={{ borderColor: 'transparent' }}
+                  >
+                    <div className="absolute inset-0 pointer-events-none border border-gray-200 group-hover:border-blue-400 rounded-xl transition-colors duration-300"></div>
+
+                    <div className="p-4 flex-1 relative z-10">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-bold text-lg text-gray-900 line-clamp-1" title={sec.title}>{sec.title || "Untitled"}</h4>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingCategorySectionId(sec.id);
+                              setCategorySectionForm({
+                                title: sec.title || "",
+                                seeAllTargetCategoryId: sec.seeAllTargetCategoryId || "",
+                                cards: sec.cards || []
+                              });
+                              setIsCategorySectionModalOpen(true);
+                            }}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <FiEdit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              patchHome({
+                                categorySections: (home.categorySections || []).filter((x) => x.id !== sec.id),
+                              })
+                            }
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-semibold text-gray-500 uppercase tracking-wider">Redirect</span>
+                          <span className="truncate flex-1 font-medium text-gray-800">
+                            {sec.seeAllTargetCategoryId ? getCategoryTitle(sec.seeAllTargetCategoryId) : "None"}
                           </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCategorySectionId(sec.id);
-                                setCategorySectionForm({ ...sec });
-                                setIsCategorySectionModalOpen(true);
-                              }}
-                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                              title="Edit"
-                            >
-                              <FiEdit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                patchHome({
-                                  categorySections: (home.categorySections || []).filter((x) => x.id !== sec.id),
-                                })
-                              }
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                              title="Delete"
-                            >
-                              <FiTrash2 className="w-4 h-4" />
-                            </button>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Content Preview</span>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-xs font-bold">{(sec.cards || []).length} Cards</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="flex -space-x-2 overflow-hidden py-1 h-12 items-center">
+                            {(sec.cards || []).length === 0 && (
+                              <span className="text-xs text-gray-400 italic pl-1">No content</span>
+                            )}
+                            {(sec.cards || []).slice(0, 5).map((c, i) => (
+                              <div key={i} className="relative w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex-shrink-0">
+                                {c.imageUrl ? (
+                                  <img src={c.imageUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-bold">?</div>
+                                )}
+                              </div>
+                            ))}
+                            {(sec.cards || []).length > 5 && (
+                              <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-500 z-10">
+                                +{(sec.cards || []).length - 5}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1035,29 +1066,51 @@ const HomePage = ({ catalog, setCatalog }) => {
         <div className="space-y-4">
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setBannerForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setBannerForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+                        toast.success("Image uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Banner upload error:', error);
+                      const msg = error.response?.data?.message || error.message || "Failed to upload image";
+                      toast.error(msg);
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Banner upload error:', error);
-                    const msg = error.response?.data?.message || error.message || "Failed to upload image";
-                    toast.error(msg);
                   }
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {bannerForm.imageUrl && (
-              <img src={bannerForm.imageUrl} alt="Preview" className="h-24 w-24 object-cover rounded-lg border border-gray-200 mt-3" />
-            )}
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading...
+                </div>
+              )}
+              {bannerForm.imageUrl && !uploading && (
+                <div className="relative inline-block group">
+                  <img src={bannerForm.imageUrl} alt="Preview" className="h-24 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" />
+                  <button
+                    onClick={() => setBannerForm(p => ({ ...p, imageUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Text (optional)</label>
@@ -1085,13 +1138,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={saveBanner}
-              className="flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingBannerId ? "Update Banner" : "Add Banner"}
+              {uploading ? "Uploading..." : (editingBannerId ? "Update Banner" : "Add Banner")}
             </button>
             <button
               onClick={resetBannerForm}
@@ -1111,29 +1163,51 @@ const HomePage = ({ catalog, setCatalog }) => {
         <div className="space-y-4">
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setPromoForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setPromoForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+                        toast.success("Image uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Promo upload error:', error);
+                      const msg = error.response?.data?.message || error.message || "Failed to upload image";
+                      toast.error(msg);
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Promo upload error:', error);
-                    const msg = error.response?.data?.message || error.message || "Failed to upload image";
-                    toast.error(msg);
                   }
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {promoForm.imageUrl && (
-              <img src={promoForm.imageUrl} alt="Preview" className="h-24 w-24 object-cover rounded-lg border border-gray-200 mt-3" />
-            )}
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading...
+                </div>
+              )}
+              {promoForm.imageUrl && !uploading && (
+                <div className="relative inline-block group">
+                  <img src={promoForm.imageUrl} alt="Preview" className="h-24 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" />
+                  <button
+                    onClick={() => setPromoForm(p => ({ ...p, imageUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -1192,13 +1266,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={savePromo}
-              className="flex-1 py-3.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingPromoId ? "Update Promo" : "Add Promo"}
+              {uploading ? "Uploading..." : (editingPromoId ? "Update Promo" : "Add Promo")}
             </button>
             <button
               onClick={resetPromoForm}
@@ -1227,34 +1300,54 @@ const HomePage = ({ catalog, setCatalog }) => {
           </div>
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">GIF/Video</label>
-            <input
-              type="file"
-              accept="image/gif,video/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setCuratedForm((p) => ({ ...p, gifUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/gif,video/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setCuratedForm((p) => ({ ...p, gifUrl: response.imageUrl }));
+                        toast.success("Media uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Curated upload error:', error);
+                      toast.error("Failed to upload image/video");
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Curated upload error:', error);
-                    toast.error("Failed to upload image/video");
                   }
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {curatedForm.gifUrl && (
-              <div className="mt-3">
-                {curatedForm.gifUrl.match(/\.(gif|webp)$/i) ? (
-                  <img src={curatedForm.gifUrl} alt="Preview" className="h-32 w-32 object-cover rounded-lg border border-gray-200" />
-                ) : (
-                  <video src={curatedForm.gifUrl} className="h-32 w-32 object-cover rounded-lg border border-gray-200" controls />
-                )}
-              </div>
-            )}
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading media...
+                </div>
+              )}
+              {curatedForm.gifUrl && !uploading && (
+                <div className="mt-3 relative inline-block group">
+                  {curatedForm.gifUrl.match(/\.(gif|webp)$/i) ? (
+                    <img src={curatedForm.gifUrl} alt="Preview" className="h-32 w-auto object-cover rounded-lg border border-gray-200" />
+                  ) : (
+                    <video src={curatedForm.gifUrl} className="h-32 w-auto object-cover rounded-lg border border-gray-200" controls />
+                  )}
+                  <button
+                    onClick={() => setCuratedForm(p => ({ ...p, gifUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove media"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">YouTube URL</label>
@@ -1273,13 +1366,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={saveCurated}
-              className="flex-1 py-3.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingCuratedId ? "Update Curated Service" : "Add Curated Service"}
+              {uploading ? "Uploading..." : (editingCuratedId ? "Update Curated Service" : "Add Curated Service")}
             </button>
             <button
               onClick={resetCuratedForm}
@@ -1308,29 +1400,51 @@ const HomePage = ({ catalog, setCatalog }) => {
           </div>
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setNoteworthyForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setNoteworthyForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+                        toast.success("Image uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Noteworthy upload error:', error);
+                      const msg = error.response?.data?.message || error.message || "Failed to upload image";
+                      toast.error(msg);
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Noteworthy upload error:', error);
-                    const msg = error.response?.data?.message || error.message || "Failed to upload image";
-                    toast.error(msg);
                   }
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {noteworthyForm.imageUrl && (
-              <img src={noteworthyForm.imageUrl} alt="Preview" className="h-32 w-32 object-cover rounded-lg border border-gray-200 mt-3" />
-            )}
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading...
+                </div>
+              )}
+              {noteworthyForm.imageUrl && !uploading && (
+                <div className="relative inline-block group">
+                  <img src={noteworthyForm.imageUrl} alt="Preview" className="h-24 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" />
+                  <button
+                    onClick={() => setNoteworthyForm(p => ({ ...p, imageUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <CategoryRedirectSelect
             value={noteworthyForm.targetCategoryId}
@@ -1340,13 +1454,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={saveNoteworthy}
-              className="flex-1 py-3.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingNoteworthyId ? "Update" : "Add"}
+              {uploading ? "Uploading..." : (editingNoteworthyId ? "Update" : "Add")}
             </button>
             <button
               onClick={resetNoteworthyForm}
@@ -1376,29 +1489,51 @@ const HomePage = ({ catalog, setCatalog }) => {
           </div>
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setBookedForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setBookedForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+                        toast.success("Image uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Booked upload error:', error);
+                      const msg = error.response?.data?.message || error.message || "Failed to upload image";
+                      toast.error(msg);
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Booked upload error:', error);
-                    const msg = error.response?.data?.message || error.message || "Failed to upload image";
-                    toast.error(msg);
                   }
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {bookedForm.imageUrl && (
-              <img src={bookedForm.imageUrl} alt="Preview" className="h-32 w-32 object-cover rounded-lg border border-gray-200 mt-3" />
-            )}
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading...
+                </div>
+              )}
+              {bookedForm.imageUrl && !uploading && (
+                <div className="relative inline-block group">
+                  <img src={bookedForm.imageUrl} alt="Preview" className="h-24 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" />
+                  <button
+                    onClick={() => setBookedForm(p => ({ ...p, imageUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
@@ -1487,13 +1622,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={saveBooked}
-              className="flex-1 py-3.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingBookedId ? "Update" : "Add"}
+              {uploading ? "Uploading..." : (editingBookedId ? "Update" : "Add")}
             </button>
             <button
               onClick={resetBookedForm}
@@ -1593,7 +1727,17 @@ const HomePage = ({ catalog, setCatalog }) => {
                           type="button"
                           onClick={() => {
                             setEditingCardId(card.id);
-                            setCardForm({ ...card });
+                            setCardForm({
+                              id: card.id,
+                              title: card.title || "",
+                              imageUrl: card.imageUrl || "",
+                              rating: card.rating || "",
+                              reviews: card.reviews || "",
+                              price: card.price || "",
+                              originalPrice: card.originalPrice || "",
+                              discount: card.discount || "",
+                              targetCategoryId: card.targetCategoryId || ""
+                            });
                             setIsCardModalOpen(true);
                           }}
                           className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -1656,30 +1800,50 @@ const HomePage = ({ catalog, setCatalog }) => {
 
           <div>
             <label className="block text-base font-bold text-gray-900 mb-2">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    const response = await serviceService.uploadImage(file);
-                    if (response.success) {
-                      setCardForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const response = await serviceService.uploadImage(file);
+                      if (response.success) {
+                        setCardForm((p) => ({ ...p, imageUrl: response.imageUrl }));
+                        toast.success("Image uploaded!");
+                      }
+                    } catch (error) {
+                      console.error('Card upload error:', error);
+                      toast.error("Failed to upload image");
+                    } finally {
+                      setUploading(false);
                     }
-                  } catch (error) {
-                    console.error('Card upload error:', error);
-                    toast.error("Failed to upload image");
                   }
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-            />
-            {cardForm.imageUrl && (
-              <div className="mt-2">
-                <img src={cardForm.imageUrl} alt="Preview" className="h-24 w-24 object-cover rounded-lg border border-gray-200" />
-              </div>
-            )}
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {uploading && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading...
+                </div>
+              )}
+              {cardForm.imageUrl && !uploading && (
+                <div className="relative inline-block group">
+                  <img src={cardForm.imageUrl} alt="Preview" className="h-24 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" />
+                  <button
+                    onClick={() => setCardForm(p => ({ ...p, imageUrl: "" }))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove image"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
             <input
               type="text"
               value={cardForm.imageUrl}
@@ -1787,13 +1951,12 @@ const HomePage = ({ catalog, setCatalog }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={saveCard}
-              className="flex-1 py-3.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: '#2874F0' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+              disabled={uploading}
+              className={`flex-1 py-3.5 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${uploading ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
+              style={{ backgroundColor: uploading ? '#cbd5e1' : '#2874F0' }}
             >
               <FiSave className="w-5 h-5" />
-              {editingCardId ? "Update Card" : "Add Card"}
+              {uploading ? "Uploading..." : (editingCardId ? "Update Card" : "Add Card")}
             </button>
             <button
               onClick={resetCardForm}

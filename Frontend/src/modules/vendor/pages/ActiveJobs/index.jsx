@@ -1,17 +1,25 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBriefcase, FiMapPin, FiClock, FiUser, FiFilter, FiSearch } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 
-import { getBookings } from '../../services/bookingService';
+import { getBookings, assignWorker as assignWorkerApi } from '../../services/bookingService';
+import { ConfirmDialog } from '../../components/common';
 
 const ActiveJobs = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [filter, setFilter] = useState('all'); // all, assigned, in_progress, completed
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { }
+  });
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -47,9 +55,9 @@ const ActiveJobs = () => {
           location: {
             address: job.address?.addressLine1 || job.location?.address || 'Address not available'
           },
-          price: job.finalAmount || job.price || 0,
+          price: (job.vendorEarnings || (job.finalAmount ? job.finalAmount * 0.9 : 0)).toFixed(2),
           status: job.status,
-          assignedTo: job.workerId ? { name: job.workerId.name } : null,
+          assignedTo: job.workerId ? { name: job.workerId.name } : (job.assignedAt ? { name: 'You (Self)' } : null),
           timeSlot: {
             date: job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Date',
             time: job.scheduledTime || 'Time'
@@ -71,6 +79,26 @@ const ActiveJobs = () => {
       window.removeEventListener('vendorJobsUpdated', loadJobs);
     };
   }, []);
+
+  const handleAssignToSelf = async (jobId) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Assign to Self',
+      message: 'Are you sure you want to do this job yourself?',
+      onConfirm: async () => {
+        try {
+          const response = await assignWorkerApi(jobId, 'SELF');
+          if (response && response.success) {
+            toast.success("Assigned to yourself!");
+            window.location.reload();
+          }
+        } catch (error) {
+          console.error("Error assigning to self:", error);
+          toast.error("Failed to assign to yourself");
+        }
+      }
+    });
+  };
 
   const getStatusColor = (status) => {
     const colors = {
@@ -267,6 +295,41 @@ const ActiveJobs = () => {
                         <span className="text-gray-700 font-medium">{job.timeSlot?.date} • {job.timeSlot?.time}</span>
                       </div>
                     </div>
+
+                    {/* Quick Action Button for Unassigned Jobs */}
+                    {['ACCEPTED', 'CONFIRMED'].includes(job.status?.toUpperCase()) && !job.assignedTo && (
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignToSelf(job.id);
+                          }}
+                          className="flex-1 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                          style={{
+                            background: 'white',
+                            color: themeColors.button,
+                            border: `1.5px solid ${themeColors.button}`,
+                          }}
+                        >
+                          <FiUser className="w-3.5 h-3.5" />
+                          Do it Myself
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/vendor/booking/${job.id}/assign-worker`);
+                          }}
+                          className="flex-1 py-2 rounded-lg text-xs font-bold text-white transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                          style={{
+                            background: themeColors.button,
+                            boxShadow: `0 2px 8px ${themeColors.button}30`,
+                          }}
+                        >
+                          <FiUser className="w-3.5 h-3.5" />
+                          Assign Worker
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -274,6 +337,15 @@ const ActiveJobs = () => {
           </div>
         )}
       </main>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+      />
 
       <BottomNav />
     </div>

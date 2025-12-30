@@ -189,12 +189,16 @@ const WorkersList = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <div
-                            className="p-1.5 rounded-lg"
+                            className="p-1 rounded-lg"
                             style={{
                               background: `${statusColor}15`,
                             }}
                           >
-                            <FiUser className="w-4 h-4" style={{ color: statusColor }} />
+                            {worker.profilePhoto ? (
+                              <img src={worker.profilePhoto} alt={worker.name} className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <FiUser className="w-4 h-4" style={{ color: statusColor }} />
+                            )}
                           </div>
                           <h3 className="font-bold text-gray-800 text-base">{worker.name}</h3>
                         </div>

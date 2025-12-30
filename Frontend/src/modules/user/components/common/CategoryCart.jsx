@@ -322,10 +322,7 @@ const CategoryCart = ({
         )}
       </main>
 
-      <BottomNav
-        cartCount={cartCount}
-        onCartClick={handleCartClick}
-      />
+      {/* BottomNav removed as per request */}
     </div>
   );
 };

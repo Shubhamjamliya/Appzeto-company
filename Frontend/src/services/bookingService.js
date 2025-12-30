@@ -8,6 +8,7 @@ import api from './api';
 export const bookingService = {
   // Create a new booking
   create: async (bookingData) => {
+    console.log('[BookingService] Creating booking with payload:', JSON.stringify(bookingData, null, 2));
     const response = await api.post('/users/bookings', bookingData);
     return response.data;
   },

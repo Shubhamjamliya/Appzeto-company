@@ -6,7 +6,7 @@ import LocationPicker from './LocationPicker';
 
 const libraries = ['places', 'geometry'];
 
-const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseNumberChange, onSave }) => {
+const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = '', onHouseNumberChange, onSave }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [mapAddress, setMapAddress] = useState('');
@@ -200,7 +200,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address, houseNumber, onHouseN
             {/* Save Button */}
             <button
               onClick={() => onSave(houseNumber, selectedLocation)}
-              disabled={!houseNumber.trim() || !mapAddress}
+              disabled={!(houseNumber || '').trim() || !mapAddress}
               className="w-full py-4 rounded-xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg mb-8"
               style={{
                 backgroundColor: themeColors.button,

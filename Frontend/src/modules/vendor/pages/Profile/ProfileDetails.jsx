@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiTag } from 'react-icons/fi';
+import { vendorAuthService } from '../../../../services/authService';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -24,6 +25,7 @@ const ProfileDetails = () => {
     address: 'Indore, Madhya Pradesh',
     serviceCategory: 'Electrician',
     skills: ['Fan Repair', 'AC', 'Lightings'],
+    profilePhoto: '',
   });
 
   useLayoutEffect(() => {
@@ -44,27 +46,83 @@ const ProfileDetails = () => {
   }, []);
 
   useEffect(() => {
-    const loadProfile = () => {
+    const loadProfile = async () => {
       try {
+        // Optimistic load from local storage
+        const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
         const vendorProfile = JSON.parse(localStorage.getItem('vendorProfile') || '{}');
-        if (Object.keys(vendorProfile).length > 0) {
-          // If serviceCategory or skills are missing, set defaults
-          const updatedProfile = {
-            ...vendorProfile,
-            serviceCategory: vendorProfile.serviceCategory || 'Electrician',
-            skills: vendorProfile.skills || ['Fan Repair', 'AC', 'Lightings', 'House Wiring']
-          };
-          
-          // Update localStorage if missing
-          if (!vendorProfile.serviceCategory || !vendorProfile.skills || vendorProfile.skills.length === 0) {
-            localStorage.setItem('vendorProfile', JSON.stringify(updatedProfile));
+
+        // Merge sources, preferring vendorData (which might be fresher from other pages)
+        const storedData = { ...vendorProfile, ...localVendorData };
+
+        if (Object.keys(storedData).length > 0) {
+          // Format address if object
+          let addressString = storedData.address;
+          if (typeof storedData.address === 'object' && storedData.address !== null) {
+            if (storedData.address.fullAddress) {
+              addressString = storedData.address.fullAddress;
+            } else {
+              addressString = `${storedData.address.addressLine1 || ''} ${storedData.address.addressLine2 || ''} ${storedData.address.city || ''} ${storedData.address.state || ''} ${storedData.address.pincode || ''}`.trim() || 'Not set';
+            }
           }
-          
+
           setProfile(prev => ({
             ...prev,
-            ...updatedProfile
+            name: storedData.name || 'Vendor Name',
+            businessName: storedData.businessName || null,
+            phone: storedData.phone || '',
+            email: storedData.email || '',
+            address: addressString || 'Not set',
+            serviceCategory: storedData.serviceCategory || storedData.service || 'Electrician',
+            skills: storedData.skills || ['Fan Repair', 'AC', 'Lightings'],
+            profilePhoto: storedData.profilePhoto || ''
           }));
         }
+
+        // Fetch fresh data from API
+        const response = await vendorAuthService.getProfile();
+        if (response.success) {
+          const apiData = response.vendor;
+
+          // Format address
+          let formattedAddress = apiData.address;
+          if (typeof apiData.address === 'object' && apiData.address !== null) {
+            if (apiData.address.fullAddress) {
+              formattedAddress = apiData.address.fullAddress;
+            } else {
+              formattedAddress = `${apiData.address.addressLine1 || ''} ${apiData.address.addressLine2 || ''} ${apiData.address.city || ''} ${apiData.address.state || ''} ${apiData.address.pincode || ''}`.trim() || 'Not set';
+            }
+          }
+
+          const newProfile = {
+            name: apiData.name,
+            businessName: apiData.businessName,
+            phone: apiData.phone,
+            email: apiData.email,
+            address: formattedAddress,
+            serviceCategory: apiData.service,
+            skills: [], // TODO: If API returns skills, map them here. Currently relying on local match or default
+            profilePhoto: apiData.profilePhoto
+          };
+
+          // Merge with existing state to keep skills if API doesn't return them yet
+          setProfile(prev => ({
+            ...prev,
+            ...newProfile,
+            // Keep local skills if API skills are empty/undefined (since backend schema might not have skills array yet)
+            skills: (apiData.skills && apiData.skills.length > 0) ? apiData.skills : prev.skills
+          }));
+
+          // Update local storage
+          const finalData = { ...apiData };
+          if (!finalData.skills || finalData.skills.length === 0) {
+            finalData.skills = storedData.skills || [];
+          }
+          localStorage.setItem('vendorData', JSON.stringify(finalData));
+          // Also update vendorProfile to keep sync (though we are moving towards vendorData)
+          localStorage.setItem('vendorProfile', JSON.stringify({ ...storedData, ...apiData }));
+        }
+
       } catch (error) {
         console.error('Error loading profile:', error);
       }
@@ -101,94 +159,137 @@ const ProfileDetails = () => {
         </div>
 
         {/* Profile Info - Compact List */}
-        <div className="space-y-2.5 mb-6">
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiUser className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Name</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.name}</p>
+        <div className="space-y-4 mb-6">
+
+          {/* Profile Photo Section */}
+          <div className="flex justify-center mb-2">
+            <div className="w-28 h-28 rounded-full p-1 bg-white shadow-lg relative">
+              <div className="w-full h-full rounded-full overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100">
+                {profile.profilePhoto ? (
+                  <img
+                    src={profile.profilePhoto}
+                    alt={profile.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <FiUser className="w-10 h-10 text-gray-300" />
+                )}
+              </div>
+              <div
+                className="absolute bottom-1 right-1 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md text-white"
+                style={{ background: themeColors.button }}
+              >
+                <FiUser className="w-4 h-4" />
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiBriefcase className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Business Name</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.businessName}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiPhone className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Phone</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.phone}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiMail className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Email</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.email}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiMapPin className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Address</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.address}</p>
-            </div>
-          </div>
-
-          {/* Service Category */}
-          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg" style={{ background: `${themeColors.icon}15` }}>
-              <FiTag className="w-5 h-5" style={{ color: themeColors.icon }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">Service Category</p>
-              <p className="text-gray-900 font-semibold text-sm">{profile.serviceCategory || 'Not set'}</p>
-            </div>
-          </div>
-
-          {/* Skills */}
-          <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white border border-gray-100">
-            <div className="p-2 rounded-lg mt-0.5" style={{ background: `${themeColors.button}15` }}>
-              <FiTag className="w-5 h-5" style={{ color: themeColors.button }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Skills</p>
-              {profile.skills && profile.skills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile.skills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                      style={{
-                        background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.button}dd 100%)`,
-                        color: '#FFFFFF',
-                        boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.3)}`,
-                      }}
-                    >
-                      {skill}
-                    </span>
-                  ))}
+          {/* Personal Info Group */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Personal Details</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.icon}15` }}>
+                  <FiUser className="w-5 h-5" style={{ color: themeColors.icon }} />
                 </div>
-              ) : (
-                <p className="text-gray-400 text-sm font-medium">Not set</p>
-              )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Full Name</p>
+                  <p className="text-gray-900 font-bold text-sm truncate">{profile.name}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.icon}15` }}>
+                  <FiBriefcase className="w-5 h-5" style={{ color: themeColors.icon }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Business Name</p>
+                  <p className="text-gray-900 font-bold text-sm truncate">{profile.businessName}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Info Group */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Contact Information</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.icon}15` }}>
+                  <FiPhone className="w-5 h-5" style={{ color: themeColors.icon }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Mobile Number</p>
+                  <p className="text-gray-900 font-bold text-sm truncate">{profile.phone}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.icon}15` }}>
+                  <FiMail className="w-5 h-5" style={{ color: themeColors.icon }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Email Address</p>
+                  <p className="text-gray-900 font-bold text-sm truncate">{profile.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.icon}15` }}>
+                  <FiMapPin className="w-5 h-5" style={{ color: themeColors.icon }} />
+                </div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Address</p>
+                  <p className="text-gray-900 font-bold text-sm leading-relaxed">{profile.address}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Professional Info Group */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Professional Profile</h4>
+            <div className="space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${themeColors.button}15` }}>
+                  <FiBriefcase className="w-5 h-5" style={{ color: themeColors.button }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Service Category</p>
+                  <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 text-xs font-bold border border-teal-100">
+                    {profile.serviceCategory || 'Not set'}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${themeColors.button}15` }}>
+                    <FiTag className="w-3.5 h-3.5" style={{ color: themeColors.button }} />
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">Expertise & Skills</p>
+                </div>
+
+                {profile.skills && profile.skills.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide"
+                        style={{
+                          background: `linear-gradient(135deg, ${themeColors.button}08 0%, ${themeColors.button}12 100%)`,
+                          color: themeColors.button,
+                          border: `1px solid ${themeColors.button}25`,
+                        }}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm italic pl-1">No skills added yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

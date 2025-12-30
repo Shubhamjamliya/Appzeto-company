@@ -97,9 +97,41 @@ const vendorSchema = new mongoose.Schema({
     }
   },
   wallet: {
-    balance: {
+    dues: {
+      type: Number,
+      default: 0 // Amount owed TO admin (from cash collection)
+    },
+    earnings: {
+      type: Number,
+      default: 0 // Amount owed BY admin (net income from jobs)
+    },
+    totalCashCollected: {
       type: Number,
       default: 0
+    },
+    totalWithdrawn: {
+      type: Number,
+      default: 0
+    },
+    totalSettled: {
+      type: Number,
+      default: 0
+    },
+    cashLimit: {
+      type: Number,
+      default: 10000
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
+    blockedAt: {
+      type: Date,
+      default: null
+    },
+    blockReason: {
+      type: String,
+      default: null
     }
   },
   isActive: {
@@ -171,6 +203,10 @@ const vendorSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Indexes for faster queries
+vendorSchema.index({ approvalStatus: 1 });
+vendorSchema.index({ 'wallet.earnings': -1 });
 
 // Hash password before saving
 vendorSchema.pre('save', async function (next) {

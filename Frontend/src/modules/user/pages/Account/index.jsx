@@ -17,7 +17,8 @@ import {
   FiMapPin,
   FiCreditCard,
   FiSettings,
-  FiChevronRight
+  FiChevronRight,
+  FiBell
 } from 'react-icons/fi';
 import { MdAccountBalanceWallet } from 'react-icons/md';
 
@@ -45,7 +46,8 @@ const Account = () => {
             phone: userData.phone || '',
             email: userData.email || '',
             isPhoneVerified: userData.isPhoneVerified || false,
-            isEmailVerified: userData.isEmailVerified || false
+            isEmailVerified: userData.isEmailVerified || false,
+            profilePhoto: userData.profilePhoto || ''
           });
         }
 
@@ -57,7 +59,8 @@ const Account = () => {
             phone: response.user.phone || '',
             email: response.user.email || '',
             isPhoneVerified: response.user.isPhoneVerified || false,
-            isEmailVerified: response.user.isEmailVerified || false
+            isEmailVerified: response.user.isEmailVerified || false,
+            profilePhoto: response.user.profilePhoto || ''
           });
         }
       } catch (error) {
@@ -165,67 +168,104 @@ const Account = () => {
   };
 
 
-
   if (isLoading) {
     return <LoadingSpinner />;
   }
-
   return (
     <div
       className="min-h-screen pb-24"
       style={{ background: themeColors.backgroundGradient }}
     >
       {/* 1. Header Section */}
-      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <FiArrowLeft className="w-5 h-5 text-gray-800" />
-        </button>
-        <div className="flex items-center gap-2">
-          <FiUser className="w-5 h-5" style={{ color: themeColors.button }} />
-          <h1 className="text-lg font-bold text-gray-900">Account</h1>
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <FiArrowLeft className="w-5 h-5 text-gray-800" />
+          </button>
+          <div className="flex items-center gap-2">
+            <FiUser className="w-5 h-5" style={{ color: themeColors.button }} />
+            <h1 className="text-lg font-bold text-gray-900">Account</h1>
+          </div>
         </div>
+        <button
+          onClick={() => navigate('/user/notifications')}
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <FiBell className="w-6 h-6 text-gray-700" />
+        </button>
       </div>
 
       <main className="pt-4 space-y-4">
-        {/* 2. Customer Profile Card */}
+        {/* 2. Customer Profile Card - Colorful & Modern Design */}
         <div className="px-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
-                style={{ backgroundColor: themeColors.button }}
-              >
-                {isLoading ? '...' : getInitials()}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {isLoading ? 'Loading...' : userProfile.name}
-                  </h2>
+          <div
+            className="rounded-3xl p-5 shadow-lg relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.brand.teal}cc 100%)`,
+              boxShadow: `0 10px 30px -5px ${themeColors.button}66`,
+            }}
+          >
+            {/* Background Decorative Circles */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-black opacity-5 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-4">
+                {/* Avatar with Ring */}
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full p-0.5 bg-white/30 backdrop-blur-sm">
+                    {userProfile.profilePhoto ? (
+                      <img
+                        src={userProfile.profilePhoto}
+                        alt={userProfile.name}
+                        className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-2xl border-2 border-white shadow-sm"
+                        style={{
+                          background: `linear-gradient(to bottom right, ${themeColors.brand.gold}, ${themeColors.brand.orange})`
+                        }}
+                      >
+                        {isLoading ? '...' : getInitials()}
+                      </div>
+                    )}
+                  </div>
+                  {/* Verified Badge */}
                   {userProfile.isPhoneVerified && (
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}1A` }}>
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: themeColors.button }} />
+                    <div className="absolute -bottom-1 -right-1 bg-white text-green-500 rounded-full p-1 shadow-md">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 font-medium">
-                  {isLoading ? 'Loading...' : (userProfile.phone ? formatPhoneNumber(userProfile.phone) : 'No phone number')}
-                </p>
-              </div>
-            </div>
 
-            <button
-              onClick={handleEditClick}
-              className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center transition-colors border border-gray-100"
-              style={{ color: themeColors.button }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${themeColors.brand.teal}1A`}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <FiEdit3 className="w-4 h-4" />
-            </button>
+                {/* User Info */}
+                <div className="flex flex-col text-white">
+                  <h2 className="text-xl font-bold leading-tight flex items-center gap-2">
+                    {isLoading ? 'Loading...' : userProfile.name}
+                  </h2>
+                  <p className="text-sm font-medium text-white/80 mt-1">
+                    {isLoading ? 'Loading...' : (userProfile.phone ? formatPhoneNumber(userProfile.phone) : 'No phone number')}
+                  </p>
+                  <p className="text-xs font-medium text-white/70 mt-0.5 truncate max-w-[150px]">
+                    {userProfile.email || 'Add email address'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Edit Button */}
+              <button
+                onClick={handleEditClick}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/30 transition-all active:scale-95 border border-white/20"
+              >
+                <FiEdit3 className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
         </div>
 

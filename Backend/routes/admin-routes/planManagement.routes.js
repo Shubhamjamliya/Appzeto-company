@@ -11,11 +11,11 @@ const {
 } = require('../../controllers/planController');
 
 // Routes
-// GET /api/admin/plans - Get all plans (including inactive potentially)
-router.get('/plans', authenticate, isAdmin, getAllPlans);
+// GET /api/admin/plans - Get all plans (Publicly accessible for authenticated users)
+router.get('/plans', authenticate, getAllPlans);
 
 // GET /api/admin/plans/:id - Get single plan
-router.get('/plans/:id', authenticate, isAdmin, getPlanById);
+router.get('/plans/:id', authenticate, getPlanById);
 
 // POST /api/admin/plans - Create new plan
 router.post('/plans', authenticate, isAdmin, createPlan);

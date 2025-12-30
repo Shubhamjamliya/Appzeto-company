@@ -43,6 +43,7 @@ const BOOKING_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
   ASSIGNED: 'assigned',
+  JOURNEY_STARTED: 'journey_started',
   VISITED: 'visited',
   IN_PROGRESS: 'in_progress',
   WORK_DONE: 'work_done',
@@ -56,7 +57,8 @@ const PAYMENT_STATUS = {
   PENDING: 'pending',
   SUCCESS: 'success',
   FAILED: 'failed',
-  REFUNDED: 'refunded'
+  REFUNDED: 'refunded',
+  COLLECTED_BY_VENDOR: 'collected_by_vendor'
 };
 
 // Service Status

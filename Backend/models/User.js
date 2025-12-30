@@ -62,6 +62,24 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+  plans: {
+    isActive: {
+      type: Boolean,
+      default: false
+    },
+    name: {
+      type: String,
+      default: null
+    },
+    expiry: {
+      type: Date,
+      default: null
+    },
+    price: {
+      type: Number,
+      default: 0
+    }
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -90,14 +108,7 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  isPlusMember: {
-    type: Boolean,
-    default: false
-  },
-  plusExpiry: {
-    type: Date,
-    default: null
-  }
+
 }, {
   timestamps: true
 });

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiGift, FiShoppingCart, FiUser } from 'react-icons/fi';
-import { HiHome, HiGift, HiShoppingCart, HiUser } from 'react-icons/hi';
+import { FiHome, FiGift, FiShoppingCart, FiUser, FiTrash2 } from 'react-icons/fi';
+import { HiHome, HiGift, HiShoppingCart, HiUser, HiTrash } from 'react-icons/hi';
 import { gsap } from 'gsap';
 import { themeColors } from '../../../../theme';
 
@@ -70,6 +70,7 @@ const BottomNav = React.memo(() => {
   const navItems = [
     { id: 'home', label: 'Home', icon: FiHome, filledIcon: HiHome, path: '/user' },
     { id: 'rewards', label: 'Rewards', icon: FiGift, filledIcon: HiGift, path: '/user/rewards' },
+    { id: 'scrap', label: 'Scrap', icon: FiTrash2, filledIcon: HiTrash, path: '/user/scrap' },
     { id: 'cart', label: 'Cart', icon: FiShoppingCart, filledIcon: HiShoppingCart, path: '/user/cart', isCart: true },
     { id: 'account', label: 'Account', icon: FiUser, filledIcon: HiUser, path: '/user/account' },
   ];
@@ -77,6 +78,7 @@ const BottomNav = React.memo(() => {
   const getActiveTab = () => {
     if (location.pathname === '/user' || location.pathname === '/user/') return 'home';
     if (location.pathname === '/user/rewards') return 'rewards';
+    if (location.pathname === '/user/scrap') return 'scrap';
     if (location.pathname === '/user/cart') return 'cart';
     if (location.pathname === '/user/account') return 'account';
     return 'home';

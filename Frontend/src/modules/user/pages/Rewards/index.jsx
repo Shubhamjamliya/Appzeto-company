@@ -2,13 +2,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import BottomNav from '../../components/layout/BottomNav';
-import { FiCopy, FiArrowLeft, FiGift } from 'react-icons/fi';
+import { FiCopy, FiArrowLeft, FiGift, FiBell } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebookMessenger } from 'react-icons/fa';
 import { themeColors } from '../../../../theme';
 
 const Rewards = () => {
   const navigate = useNavigate();
-
   const handleCopyLink = () => {
     // Copy referral link to clipboard
     const referralLink = 'https://appzeto.com/refer/your-link';
@@ -27,24 +26,31 @@ const Rewards = () => {
     const url = 'https://appzeto.com/refer/your-link';
     window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=your-app-id`, '_blank');
   };
-
   return (
     <div
       className="min-h-screen pb-20"
       style={{ background: themeColors.backgroundGradient }}
     >
       {/* Header */}
-      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <FiArrowLeft className="w-5 h-5 text-gray-800" />
-        </button>
-        <div className="flex items-center gap-2">
-          <FiGift className="w-5 h-5" style={{ color: '#00A6A6' }} />
-          <h1 className="text-lg font-bold text-gray-900">Refer & Earn</h1>
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <FiArrowLeft className="w-5 h-5 text-gray-800" />
+          </button>
+          <div className="flex items-center gap-2">
+            <FiGift className="w-5 h-5" style={{ color: '#00A6A6' }} />
+            <h1 className="text-lg font-bold text-gray-900">Refer & Earn</h1>
+          </div>
         </div>
+        <button
+          onClick={() => navigate('/user/notifications')}
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <FiBell className="w-6 h-6 text-gray-700" />
+        </button>
       </div>
 
       <main>

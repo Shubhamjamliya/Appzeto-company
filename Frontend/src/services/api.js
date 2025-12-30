@@ -14,15 +14,23 @@ const api = axios.create({
 
 // Helper to get token keys based on role/path
 const getTokenKeys = (url) => {
-  if (url?.includes('/vendors') || window.location.pathname.startsWith('/vendor')) {
-    return { access: 'vendorAccessToken', refresh: 'vendorRefreshToken', role: 'vendor' };
-  }
-  if (url?.includes('/workers') || window.location.pathname.startsWith('/worker')) {
-    return { access: 'workerAccessToken', refresh: 'workerRefreshToken', role: 'worker' };
-  }
-  if (url?.includes('/admin') || window.location.pathname.startsWith('/admin')) {
+  // 1. Prioritize current page context for role-based tokens
+  if (window.location.pathname.startsWith('/admin')) {
     return { access: 'adminAccessToken', refresh: 'adminRefreshToken', role: 'admin' };
   }
+  if (window.location.pathname.startsWith('/vendor')) {
+    return { access: 'vendorAccessToken', refresh: 'vendorRefreshToken', role: 'vendor' };
+  }
+  if (window.location.pathname.startsWith('/worker')) {
+    return { access: 'workerAccessToken', refresh: 'workerRefreshToken', role: 'worker' };
+  }
+
+  // 2. Explicitly detect auth routes regardless of current page (for cross-role login/actions)
+  if (url?.includes('/admin/auth')) return { access: 'adminAccessToken', refresh: 'adminRefreshToken', role: 'admin' };
+  if (url?.includes('/vendors/auth')) return { access: 'vendorAccessToken', refresh: 'vendorRefreshToken', role: 'vendor' };
+  if (url?.includes('/workers/auth')) return { access: 'workerAccessToken', refresh: 'workerRefreshToken', role: 'worker' };
+
+  // 3. Fallback to user token (most common case for user app)
   return { access: 'accessToken', refresh: 'refreshToken', role: 'user' };
 };
 

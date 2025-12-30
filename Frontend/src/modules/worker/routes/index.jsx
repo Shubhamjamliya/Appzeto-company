@@ -38,14 +38,16 @@ const lazyLoad = (importFunc) => {
 // Lazy load worker pages for code splitting
 const Login = lazy(() => import('../pages/login'));
 const Signup = lazy(() => import('../pages/signup'));
-const Dashboard = lazyLoad(() => import('../pages/Dashboard'));
-const AssignedJobs = lazyLoad(() => import('../pages/AssignedJobs'));
-const JobDetails = lazyLoad(() => import('../pages/JobDetails'));
-const Profile = lazyLoad(() => import('../pages/Profile'));
-const EditProfile = lazyLoad(() => import('../pages/Profile/EditProfile'));
-const Settings = lazyLoad(() => import('../pages/Settings'));
-const Notifications = lazyLoad(() => import('../pages/Notifications'));
-const JobMap = lazyLoad(() => import('../pages/JobMap'));
+const Dashboard = lazy(() => import('../pages/Dashboard'));
+const AssignedJobs = lazy(() => import('../pages/AssignedJobs'));
+const JobDetails = lazy(() => import('../pages/JobDetails'));
+const Profile = lazy(() => import('../pages/Profile'));
+const EditProfile = lazy(() => import('../pages/Profile/EditProfile'));
+const Settings = lazy(() => import('../pages/Settings'));
+const Notifications = lazy(() => import('../pages/Notifications'));
+const JobMap = lazy(() => import('../pages/JobMap'));
+const JobTimeline = lazy(() => import('../pages/JobTimeline'));
+const Wallet = lazy(() => import('../pages/Wallet'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -75,24 +77,24 @@ const WorkerRoutes = () => {
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
-        <PageTransition>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<PublicRoute userType="worker"><Login /></PublicRoute>} />
-            <Route path="/signup" element={<PublicRoute userType="worker"><Signup /></PublicRoute>} />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<PublicRoute userType="worker"><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute userType="worker"><Signup /></PublicRoute>} />
 
-            {/* Protected routes (auth required) */}
-            <Route path="/" element={<ProtectedRoute userType="worker"><Navigate to="dashboard" replace /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute userType="worker"><Dashboard /></ProtectedRoute>} />
-            <Route path="/jobs" element={<ProtectedRoute userType="worker"><AssignedJobs /></ProtectedRoute>} />
-            <Route path="/job/:id" element={<ProtectedRoute userType="worker"><JobDetails /></ProtectedRoute>} />
-            <Route path="/job/:id/map" element={<ProtectedRoute userType="worker"><JobMap /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute userType="worker"><Profile /></ProtectedRoute>} />
-            <Route path="/profile/edit" element={<ProtectedRoute userType="worker"><EditProfile /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute userType="worker"><Settings /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute userType="worker"><Notifications /></ProtectedRoute>} />
-          </Routes>
-        </PageTransition>
+          {/* Protected routes (auth required) */}
+          <Route path="/" element={<ProtectedRoute userType="worker"><Navigate to="dashboard" replace /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute userType="worker"><Dashboard /></ProtectedRoute>} />
+          <Route path="/jobs" element={<ProtectedRoute userType="worker"><AssignedJobs /></ProtectedRoute>} />
+          <Route path="/job/:id" element={<ProtectedRoute userType="worker"><JobDetails /></ProtectedRoute>} />
+          <Route path="/job/:id/map" element={<ProtectedRoute userType="worker"><JobMap /></ProtectedRoute>} />
+          <Route path="/job/:id/timeline" element={<ProtectedRoute userType="worker"><JobTimeline /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute userType="worker"><Profile /></ProtectedRoute>} />
+          <Route path="/profile/edit" element={<ProtectedRoute userType="worker"><EditProfile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute userType="worker"><Settings /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute userType="worker"><Notifications /></ProtectedRoute>} />
+          <Route path="/wallet" element={<ProtectedRoute userType="worker"><Wallet /></ProtectedRoute>} />
+        </Routes>
       </Suspense>
       {!shouldHideBottomNav && <BottomNav />}
     </ErrorBoundary>

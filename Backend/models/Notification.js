@@ -36,11 +36,17 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     enum: [
       'booking_created',
+      'booking_request',      // New booking request to vendor
+      'booking_accepted',     // Vendor accepted booking
       'booking_confirmed',
       'booking_cancelled',
       'booking_completed',
       'booking_rejected',
       'worker_assigned',
+      'worker_started',
+      'worker_completed',
+      'work_done',
+      'payment_received',
       'payment_success',
       'payment_failed',
       'payment_refunded',

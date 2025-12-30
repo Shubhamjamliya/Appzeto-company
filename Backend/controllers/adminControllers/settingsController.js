@@ -53,3 +53,25 @@ exports.updateSettings = async (req, res, next) => {
     });
   }
 };
+// Get Public Settings (Visited Charges, GST)
+exports.getPublicSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges gstPercentage');
+
+    // Default if not found (fallback values)
+    if (!settings) {
+      settings = { visitedCharges: 29, gstPercentage: 18 };
+    }
+
+    res.status(200).json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch settings'
+    });
+  }
+};

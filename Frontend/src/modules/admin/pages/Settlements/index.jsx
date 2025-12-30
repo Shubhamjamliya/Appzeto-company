@@ -1,0 +1,797 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FiDollarSign, FiCheck, FiX, FiEye, FiClock, FiUsers, FiTrendingUp, FiAlertCircle } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import Modal from '../../components/Modal';
+import Button from '../../components/Button';
+import adminSettlementService from '../../../../services/adminSettlementService';
+
+const SettlementManagement = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('pending'); // pending, vendors, withdrawals, history
+  const [dashboard, setDashboard] = useState(null);
+  const [pendingSettlements, setPendingSettlements] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Modal State
+  const [activeModal, setActiveModal] = useState(null); // 'approve_settlement', 'reject_settlement', 'block_vendor', 'update_limit', 'approve_withdrawal', 'reject_withdrawal'
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [modalInput, setModalInput] = useState(''); // Reasons/Notes/Limit
+  const [modalInput2, setModalInput2] = useState(''); // Secondary (Ref No)
+
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      // Always load dashboard
+      const dashRes = await adminSettlementService.getDashboard();
+      if (dashRes.success) {
+        setDashboard(dashRes.data);
+      }
+
+      if (activeTab === 'pending') {
+        const res = await adminSettlementService.getPendingSettlements();
+        if (res.success) setPendingSettlements(res.data || []);
+      } else if (activeTab === 'vendors') {
+        const res = await adminSettlementService.getVendorBalances({ filterDue: 'true' });
+        if (res.success) setVendors(res.data || []);
+      } else if (activeTab === 'history') {
+        const res = await adminSettlementService.getSettlementHistory();
+        if (res.success) setHistory(res.data || []);
+      } else if (activeTab === 'withdrawals') {
+        const res = await adminSettlementService.getWithdrawalRequests();
+        if (res.success) setWithdrawals(res.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
+  // --- Modal Openers ---
+  const openApproveSettlement = (item) => {
+    setSelectedItem(item);
+    setActiveModal('approve_settlement');
+  };
+
+  const openRejectSettlement = (item) => {
+    setSelectedItem(item);
+    setModalInput('');
+    setActiveModal('reject_settlement');
+  };
+
+  const openBlockVendor = (vendor) => {
+    setSelectedItem(vendor);
+    setModalInput('');
+    setActiveModal('block_vendor');
+  };
+
+  const openUnblockVendor = (vendor) => {
+    setSelectedItem(vendor);
+    setActiveModal('unblock_vendor');
+  };
+
+  const openUpdateLimit = (vendor) => {
+    setSelectedItem(vendor);
+    setModalInput(vendor.cashLimit || 10000);
+    setActiveModal('update_limit');
+  };
+
+  const openApproveWithdrawal = (item) => {
+    setSelectedItem(item);
+    setModalInput(''); // Transaction Ref
+    setActiveModal('approve_withdrawal');
+  };
+
+  const openRejectWithdrawal = (item) => {
+    setSelectedItem(item);
+    setModalInput('');
+    setActiveModal('reject_withdrawal');
+  };
+
+  const closeModals = () => {
+    setActiveModal(null);
+    setSelectedItem(null);
+    setModalInput('');
+    setModalInput2('');
+  };
+
+  // --- Action Handlers ---
+  const handleApproveSettlement = async () => {
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.approveSettlement(selectedItem._id);
+      if (res.success) {
+        toast.success('Settlement approved!');
+        loadData();
+        closeModals();
+      } else {
+        toast.error(res.message || 'Failed to approve');
+      }
+    } catch (error) {
+      toast.error('Failed to approve');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectSettlement = async () => {
+    if (!modalInput.trim()) return toast.error('Rejection reason is required');
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.rejectSettlement(selectedItem._id, modalInput);
+      if (res.success) {
+        toast.success('Settlement rejected');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to reject');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBlockVendor = async () => {
+    if (!modalInput.trim()) return toast.error('Blocking reason is required');
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.blockVendor(selectedItem._id, modalInput);
+      if (res.success) {
+        toast.success('Vendor blocked');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to block');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateLimitSubmit = async () => {
+    if (!modalInput || isNaN(modalInput)) return toast.error('Valid limit required');
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.updateCashLimit(selectedItem._id, parseInt(modalInput));
+      if (res.success) {
+        toast.success('Limit updated');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to update limit');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnblockVendorSubmit = async () => {
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.unblockVendor(selectedItem._id);
+      if (res.success) {
+        toast.success('Vendor unblocked');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to unblock');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveWithdrawalSubmit = async () => {
+    const ref = modalInput.trim() || `MANUAL-${Date.now()}`;
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.approveWithdrawal(selectedItem._id, { transactionReference: ref });
+      if (res.success) {
+        toast.success('Withdrawal approved');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to approve');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectWithdrawalSubmit = async () => {
+    if (!modalInput.trim()) return toast.error('Rejection reason required');
+    try {
+      setActionLoading(true);
+      const res = await adminSettlementService.rejectWithdrawal(selectedItem._id, modalInput);
+      if (res.success) {
+        toast.success('Withdrawal rejected');
+        loadData();
+        closeModals();
+      }
+    } catch (error) {
+      toast.error('Failed to reject');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Settlement Management</h1>
+        <p className="text-gray-600 mt-1">Manage vendor cash collections and settlements</p>
+      </div>
+
+      {/* Dashboard Cards */}
+      {dashboard && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-red-100">
+                <FiDollarSign className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Due</p>
+                <p className="text-2xl font-bold text-red-600">₹{dashboard.totalDueToAdmin?.toLocaleString() || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-orange-100">
+                <FiClock className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Pending Settlements</p>
+                <p className="text-2xl font-bold text-orange-600">{dashboard.pendingSettlements?.count || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-blue-100">
+                <FiTrendingUp className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Today Cash Collected</p>
+                <p className="text-2xl font-bold text-blue-600">₹{dashboard.todayCashCollected?.amount?.toLocaleString() || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-green-100">
+                <FiCheck className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Weekly Settlements</p>
+                <p className="text-2xl font-bold text-green-600">₹{dashboard.weeklySettlements?.amount?.toLocaleString() || 0}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+        <div className="flex border-b border-gray-200">
+          {[
+            { id: 'pending', label: 'Pending', icon: FiClock },
+            { id: 'withdrawals', label: 'Withdrawals', icon: FiDollarSign },
+            { id: 'vendors', label: 'Vendors with Due', icon: FiUsers },
+            { id: 'history', label: 'History', icon: FiTrendingUp },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold border-b-2 transition-colors ${activeTab === tab.id
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <>
+              {/* Pending Settlements */}
+              {activeTab === 'pending' && (
+                pendingSettlements.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiCheck className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 font-semibold">No pending settlements</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingSettlements.map(settlement => (
+                      <div key={settlement._id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-bold text-gray-900">
+                              {settlement.vendorId?.name || 'Vendor'} - {settlement.vendorId?.businessName}
+                            </p>
+                            <p className="text-2xl font-bold text-blue-600 my-1">
+                              ₹{settlement.amount?.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Via {settlement.paymentMethod === 'upi' ? 'UPI' : 'Bank Transfer'}
+                              {settlement.paymentReference && ` • Ref: ${settlement.paymentReference}`}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">{formatDate(settlement.createdAt)}</p>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openApproveSettlement(settlement)}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 flex items-center gap-1"
+                            >
+                              <FiCheck className="w-4 h-4" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => openRejectSettlement(settlement)}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 flex items-center gap-1"
+                            >
+                              <FiX className="w-4 h-4" />
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+
+                        {settlement.paymentProof && (
+                          <div className="mt-3">
+                            <a
+                              href={settlement.paymentProof}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              View Payment Proof
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {/* Vendors with Due */}
+              {activeTab === 'vendors' && (
+                vendors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiCheck className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 font-semibold">All vendors are settled</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Vendor</th>
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Phone</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Limit Used</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Amount Due</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vendors.map(vendor => (
+                          <tr key={vendor._id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <p className="font-semibold text-gray-900">{vendor.name}</p>
+                              <p className="text-sm text-gray-500">{vendor.businessName}</p>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600">{vendor.phone}</td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-medium text-gray-700">
+                                  ₹{Math.abs(vendor.balance).toLocaleString()} / ₹{vendor.cashLimit?.toLocaleString()}
+                                </span>
+                                <div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${vendor.isBlocked ? 'bg-red-500' : 'bg-blue-500'}`}
+                                    style={{ width: `${Math.min((vendor.amountDue / vendor.cashLimit) * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                                {vendor.isBlocked && <span className="text-xs text-red-600 font-bold mt-1">AUTO BLOCKED</span>}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <span className="font-bold text-red-600 text-lg">
+                                ₹{vendor.amountDue?.toLocaleString() || 0}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => navigate(`/admin/settlements/vendor/${vendor._id}`)}
+                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200"
+                                  title="View Ledger"
+                                >
+                                  Ledger
+                                </button>
+
+                                <button
+                                  onClick={() => openUpdateLimit(vendor)}
+                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200"
+                                  title="Update Cash Limit"
+                                >
+                                  Limit
+                                </button>
+
+                                {vendor.isBlocked ? (
+                                  <button
+                                    onClick={() => openUnblockVendor(vendor)}
+                                    className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-semibold hover:bg-orange-200"
+                                  >
+                                    Unblock
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => openBlockVendor(vendor)}
+                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"
+                                  >
+                                    Block
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              )}
+
+              {/* History */}
+              {activeTab === 'history' && (
+                history.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiDollarSign className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 font-semibold">No settlement history</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {history.map(settlement => (
+                      <div
+                        key={settlement._id}
+                        className={`bg-gray-50 rounded-xl p-4 border-l-4 ${settlement.status === 'approved' ? 'border-green-500' :
+                          settlement.status === 'rejected' ? 'border-red-500' : 'border-orange-500'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {settlement.vendorId?.name} - ₹{settlement.amount?.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-gray-500">{formatDate(settlement.createdAt)}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${settlement.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            settlement.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                            {settlement.status.toUpperCase()}
+                          </span>
+                        </div>
+                        {settlement.rejectionReason && (
+                          <p className="text-sm text-red-600 mt-2">Reason: {settlement.rejectionReason}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {/* Withdrawal Requests */}
+              {activeTab === 'withdrawals' && (
+                withdrawals.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiCheck className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-600 font-semibold">No pending withdrawal requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {withdrawals.map(request => (
+                      <div key={request._id} className="bg-white rounded-xl p-6 shadow-sm border border-l-4 border-l-green-500">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-bold text-lg text-gray-900">{request.vendorId?.name}</p>
+                              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{request.vendorId?.businessName}</span>
+                            </div>
+                            <p className="text-2xl font-bold text-green-600 mb-2">₹{request.amount?.toLocaleString()}</p>
+
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <p>Available Earnings: <span className="font-semibold">₹{request.vendorId?.wallet?.earnings?.toLocaleString() || 0}</span></p>
+                              <p>Requested: {formatDate(request.requestDate)}</p>
+                              {request.bankDetails && (
+                                <div className="mt-2 bg-gray-50 p-2 rounded text-xs">
+                                  <p className="font-semibold text-gray-700">Bank Details:</p>
+                                  {Object.entries(request.bankDetails).map(([key, val]) => (
+                                    <p key={key}><span className="capitalize text-gray-500">{key}:</span> {val}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => openApproveWithdrawal(request)}
+                              className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold shadow-sm hover:bg-green-700 active:scale-95 transition-all text-sm"
+                            >
+                              Approve & Pay
+                            </button>
+                            <button
+                              onClick={() => openRejectWithdrawal(request)}
+                              className="px-6 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 active:scale-95 transition-all text-sm"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                        {request.adminNotes && (
+                          <p className="mt-3 text-sm text-gray-500 italic border-t pt-2">Note: {request.adminNotes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+
+      {/* --- Modals --- */}
+
+      {/* Approve Settlement Modal */}
+      <Modal
+        isOpen={activeModal === 'approve_settlement'}
+        onClose={closeModals}
+        title="Approve Settlement"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to approve this settlement of
+            <span className="font-bold text-gray-900 mx-1">₹{selectedItem?.amount?.toLocaleString()}</span>
+            from {selectedItem?.vendorId?.name}?
+          </p>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleApproveSettlement}
+              isLoading={actionLoading}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Confirm Approval
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reject Settlement Modal */}
+      <Modal
+        isOpen={activeModal === 'reject_settlement'}
+        onClose={closeModals}
+        title="Reject Settlement"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Please provide a reason for rejecting this settlement.</p>
+          <textarea
+            value={modalInput}
+            onChange={(e) => setModalInput(e.target.value)}
+            placeholder="e.g., Transaction ID not found, Invalid screenshot..."
+            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+            rows={3}
+          />
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleRejectSettlement}
+              isLoading={actionLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reject Settlement
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Block Vendor Modal */}
+      <Modal
+        isOpen={activeModal === 'block_vendor'}
+        onClose={closeModals}
+        title="Block Vendor"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Blocking <span className="font-bold">{selectedItem?.name}</span> will prevent them from accepting new cash jobs.
+          </p>
+          <textarea
+            value={modalInput}
+            onChange={(e) => setModalInput(e.target.value)}
+            placeholder="Reason for blocking..."
+            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+            rows={3}
+          />
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleBlockVendor}
+              isLoading={actionLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Block Vendor
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Unblock Vendor Modal */}
+      <Modal
+        isOpen={activeModal === 'unblock_vendor'}
+        onClose={closeModals}
+        title="Unblock Vendor"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to unblock <span className="font-bold text-gray-900">{selectedItem?.name}</span>?
+            Their cash limit and blocking status will be reset.
+          </p>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleUnblockVendorSubmit}
+              isLoading={actionLoading}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Confirm Unblock
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Update Limit Modal */}
+      <Modal
+        isOpen={activeModal === 'update_limit'}
+        onClose={closeModals}
+        title="Update Cash Limit"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Set a new cash collection limit for {selectedItem?.name}.</p>
+          <div className="relative">
+            <span className="absolute left-3 top-3 text-gray-500 font-bold">₹</span>
+            <input
+              type="number"
+              value={modalInput}
+              onChange={(e) => setModalInput(e.target.value)}
+              className="w-full p-3 pl-8 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleUpdateLimitSubmit}
+              isLoading={actionLoading}
+            >
+              Update Limit
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Approve Withdrawal Modal */}
+      <Modal
+        isOpen={activeModal === 'approve_withdrawal'}
+        onClose={closeModals}
+        title="Approve Withdrawal"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+            <p className="text-sm text-green-800 font-semibold mb-1">To Pay: ₹{selectedItem?.amount?.toLocaleString()}</p>
+            <p className="text-xs text-green-700">Vendor: {selectedItem?.vendorId?.name}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Reference (UPI/Bank Ref)</label>
+            <input
+              type="text"
+              value={modalInput}
+              onChange={(e) => setModalInput(e.target.value)}
+              placeholder="e.g., UPI-1234567890"
+              className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">Optional. Defaults to generated ID if empty.</p>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleApproveWithdrawalSubmit}
+              isLoading={actionLoading}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Approve & Pay
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reject Withdrawal Modal */}
+      <Modal
+        isOpen={activeModal === 'reject_withdrawal'}
+        onClose={closeModals}
+        title="Reject Withdrawal"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Please provide a reason for rejecting this withdrawal request.</p>
+          <textarea
+            value={modalInput}
+            onChange={(e) => setModalInput(e.target.value)}
+            placeholder="e.g., Incorrect bank details..."
+            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+            rows={3}
+          />
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={closeModals}>Cancel</Button>
+            <Button
+              onClick={handleRejectWithdrawalSubmit}
+              isLoading={actionLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reject Request
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div >
+  );
+};
+
+export default SettlementManagement;

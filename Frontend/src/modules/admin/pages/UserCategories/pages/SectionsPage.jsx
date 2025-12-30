@@ -97,24 +97,24 @@ const SectionsPage = ({ catalog, setCatalog }) => {
     if (!service) return alert("Select a service first");
     if (!activeGridItem) return alert("Select a section (grid item) first");
 
-    const title = cardForm.title.trim();
-    if (!title) return alert("Service card title required");
+    const title = (cardForm.title || "").trim();
+    if (!title) return toast.error("Service card title required");
 
     // Form data extraction...
-    const subtitle = cardForm.subtitle.trim();
-    const description = cardForm.description.trim();
-    const imageUrl = cardForm.imageUrl.trim();
+    const subtitle = (cardForm.subtitle || "").trim();
+    const description = (cardForm.description || "").trim();
+    const imageUrl = (cardForm.imageUrl || "").trim();
     const price = String(cardForm.price ?? "").trim();
     const originalPrice = String(cardForm.originalPrice ?? "").trim();
-    const discount = cardForm.discount.trim();
+    const discount = (cardForm.discount || "").trim();
     const rating = String(cardForm.rating ?? "").trim();
     const reviews = String(cardForm.reviews ?? "").trim();
-    const duration = cardForm.duration.trim();
-    const options = cardForm.options.trim();
-    const badge = cardForm.badge.trim();
+    const duration = (cardForm.duration || "").trim();
+    const options = (cardForm.options || "").trim();
+    const badge = (cardForm.badge || "").trim();
     const features = (cardForm.featuresText || "").split("\n").map((l) => l.trim()).filter(Boolean);
     const imageTextTitleLines = (cardForm.imageTextTitleLines || "").split("\n").map((l) => l.trim()).filter(Boolean);
-    const imageTextSubtitle = cardForm.imageTextSubtitle.trim();
+    const imageTextSubtitle = (cardForm.imageTextSubtitle || "").trim();
     const imageText = imageTextTitleLines.length || imageTextSubtitle ? { titleLines: imageTextTitleLines, subtitle: imageTextSubtitle } : null;
 
     try {

@@ -1,7 +1,8 @@
+const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
 const { validationResult } = require('express-validator');
-const { BOOKING_STATUS } = require('../../utils/constants');
+const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');
 
 /**
@@ -140,14 +141,26 @@ const acceptBooking = async (req, res) => {
 
     // Assign vendor and update booking status
     booking.vendorId = vendorId;
-    booking.status = BOOKING_STATUS.AWAITING_PAYMENT; // Notify user to pay
     booking.acceptedAt = new Date();
+
+    // Check if booking is already paid (via plan benefit)
+    if (booking.paymentMethod === 'plan_benefit' && booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
+      // Free booking - skip payment, go directly to confirmed
+      booking.status = BOOKING_STATUS.CONFIRMED;
+    } else {
+      // Regular booking - needs payment
+      booking.status = BOOKING_STATUS.AWAITING_PAYMENT;
+    }
 
     await booking.save();
 
     // Emit real-time socket event to the user
     const io = req.app.get('io');
     if (io) {
+      const message = booking.paymentMethod === 'plan_benefit'
+        ? 'Vendor has accepted your request. Your booking is confirmed!'
+        : 'Vendor has accepted your request. Please complete payment to confirm your booking.';
+
       io.to(`user_${booking.userId}`).emit('booking_accepted', {
         bookingId: booking._id,
         bookingNumber: booking.bookingNumber,
@@ -156,19 +169,47 @@ const acceptBooking = async (req, res) => {
           name: req.user.name,
           businessName: req.user.businessName
         },
-        message: 'Vendor has accepted your request. Please complete payment to confirm your booking.'
+        message
       });
+
+      // For plan_benefit bookings, also emit to vendor that booking is confirmed
+      if (booking.paymentMethod === 'plan_benefit') {
+        io.to(`vendor_${vendorId}`).emit('booking_confirmed', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          serviceName: booking.serviceName,
+          message: `Booking ${booking.bookingNumber} is confirmed! Payment covered by customer's plan.`,
+          paymentStatus: 'success',
+          vendorEarnings: booking.vendorEarnings
+        });
+      }
     }
 
     // Send notification to user
+    const notificationMessage = booking.paymentMethod === 'plan_benefit'
+      ? `Your booking ${booking.bookingNumber} is confirmed! ${req.user.businessName || req.user.name} will arrive at scheduled time.`
+      : `Vendor ${req.user.businessName || req.user.name} has accepted your request ${booking.bookingNumber}. Please complete payment to book the service.`;
+
     await createNotification({
       userId: booking.userId,
       type: 'booking_accepted',
-      title: 'Request Accepted by Vendor',
-      message: `Vendor ${req.user.businessName || req.user.name} has accepted your request ${booking.bookingNumber}. Please complete payment to book the service.`,
+      title: booking.paymentMethod === 'plan_benefit' ? 'Booking Confirmed!' : 'Request Accepted by Vendor',
+      message: notificationMessage,
       relatedId: booking._id,
       relatedType: 'booking'
     });
+
+    // For plan_benefit bookings, also notify vendor about confirmation
+    if (booking.paymentMethod === 'plan_benefit') {
+      await createNotification({
+        vendorId: vendorId,
+        type: 'booking_confirmed',
+        title: 'Booking Confirmed!',
+        message: `Booking ${booking.bookingNumber} is confirmed. Payment is covered by customer's subscription plan. Your earnings: ₹${booking.vendorEarnings || 0}`,
+        relatedId: booking._id,
+        relatedType: 'booking'
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -202,16 +243,25 @@ const rejectBooking = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    const booking = await Booking.findOne({ _id: id, vendorId });
+    // Find booking (either explicitly assigned to vendor or unassigned/requested)
+    const booking = await Booking.findOne({
+      _id: id,
+      $or: [
+        { vendorId },
+        // Important: Allow rejecting 'requested' bookings that were broadcasted
+        { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING] } }
+      ]
+    });
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found'
+        message: 'Booking not found or not available for rejection'
       });
     }
 
-    if (booking.status !== BOOKING_STATUS.PENDING) {
+    const validStatuses = [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING];
+    if (!validStatuses.includes(booking.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot reject booking with status: ${booking.status}`
@@ -277,6 +327,34 @@ const assignWorker = async (req, res) => {
       });
     }
 
+    // Handle "Assign to Self"
+    if (workerId === 'SELF') {
+      booking.workerId = null; // null means vendor itself
+      booking.assignedAt = new Date();
+
+      if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED) {
+        booking.status = BOOKING_STATUS.ASSIGNED;
+      }
+
+      await booking.save();
+
+      // Notify User
+      await createNotification({
+        userId: booking.userId,
+        type: 'worker_assigned',
+        title: 'Service Provider Assigned',
+        message: `Vendor ${req.user.businessName || req.user.name} will handle your booking ${booking.bookingNumber} personally.`,
+        relatedId: booking._id,
+        relatedType: 'booking'
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Assigned to yourself successfully',
+        data: booking
+      });
+    }
+
     // Verify worker belongs to vendor
     const worker = await Worker.findOne({ _id: workerId, vendorId });
     if (!worker) {
@@ -289,7 +367,6 @@ const assignWorker = async (req, res) => {
     // Check if worker is active
     const validStatuses = ['active', 'ONLINE', 'ACTIVE'];
     if (!validStatuses.includes(worker.status)) {
-      // Also allow if status is undefined/null (legacy) but that shouldn't happen
       return res.status(400).json({
         success: false,
         message: `Worker is not active (Status: ${worker.status})`
@@ -300,11 +377,8 @@ const assignWorker = async (req, res) => {
     booking.workerId = workerId;
     booking.assignedAt = new Date();
 
-    // If booking was confirmed, update to assigned when worker is assigned
-    if (booking.status === BOOKING_STATUS.CONFIRMED) {
+    if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED) {
       booking.status = BOOKING_STATUS.ASSIGNED;
-      booking.startedAt = new Date(); // Or maybe keep startedAt for when actual work starts? Frontend uses it for 'Visited Sites'?
-      // Let's keep startedAt for IN_PROGRESS/VISITED usually. But maybe ASSIGNED is fine.
     }
 
     await booking.save();
@@ -406,7 +480,13 @@ const updateBookingStatus = async (req, res) => {
     }
 
     // Update other fields
-    if (workerPaymentStatus) booking.workerPaymentStatus = workerPaymentStatus;
+    if (workerPaymentStatus) {
+      booking.workerPaymentStatus = workerPaymentStatus;
+      if (workerPaymentStatus === 'PAID' || workerPaymentStatus === 'SUCCESS') {
+        booking.isWorkerPaid = true;
+        booking.workerPaidAt = booking.workerPaidAt || new Date();
+      }
+    }
     if (finalSettlementStatus) booking.finalSettlementStatus = finalSettlementStatus;
 
     await booking.save();
@@ -483,6 +563,386 @@ const addVendorNotes = async (req, res) => {
   }
 };
 
+/**
+ * Start Self Job (Vendor performing job)
+ */
+const startSelfJob = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+
+    const booking = await Booking.findOne({ _id: id, vendorId });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Ensure no worker is assigned (or self-assigned flag?) implementation assumes workerId null means unassigned or self?
+    // User says: "if vendor didn't assignes to worker and do himself"
+    // Usually means workerId is null.
+    if (booking.workerId) {
+      return res.status(400).json({ success: false, message: 'Worker is assigned to this booking. You cannot start it yourself unless you unassign worker.' });
+    }
+
+    if (booking.status !== BOOKING_STATUS.CONFIRMED && booking.status !== BOOKING_STATUS.ASSIGNED) {
+      // Allow ASSIGNED if we consider "Self Assigned" as a state? 
+      // If workerId is null, status usually CONFIRMED.
+      // But lets allow generic flow.
+    }
+
+    // Status Check
+    const allowed = [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.AWAITING_PAYMENT];
+    if (!allowed.includes(booking.status) && booking.status !== BOOKING_STATUS.ACCEPTED) { // flexible
+      // check strict
+    }
+
+    // Generate Visit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Update booking
+    booking.status = BOOKING_STATUS.JOURNEY_STARTED;
+    booking.journeyStartedAt = new Date();
+    booking.visitOtp = otp;
+    booking.assignedAt = new Date(); // Implicitly assigned to self now
+
+    await booking.save();
+
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'worker_started',
+      title: 'Vendor Started Journey',
+      message: `Vendor is on the way! OTP for verification: ${otp}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: BOOKING_STATUS.JOURNEY_STARTED,
+        visitOtp: otp
+      });
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Vendor Started Journey',
+        message: `Vendor is on the way! OTP: ${otp}`,
+        relatedId: booking._id
+      });
+    }
+
+    res.status(200).json({ success: true, message: 'Journey started, OTP sent', data: booking });
+  } catch (error) {
+    console.error('Start self job error:', error);
+    res.status(500).json({ success: false, message: 'Failed to start job' });
+  }
+};
+
+/**
+ * Verify Self Visit
+ */
+const verifySelfVisit = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+    const { otp, location } = req.body;
+
+    const booking = await Booking.findOne({ _id: id, vendorId }).select('+visitOtp');
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.status !== BOOKING_STATUS.JOURNEY_STARTED) return res.status(400).json({ success: false, message: 'Journey not started' });
+    if (booking.visitOtp !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
+
+    booking.status = BOOKING_STATUS.VISITED;
+    booking.visitedAt = new Date();
+    booking.startedAt = new Date();
+    booking.visitOtp = undefined;
+    if (location) {
+      booking.visitLocation = { ...location, verifiedAt: new Date() };
+    }
+
+    await booking.save();
+    res.status(200).json({ success: true, message: 'Visit verified', data: booking });
+  } catch (error) {
+    console.error('Verify self visit error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify visit' });
+  }
+};
+
+/**
+ * Complete Self Job
+ */
+const completeSelfJob = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+    const { workPhotos, workDoneDetails } = req.body;
+
+    const booking = await Booking.findOne({ _id: id, vendorId });
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Status check
+    if (booking.status !== BOOKING_STATUS.VISITED && booking.status !== BOOKING_STATUS.IN_PROGRESS) {
+      return res.status(400).json({ success: false, message: 'Cannot complete from current status' });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    booking.status = BOOKING_STATUS.WORK_DONE;
+    booking.paymentOtp = otp;
+    if (workPhotos) booking.workPhotos = workPhotos;
+    if (workDoneDetails) booking.workDoneDetails = workDoneDetails;
+
+    await booking.save();
+
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'work_done',
+      title: 'Work Completed',
+      message: `Work done. Please confirm & pay. OTP: ${otp}. Amount: ₹${booking.finalAmount}`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: BOOKING_STATUS.WORK_DONE,
+        paymentOtp: otp
+      });
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Work Completed',
+        message: `Work done. Please confirm & pay. OTP: ${otp}`,
+        relatedId: booking._id
+      });
+    }
+
+    res.status(200).json({ success: true, message: 'Work done, OTP sent', data: booking });
+  } catch (error) {
+    console.error('Complete self job error:', error);
+    res.status(500).json({ success: false, message: 'Failed to complete job' });
+  }
+};
+
+/**
+ * Collect Self Cash
+ */
+const collectSelfCash = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+    const { otp, amount } = req.body;
+
+    const booking = await Booking.findOne({ _id: id, vendorId }).select('+paymentOtp');
+    const Vendor = require('../../models/Vendor'); // Need Vendor model
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.status !== BOOKING_STATUS.WORK_DONE) return res.status(400).json({ success: false, message: 'Work not done' });
+    if (booking.paymentOtp !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
+
+    booking.status = BOOKING_STATUS.COMPLETED;
+    booking.paymentStatus = PAYMENT_STATUS.SUCCESS;
+    booking.cashCollected = true;
+    booking.cashCollectedBy = 'vendor';
+    booking.cashCollectorId = vendorId;
+    booking.cashCollectedAt = new Date();
+    booking.completedAt = new Date();
+    booking.paymentOtp = undefined;
+
+    // Deduct from Vendor Wallet
+    const vendor = await Vendor.findById(vendorId);
+    if (vendor) {
+      // 1. Dues Increase (Cash Collected - owed to admin)
+      vendor.wallet.dues = (vendor.wallet.dues || 0) + booking.finalAmount;
+
+      // 2. Earnings Credit (Net income for this job)
+      vendor.wallet.earnings = (vendor.wallet.earnings || 0) + booking.vendorEarnings;
+
+      vendor.wallet.totalCashCollected = (vendor.wallet.totalCashCollected || 0) + booking.finalAmount;
+
+      // Check Auto-Blocking Logic
+      const cashLimit = vendor.wallet.cashLimit || 10000;
+      if (vendor.wallet.dues > cashLimit) {
+        vendor.wallet.isBlocked = true;
+        vendor.wallet.blockedAt = new Date();
+        vendor.wallet.blockReason = `Cash limit exceeded. Owed: ₹${vendor.wallet.dues}, Limit: ₹${cashLimit}`;
+      }
+
+      await vendor.save();
+
+      // Create Transactions
+      const Transaction = require('../../models/Transaction');
+
+      // Transaction 1: Cash Collected (Dues Increase)
+      await Transaction.create({
+        vendorId: vendor._id,
+        bookingId: booking._id,
+        type: 'cash_collected',
+        amount: booking.finalAmount,
+        status: 'completed',
+        paymentMethod: 'cash',
+        description: `Cash collected by vendor. Dues +${booking.finalAmount}`,
+        metadata: { type: 'dues_increase', collectedBy: 'vendor' }
+      });
+
+      // Transaction 2: Earnings Credit
+      if (booking.vendorEarnings > 0) {
+        await Transaction.create({
+          vendorId: vendor._id,
+          bookingId: booking._id,
+          type: 'earnings_credit',
+          amount: booking.vendorEarnings,
+          status: 'completed',
+          paymentMethod: 'wallet',
+          description: `Earnings credited for self-job #${booking.bookingNumber}`,
+          metadata: { type: 'earnings_increase' }
+        });
+      }
+    }
+
+    await booking.save();
+
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'payment_received',
+      title: 'Booking Completed',
+      message: `Payment received. Booking completed.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    res.status(200).json({ success: true, message: 'Cash collected', data: booking });
+  } catch (error) {
+    console.error('Collect self cash error:', error);
+    res.status(500).json({ success: false, message: 'Failed' });
+  }
+};
+
+/**
+ * Pay Worker (Manual Settlement)
+ */
+const payWorker = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+
+    const booking = await Booking.findOne({ _id: id, vendorId });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (!booking.workerId) {
+      return res.status(400).json({ success: false, message: 'No worker assigned to this booking' });
+    }
+
+    if (booking.isWorkerPaid) {
+      return res.status(400).json({ success: false, message: 'Worker already paid' });
+    }
+
+    // Update booking payment status
+    booking.isWorkerPaid = true;
+    booking.workerPaymentStatus = 'SUCCESS';
+    booking.workerPaidAt = new Date();
+
+    await booking.save();
+
+    // Notify Worker
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      workerId: booking.workerId,
+      type: 'payment_received',
+      title: 'Payment Received',
+      message: `Vendor has paid you for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    // Notify Vendor
+    await createNotification({
+      vendorId: vendorId,
+      type: 'payment_success',
+      title: 'Worker Paid',
+      message: `You have successfully marked worker payment for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Worker payment marked successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Pay worker error:', error);
+    res.status(500).json({ success: false, message: 'Failed to process worker payment' });
+  }
+};
+
+/**
+ * Get vendor ratings and reviews
+ */
+const getVendorRatings = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Fetch bookings where rating is not null
+    const bookings = await Booking.find({ vendorId, rating: { $ne: null } })
+      .populate('userId', 'name profilePhoto')
+      .populate('serviceId', 'title iconUrl')
+      .populate('workerId', 'name profilePhoto')
+      .sort({ reviewedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Booking.countDocuments({ vendorId, rating: { $ne: null } });
+
+    // Calculate average rating
+    const stats = await Booking.aggregate([
+      { $match: { vendorId: new mongoose.Types.ObjectId(vendorId), rating: { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
+          star5: { $sum: { $cond: [{ $eq: ['$rating', 5] }, 1, 0] } },
+          star4: { $sum: { $cond: [{ $eq: ['$rating', 4] }, 1, 0] } },
+          star3: { $sum: { $cond: [{ $eq: ['$rating', 3] }, 1, 0] } },
+          star2: { $sum: { $cond: [{ $eq: ['$rating', 2] }, 1, 0] } },
+          star1: { $sum: { $cond: [{ $eq: ['$rating', 1] }, 1, 0] } },
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: bookings,
+      stats: stats[0] || { averageRating: 0, totalReviews: 0, star5: 0, star4: 0, star3: 0, star2: 0, star1: 0 },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get vendor ratings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch ratings'
+    });
+  }
+};
+
 module.exports = {
   getVendorBookings,
   getBookingById,
@@ -490,6 +950,12 @@ module.exports = {
   rejectBooking,
   assignWorker,
   updateBookingStatus,
-  addVendorNotes
+  addVendorNotes,
+  startSelfJob,
+  verifySelfVisit,
+  completeSelfJob,
+  collectSelfCash,
+  payWorker,
+  getVendorRatings
 };
 

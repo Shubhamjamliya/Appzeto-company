@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiDollarSign, FiArrowUp, FiArrowDown, FiArrowRight, FiSearch } from 'react-icons/fi';
+import { FiDollarSign, FiArrowUp, FiArrowDown, FiArrowRight, FiClock, FiCheckCircle, FiAlertCircle, FiSend } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-
-import { getWalletBalance, getTransactions } from '../../services/walletService';
+import vendorWalletService from '../../../../services/vendorWalletService';
+import { toast } from 'react-hot-toast';
 
 const Wallet = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [wallet, setWallet] = useState({
     balance: 0,
-    pending: 0,
-    available: 0,
+    dues: 0,
+    earnings: 0,
+    amountDue: 0,
+    totalCashCollected: 0,
+    totalSettled: 0,
+    totalWithdrawn: 0,
+    pendingSettlements: 0
   });
   const [transactions, setTransactions] = useState([]);
-  const [filter, setFilter] = useState('all'); // all, earning, withdrawal, commission
+  const [filter, setFilter] = useState('all');
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -35,64 +41,47 @@ const Wallet = () => {
   }, []);
 
   useEffect(() => {
-
-
-    const loadWallet = async () => {
-      try {
-        const walletData = await getWalletBalance();
-        const txns = await getTransactions();
-
-        // Calculate pending from transactions
-        const pendingAmount = txns
-          .filter(t => t.type === 'withdrawal' && t.status === 'pending')
-          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-        const availableBalance = walletData.balance || 0;
-
-        setWallet({
-          balance: availableBalance + pendingAmount, // Total = Available + Pending
-          available: availableBalance,
-          pending: pendingAmount,
-        });
-
-        // Map transactions to UI format if needed (Backend returns standard format, assume it matches or is close enough)
-        // Backend Transaction model: type, amount, status, date(createdAt), description
-        // Frontend expects: type, amount, status, date, description
-
-        const formattedTxns = txns.map(t => ({
-          ...t,
-          date: new Date(t.createdAt).toLocaleDateString(),
-          amount: t.amount // Backend might store absolute or negative? Controller uses absolute in amount field.
-        }));
-
-        setTransactions(formattedTxns);
-      } catch (error) {
-        console.error('Error loading wallet:', error);
-      }
-    };
-
-    // Load immediately and after a delay
-    loadWallet();
-    setTimeout(loadWallet, 200);
-
-    window.addEventListener('vendorWalletUpdated', loadWallet);
-
-    return () => {
-      window.removeEventListener('vendorWalletUpdated', loadWallet);
-    };
+    loadWalletData();
   }, []);
+
+  const loadWalletData = async () => {
+    try {
+      setLoading(true);
+      const [walletRes, txnRes] = await Promise.all([
+        vendorWalletService.getWallet(),
+        vendorWalletService.getTransactions({ limit: 50 })
+      ]);
+
+      if (walletRes.success) {
+        setWallet(walletRes.data);
+      }
+
+      if (txnRes.success) {
+        setTransactions(txnRes.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading wallet:', error);
+      toast.error('Failed to load wallet data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter(txn => {
     if (filter === 'all') return true;
-    return txn.type.toLowerCase() === filter;
+    return txn.type === filter;
   });
 
   const getTransactionIcon = (type) => {
-    switch (type.toLowerCase()) {
-      case 'earning':
-        return <FiArrowDown className="w-5 h-5 text-green-500" />;
+    switch (type) {
+      case 'cash_collected':
+        return <FiArrowDown className="w-5 h-5 text-red-500" />;
+      case 'earnings_credit':
+        return <FiArrowUp className="w-5 h-5 text-green-500" />;
+      case 'settlement':
+        return <FiSend className="w-5 h-5 text-blue-500" />;
       case 'withdrawal':
-        return <FiArrowUp className="w-5 h-5 text-red-500" />;
+        return <FiDollarSign className="w-5 h-5 text-purple-500" />;
       case 'commission':
         return <FiDollarSign className="w-5 h-5 text-orange-500" />;
       default:
@@ -100,129 +89,179 @@ const Wallet = () => {
     }
   };
 
-  const getTransactionColor = (type) => {
-    switch (type.toLowerCase()) {
-      case 'earning':
-        return 'text-green-600';
+  const getTransactionLabel = (type) => {
+    switch (type) {
+      case 'cash_collected':
+        return 'Cash Collected';
+      case 'earnings_credit':
+        return 'Earnings Credited';
+      case 'settlement':
+        return 'Settlement Paid';
       case 'withdrawal':
-        return 'text-red-600';
+        return 'Withdrawal';
       case 'commission':
-        return 'text-orange-600';
+        return 'Commission';
       default:
-        return 'text-gray-600';
+        return type;
     }
   };
 
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: themeColors.backgroundGradient }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${themeColors.button} transparent ${themeColors.button} ${themeColors.button}` }}></div>
+          <p className="text-gray-600 font-medium">Loading wallet...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
-      <Header title="Wallet" />
+    <div className="min-h-screen pb-24" style={{ background: themeColors.backgroundGradient }}>
+      <Header title="Wallet & Ledger" />
 
       <main className="px-4 py-6">
-        {/* Balance Cards */}
-        <div className="space-y-4 mb-6">
-          {/* Total Balance */}
-          <div
-            className="rounded-2xl p-6 shadow-xl relative overflow-hidden"
-            style={{
-              background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
-              boxShadow: `0 12px 32px ${themeColors.button}50, 0 4px 16px ${themeColors.button}30`,
-            }}
-          >
-            {/* Decorative Pattern */}
-            <div
-              className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20"
-              style={{
-                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
-                transform: 'translate(30px, -30px)',
-              }}
-            />
-            <div className="relative z-10">
-              <p className="text-white text-sm mb-2 opacity-90 font-medium">Total Balance</p>
-              <p className="text-4xl font-bold text-white">₹{wallet.balance.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Available & Pending */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Available Card */}
-            <div
-              className="rounded-2xl p-5 shadow-lg relative overflow-hidden border-2"
-              style={{
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 100%)',
-                borderColor: '#10B981',
-                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.15)',
-              }}
-            >
-              {/* Left accent */}
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
-                style={{
-                  background: 'linear-gradient(180deg, #10B981 0%, #059669 100%)',
-                }}
-              />
-              <div className="relative z-10 pl-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="p-2 rounded-xl"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)',
-                    }}
-                  >
-                    <FiArrowDown className="w-5 h-5" style={{ color: '#10B981' }} />
-                  </div>
-                  <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Available</p>
-                </div>
-                <p className="text-2xl font-bold mb-1" style={{ color: '#10B981' }}>
-                  ₹{wallet.available.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 font-medium">Withdrawable</p>
+        {/* Earnings Card (Green) */}
+        <div className="rounded-2xl p-6 shadow-xl relative overflow-hidden mb-4 bg-gradient-to-br from-green-600 to-green-800">
+          <div className="relative z-10 text-white">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-white/80 text-sm font-medium mb-1">Available Earnings</p>
+                <p className="text-3xl font-bold mb-4">₹{wallet.earnings?.toLocaleString() || 0}</p>
+              </div>
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <FiDollarSign className="w-6 h-6 text-white" />
               </div>
             </div>
 
-            {/* Pending Card */}
-            <div
-              className="rounded-2xl p-5 shadow-lg relative overflow-hidden border-2"
-              style={{
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF7ED 100%)',
-                borderColor: '#F97316',
-                boxShadow: '0 8px 24px rgba(249, 115, 22, 0.2), 0 4px 12px rgba(249, 115, 22, 0.15)',
-              }}
+            <button
+              onClick={() => navigate('/vendor/wallet/withdraw')}
+              className="w-full bg-white text-green-700 py-3 rounded-xl font-bold text-sm hover:bg-green-50 active:scale-95 transition-all shadow-sm"
             >
-              {/* Left accent */}
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
-                style={{
-                  background: 'linear-gradient(180deg, #F97316 0%, #EA580C 100%)',
-                }}
-              />
-              <div className="relative z-10 pl-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="p-2 rounded-xl"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%)',
-                    }}
-                  >
-                    <FiArrowUp className="w-5 h-5" style={{ color: '#F97316' }} />
-                  </div>
-                  <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Pending</p>
-                </div>
-                <p className="text-2xl font-bold mb-1" style={{ color: '#F97316' }}>
-                  ₹{wallet.pending.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 font-medium">In settlement</p>
-              </div>
-            </div>
+              Request Withdrawal
+            </button>
           </div>
         </div>
 
+        {/* Dues Card (Red) */}
+        <div className="rounded-2xl p-6 shadow-xl relative overflow-hidden mb-6 bg-gradient-to-br from-red-600 to-red-800">
+          <div className="relative z-10 text-white">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white/80 text-sm font-medium">Amount Due to Admin</p>
+                  {wallet.dues > 0 && <FiAlertCircle className="w-4 h-4 text-red-200 animate-pulse" />}
+                </div>
+                <p className="text-3xl font-bold mb-4">₹{wallet.dues?.toLocaleString() || 0}</p>
+              </div>
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <FiArrowDown className="w-6 h-6 text-white" />
+              </div>
+            </div>
+
+            {wallet.dues > 0 ? (
+              <button
+                onClick={() => navigate('/vendor/wallet/settle')}
+                className="w-full bg-white text-red-700 py-3 rounded-xl font-bold text-sm hover:bg-red-50 active:scale-95 transition-all shadow-sm"
+              >
+                Pay Now
+              </button>
+            ) : (
+              <div className="w-full bg-white/10 text-white py-3 rounded-xl font-medium text-sm text-center border border-white/20">
+                No Dues Pending
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Cash Collected */}
+          <div className="bg-white rounded-2xl p-4 shadow-lg border border-red-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-lg bg-red-50">
+                <FiArrowDown className="w-4 h-4 text-red-500" />
+              </div>
+              <p className="text-xs text-gray-600 font-semibold">Cash Collected</p>
+            </div>
+            <p className="text-xl font-bold text-red-600">
+              ₹{wallet.totalCashCollected?.toLocaleString() || 0}
+            </p>
+          </div>
+
+          {/* Total Settled */}
+          <div className="bg-white rounded-2xl p-4 shadow-lg border border-green-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-lg bg-green-50">
+                <FiArrowUp className="w-4 h-4 text-green-500" />
+              </div>
+              <p className="text-xs text-gray-600 font-semibold">Total Settled</p>
+            </div>
+            <p className="text-xl font-bold text-green-600">
+              ₹{wallet.totalSettled?.toLocaleString() || 0}
+            </p>
+          </div>
+        </div>
+
+        {/* Blocked Status Notice */}
+        {wallet.isBlocked && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <FiX className="w-5 h-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-bold text-red-800">Account Blocked</p>
+                <p className="text-sm text-red-600 mb-2">
+                  {wallet.blockReason || 'Your account is blocked due to excessive dues.'}
+                </p>
+                <button
+                  onClick={() => navigate('/vendor/wallet/settle')}
+                  className="text-xs font-bold uppercase tracking-wider text-white bg-red-600 px-3 py-1.5 rounded-lg shadow-sm active:scale-95 transition-all"
+                >
+                  Pay Now to Unblock
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cash Limit Indicator */}
+        <div className="bg-white rounded-2xl p-4 shadow-lg mb-6 border border-blue-50">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-gray-700">Cash Collection Limit</p>
+            <p className="text-xs font-medium text-gray-500">
+              ₹{(wallet.dues || 0).toLocaleString()} / ₹{(wallet.cashLimit || 10000).toLocaleString()}
+            </p>
+          </div>
+          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${(wallet.dues / (wallet.cashLimit || 10000)) > 0.8 ? 'bg-red-500' : 'bg-blue-500'
+                }`}
+              style={{ width: `${Math.min(100, (wallet.dues / (wallet.cashLimit || 10000)) * 100)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">
+            * Your account will be auto-blocked if you exceed the ₹{(wallet.cashLimit || 10000).toLocaleString()} limit.
+          </p>
+        </div>
+
+
+
         {/* Filter Buttons */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
           {[
             { id: 'all', label: 'All' },
-            { id: 'earning', label: 'Earnings' },
-            { id: 'withdrawal', label: 'Withdrawals' },
-            { id: 'commission', label: 'Commission' },
+            { id: 'cash_collected', label: 'Cash Collected' },
+            { id: 'settlement', label: 'Settlements' },
           ].map((filterOption) => (
             <button
               key={filterOption.id}
@@ -247,109 +286,74 @@ const Wallet = () => {
           ))}
         </div>
 
-        {/* Transactions */}
+        {/* Transactions/Ledger */}
         <div>
-          <h3 className="font-bold text-gray-800 mb-4">Transactions</h3>
+          <h3 className="font-bold text-gray-800 mb-4">Transaction History</h3>
           {filteredTransactions.length === 0 ? (
-            <div
-              className="bg-white rounded-xl p-8 text-center shadow-md"
-              style={{
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              }}
-            >
+            <div className="bg-white rounded-xl p-8 text-center shadow-md">
               <FiDollarSign className="w-16 h-16 mx-auto mb-4 text-gray-300" />
               <p className="text-gray-600 font-semibold mb-2">No transactions yet</p>
-              <p className="text-sm text-gray-500">Your transactions will appear here</p>
+              <p className="text-sm text-gray-500">Your ledger will appear here</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredTransactions.map((txn, index) => {
-                const txnColor = txn.type.toLowerCase() === 'earning' ? '#10B981' :
-                  txn.type.toLowerCase() === 'withdrawal' ? '#EF4444' : '#F97316';
-                const hexToRgba = (hex, alpha) => {
-                  const r = parseInt(hex.slice(1, 3), 16);
-                  const g = parseInt(hex.slice(3, 5), 16);
-                  const b = parseInt(hex.slice(5, 7), 16);
-                  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                };
-
-                return (
-                  <div
-                    key={index}
-                    className="rounded-2xl p-4 shadow-lg relative overflow-hidden border-2"
-                    style={{
-                      background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-                      borderColor: hexToRgba(txnColor, 0.3),
-                      boxShadow: `0 8px 24px ${hexToRgba(txnColor, 0.15)}, 0 4px 12px ${hexToRgba(txnColor, 0.1)}`,
-                    }}
-                  >
-                    {/* Left accent bar */}
+            <div className="space-y-3">
+              {filteredTransactions.map((txn) => (
+                <div
+                  key={txn._id}
+                  className="bg-white rounded-xl p-4 shadow-md border-l-4"
+                  style={{
+                    borderLeftColor: txn.type === 'cash_collected' ? '#DC2626' :
+                      txn.type === 'settlement' ? '#10B981' : '#F97316'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
                     <div
-                      className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{
-                        background: `linear-gradient(180deg, ${txnColor} 0%, ${txnColor}dd 100%)`,
+                        background: txn.type === 'cash_collected' ? '#FEE2E2' :
+                          txn.type === 'settlement' ? '#D1FAE5' : '#FFEDD5'
                       }}
-                    />
+                    >
+                      {getTransactionIcon(txn.type)}
+                    </div>
 
-                    <div className="relative z-10 pl-3">
-                      <div className="flex items-center gap-4">
-                        {/* Icon */}
-                        <div
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: `linear-gradient(135deg, ${hexToRgba(txnColor, 0.2)} 0%, ${hexToRgba(txnColor, 0.1)} 100%)`,
-                            border: `2px solid ${hexToRgba(txnColor, 0.3)}`,
-                          }}
-                        >
-                          {getTransactionIcon(txn.type)}
-                        </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-bold text-gray-900 text-sm">
+                          {getTransactionLabel(txn.type)}
+                        </p>
+                        <p className={`text-lg font-bold ${txn.type === 'cash_collected' ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                          {txn.type === 'cash_collected' ? '-' : '+'}₹{Math.abs(txn.amount).toLocaleString()}
+                        </p>
+                      </div>
 
-                        {/* Transaction Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="font-bold text-gray-900 capitalize text-base">{txn.type}</p>
-                            <p className={`text-xl font-bold ${getTransactionColor(txn.type)}`}>
-                              {txn.type.toLowerCase() === 'withdrawal' ? '-' : '+'}₹{Math.abs(txn.amount).toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="text-sm text-gray-700 font-medium mb-1">{txn.description || 'Transaction'}</p>
-                          <div className="flex items-center gap-3">
-                            <p className="text-xs text-gray-500">{txn.date}</p>
-                            <span
-                              className={`text-xs font-bold px-2 py-1 rounded-full ${txn.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                txn.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-gray-100 text-gray-600'
-                                }`}
-                            >
-                              {txn.status}
-                            </span>
-                          </div>
-                        </div>
+                      <p className="text-xs text-gray-600 truncate mb-1">{txn.description}</p>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">{formatDate(txn.createdAt)}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${txn.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          txn.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                          {txn.status}
+                        </span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Request Withdrawal Button */}
-        {wallet.available > 0 && (
-          <div className="mt-6">
-            <button
-              onClick={() => navigate('/vendor/wallet/withdraw')}
-              className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-              style={{
-                background: themeColors.button,
-                boxShadow: `0 4px 12px ${themeColors.button}40`,
-              }}
-            >
-              Request Withdrawal
-              <FiArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
+        {/* View Settlements Link */}
+        <button
+          onClick={() => navigate('/vendor/wallet/settlements')}
+          className="w-full mt-6 py-3 rounded-xl font-semibold text-gray-700 bg-white border border-gray-200 flex items-center justify-center gap-2 transition-all active:scale-95"
+        >
+          View Settlement History
+          <FiArrowRight className="w-4 h-4" />
+        </button>
       </main>
 
       <BottomNav />
@@ -358,4 +362,3 @@ const Wallet = () => {
 };
 
 export default Wallet;
-

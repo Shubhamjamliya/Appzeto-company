@@ -65,7 +65,15 @@ const updateHomeContent = async (req, res) => {
       return items.map(item => {
         const newItem = { ...item };
         // Remove frontend-only 'id' fields that are strings
-        if (typeof newItem.id === 'string' && (newItem.id.startsWith('hbnr-') || newItem.id.startsWith('hprm-') || newItem.id.startsWith('hcur-') || newItem.id.startsWith('hnot-') || newItem.id.startsWith('hbkd-'))) {
+        // Added 'hsec-' for category sections
+        if (typeof newItem.id === 'string' && (
+          newItem.id.startsWith('hbnr-') ||
+          newItem.id.startsWith('hprm-') ||
+          newItem.id.startsWith('hcur-') ||
+          newItem.id.startsWith('hnot-') ||
+          newItem.id.startsWith('hbkd-') ||
+          newItem.id.startsWith('hsec-')
+        )) {
           delete newItem.id;
         }
 
@@ -78,6 +86,12 @@ const updateHomeContent = async (req, res) => {
           newItem.cards = newItem.cards.map(card => {
             const newCard = { ...card };
             if (newCard.targetCategoryId === '') newCard.targetCategoryId = null;
+
+            // Remove frontend-only 'id' fields from cards ie. 'hcard-'
+            if (typeof newCard.id === 'string' && newCard.id.startsWith('hcard-')) {
+              delete newCard.id;
+            }
+
             return newCard;
           });
         }
@@ -92,7 +106,10 @@ const updateHomeContent = async (req, res) => {
     if (req.body.curated !== undefined) homeContent.curated = sanitizeItems(req.body.curated);
     if (req.body.noteworthy !== undefined) homeContent.noteworthy = sanitizeItems(req.body.noteworthy);
     if (req.body.booked !== undefined) homeContent.booked = sanitizeItems(req.body.booked);
-    if (req.body.categorySections !== undefined) homeContent.categorySections = sanitizeItems(req.body.categorySections);
+    if (req.body.categorySections !== undefined) {
+      homeContent.categorySections = sanitizeItems(req.body.categorySections);
+      homeContent.markModified('categorySections');
+    }
     if (req.body.isActive !== undefined) homeContent.isActive = req.body.isActive;
 
     await homeContent.save();

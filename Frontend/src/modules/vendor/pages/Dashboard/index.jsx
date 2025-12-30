@@ -6,6 +6,8 @@ import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import { vendorDashboardService } from '../../services/dashboardService';
 import { acceptBooking, rejectBooking } from '../../services/bookingService';
+import { BookingAlertModal } from '../../components/bookings';
+import { toast } from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -39,6 +41,7 @@ const Dashboard = () => {
   const [pendingBookings, setPendingBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeAlertBooking, setActiveAlertBooking] = useState(null);
 
   // Set background gradient
   useLayoutEffect(() => {
@@ -92,7 +95,7 @@ const Dashboard = () => {
             serviceType: booking.serviceId?.title || 'Service',
             customerName: booking.userId?.name || 'Customer',
             location: booking.address?.addressLine1 || 'Address not available',
-            price: booking.finalAmount || booking.baseAmount || 0,
+            price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
             timeSlot: {
               date: new Date(booking.scheduledDate).toLocaleDateString(),
               time: booking.scheduledTimeSlot || 'Time not set'
@@ -111,7 +114,7 @@ const Dashboard = () => {
               address: booking.address?.addressLine1 || 'Address not available',
               distance: 'N/A' // Would need to calculate distance
             },
-            price: booking.finalAmount || booking.baseAmount || 0,
+            price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
             timeSlot: {
               date: new Date(booking.scheduledDate).toLocaleDateString(),
               time: booking.scheduledTimeSlot || 'Time not set'
@@ -171,7 +174,7 @@ const Dashboard = () => {
               serviceType: booking.serviceId?.title || 'Service',
               customerName: booking.userId?.name || 'Customer',
               location: booking.address?.addressLine1 || 'Address not available',
-              price: booking.finalAmount || booking.baseAmount || 0,
+              price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
               timeSlot: {
                 date: new Date(booking.scheduledDate).toLocaleDateString(),
                 time: booking.scheduledTimeSlot || 'Time not set'
@@ -189,7 +192,7 @@ const Dashboard = () => {
                 address: booking.address?.addressLine1 || 'Address not available',
                 distance: 'N/A'
               },
-              price: booking.finalAmount || booking.baseAmount || 0,
+              price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
               timeSlot: {
                 date: new Date(booking.scheduledDate).toLocaleDateString(),
                 time: booking.scheduledTimeSlot || 'Time not set'
@@ -589,6 +592,7 @@ const Dashboard = () => {
                 {pendingBookings.map((booking) => (
                   <div
                     key={booking.id}
+                    onClick={() => setActiveAlertBooking(booking)}
                     className="bg-white rounded-xl p-4 shadow-md cursor-pointer active:scale-98 transition-transform border-l-4"
                     style={{
                       boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)', // Orange for REQUESTED
@@ -643,9 +647,10 @@ const Dashboard = () => {
 
                             // Dispatch stats update event
                             window.dispatchEvent(new Event('vendorStatsUpdated'));
+                            toast.success('Booking accepted successfully!');
                           } catch (error) {
                             console.error('Error accepting:', error);
-                            alert('Failed to accept booking');
+                            toast.error('Failed to accept booking');
                           }
                         }}
                         className="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
@@ -664,9 +669,12 @@ const Dashboard = () => {
                             const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
                             const updated = pendingJobs.filter(b => b.id !== booking.id);
                             localStorage.setItem('vendorPendingJobs', JSON.stringify(updated));
+                            toast.success('Booking rejected');
+                            navigate('/vendor/jobs');
                           } catch (error) {
                             console.error('Error rejecting:', error);
-                            alert('Failed to reject booking');
+                            toast.error('Failed to reject booking');
+                            navigate('/vendor/jobs');
                           }
                         }}
                         className="flex-1 bg-red-500 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
@@ -940,6 +948,32 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+      {/* Slick New Booking Alert Modal */}
+      <BookingAlertModal
+        isOpen={!!activeAlertBooking}
+        booking={activeAlertBooking}
+        onAccept={async (id) => {
+          try {
+            await acceptBooking(id);
+            setActiveAlertBooking(null);
+            setPendingBookings(prev => prev.filter(b => b.id !== id));
+            window.dispatchEvent(new Event('vendorStatsUpdated'));
+            toast.success('Job claimed successfully!');
+          } catch (e) {
+            toast.error('Failed to claim job');
+          }
+        }
+        }
+        onReject={async (id) => {
+          try {
+            await rejectBooking(id, 'Vendor Declined');
+            setActiveAlertBooking(null);
+            setPendingBookings(prev => prev.filter(b => b.id !== id));
+          } catch (e) {
+            setActiveAlertBooking(null);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -15,6 +15,7 @@ import {
   FiChevronDown,
   FiX,
   FiPackage,
+  FiTrash2,
 } from "react-icons/fi";
 import adminMenu from "../../config/adminMenu.json";
 
@@ -29,7 +30,8 @@ const iconMap = {
   Payments: FiDollarSign,
   Reports: FiFileText,
   Notifications: FiBell,
-  Notifications: FiBell,
+  "Scrap Items": FiTrash2,
+  Settlements: FiDollarSign,
   Settings: FiSettings,
   Plans: FiPackage,
 };

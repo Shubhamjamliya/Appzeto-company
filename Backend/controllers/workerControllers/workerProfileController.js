@@ -63,7 +63,7 @@ const updateProfile = async (req, res) => {
     }
 
     const workerId = req.user.id;
-    const { name, serviceCategory, skills, address, status } = req.body;
+    const { name, serviceCategory, skills, address, status, profilePhoto } = req.body;
 
     const worker = await Worker.findById(workerId);
 
@@ -89,6 +89,7 @@ const updateProfile = async (req, res) => {
       };
     }
     if (status) worker.status = status;
+    if (profilePhoto !== undefined) worker.profilePhoto = profilePhoto;
 
     if (req.body.settings) {
       worker.settings = {
@@ -115,6 +116,7 @@ const updateProfile = async (req, res) => {
         totalJobs: worker.totalJobs,
         completedJobs: worker.completedJobs,
         status: worker.status,
+        profilePhoto: worker.profilePhoto, // Include in response
         settings: worker.settings,
         isPhoneVerified: worker.isPhoneVerified,
         isEmailVerified: worker.isEmailVerified

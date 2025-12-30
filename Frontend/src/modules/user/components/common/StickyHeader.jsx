@@ -1,12 +1,12 @@
 import React from 'react';
 import { FiArrowLeft, FiSearch, FiShare2 } from 'react-icons/fi';
 
-const StickyHeader = React.memo(({ 
-  title = 'Appzeto', 
-  onBack, 
-  onSearch, 
-  onShare, 
-  isVisible = false 
+const StickyHeader = React.memo(({
+  title = 'Appzeto',
+  onBack,
+  onSearch,
+  onShare,
+  isVisible = false
 }) => {
   if (!isVisible) {
     return null;

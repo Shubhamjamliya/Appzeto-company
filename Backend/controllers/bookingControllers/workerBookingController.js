@@ -1,6 +1,6 @@
 const Booking = require('../../models/Booking');
 const { validationResult } = require('express-validator');
-const { BOOKING_STATUS } = require('../../utils/constants');
+const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 
 /**
  * Get assigned jobs for worker
@@ -101,7 +101,7 @@ const updateJobStatus = async (req, res) => {
 
     const workerId = req.user.id;
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, finalSettlementStatus, workerPaymentStatus } = req.body;
 
     const booking = await Booking.findOne({ _id: id, workerId });
 
@@ -112,36 +112,48 @@ const updateJobStatus = async (req, res) => {
       });
     }
 
-    // Validate status transition
-    const validTransitions = {
-      [BOOKING_STATUS.ASSIGNED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS],
-      [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS], // Allow confirmed->progress legacy
-      [BOOKING_STATUS.VISITED]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
-      [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
-      [BOOKING_STATUS.WORK_DONE]: [BOOKING_STATUS.COMPLETED]
-    };
+    // Validate status transition if status is changing
+    if (status && status !== booking.status) {
+      const validTransitions = {
+        [BOOKING_STATUS.ASSIGNED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS],
+        [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS],
+        [BOOKING_STATUS.VISITED]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
+        [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED],
+        [BOOKING_STATUS.WORK_DONE]: [BOOKING_STATUS.COMPLETED],
+        [BOOKING_STATUS.JOURNEY_STARTED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS]
+      };
 
-    if (!validTransitions[booking.status]?.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid status transition from ${booking.status} to ${status}`
-      });
+      if (!validTransitions[booking.status]?.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status transition from ${booking.status} to ${status}`
+        });
+      }
+
+      // Update booking status
+      booking.status = status;
+
+      if (status === BOOKING_STATUS.IN_PROGRESS && !booking.startedAt) {
+        booking.startedAt = new Date();
+      }
+
+      if (status === BOOKING_STATUS.VISITED && !booking.startedAt) {
+        booking.startedAt = new Date();
+      }
+
+      if (status === BOOKING_STATUS.COMPLETED) {
+        booking.completedAt = new Date();
+      }
     }
 
-    // Update booking
-    booking.status = status;
-
-    if (status === BOOKING_STATUS.IN_PROGRESS && !booking.startedAt) {
-      booking.startedAt = new Date();
-    }
-
-    // Use startedAt for visited as well if needed, or maybe add visitedAt? 
-    if (status === BOOKING_STATUS.VISITED && !booking.startedAt) {
-      booking.startedAt = new Date(); // Using startedAt for visit time
-    }
-
-    if (status === BOOKING_STATUS.COMPLETED) {
-      booking.completedAt = new Date();
+    // Update additional fields
+    if (finalSettlementStatus) booking.finalSettlementStatus = finalSettlementStatus;
+    if (workerPaymentStatus) {
+      booking.workerPaymentStatus = workerPaymentStatus;
+      if (workerPaymentStatus === 'PAID' || workerPaymentStatus === 'SUCCESS') {
+        booking.isWorkerPaid = true;
+        booking.workerPaidAt = booking.workerPaidAt || new Date();
+      }
     }
 
     await booking.save();
@@ -163,6 +175,9 @@ const updateJobStatus = async (req, res) => {
 /**
  * Mark job as started (Visited)
  */
+/**
+ * Mark job as started (Journey Started)
+ */
 const startJob = async (req, res) => {
   try {
     const workerId = req.user.id;
@@ -180,23 +195,27 @@ const startJob = async (req, res) => {
     if (booking.status !== BOOKING_STATUS.ASSIGNED && booking.status !== BOOKING_STATUS.CONFIRMED) {
       return res.status(400).json({
         success: false,
-        message: `Cannot start job with status: ${booking.status}`
+        message: `Cannot start journey with status: ${booking.status}`
       });
     }
 
-    // Update booking to VISITED (Start Journey implies going to site)
-    booking.status = BOOKING_STATUS.VISITED;
-    booking.startedAt = new Date(); // Reusing startedAt
+    // Generate Visit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Update booking
+    booking.status = BOOKING_STATUS.JOURNEY_STARTED;
+    booking.journeyStartedAt = new Date();
+    booking.visitOtp = otp; // In production, hash this!
 
     await booking.save();
 
-    // Notify user
+    // Notify user with OTP
     const { createNotification } = require('../notificationControllers/notificationController');
     await createNotification({
       userId: booking.userId,
       type: 'worker_started',
-      title: 'Worker On The Way',
-      message: `The worker has started the journey for booking ${booking.bookingNumber}.`,
+      title: 'Worker Started Journey',
+      message: `Worker is on the way! specific OTP for site visit verification is: ${otp}. Please share this with worker upon arrival.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
@@ -211,9 +230,25 @@ const startJob = async (req, res) => {
       relatedType: 'booking'
     });
 
+    // Explicitly emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: BOOKING_STATUS.JOURNEY_STARTED,
+        visitOtp: otp
+      });
+
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Worker Started Journey',
+        message: `Worker is on the way! OTP: ${otp}`,
+        relatedId: booking._id
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Job started successfully',
+      message: 'Journey started, OTP sent to user',
       data: booking
     });
   } catch (error) {
@@ -226,12 +261,65 @@ const startJob = async (req, res) => {
 };
 
 /**
+ * Verify Site Visit with OTP
+ */
+const verifyVisit = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+    const { otp, location } = req.body;
+
+    // Use query to select visitOtp which is usually hidden
+    const booking = await Booking.findOne({ _id: id, workerId }).select('+visitOtp');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (booking.status !== BOOKING_STATUS.JOURNEY_STARTED) {
+      return res.status(400).json({ success: false, message: 'Worker has not started journey yet' });
+    }
+
+    if (booking.visitOtp !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    // Update status
+    booking.status = BOOKING_STATUS.VISITED;
+    booking.visitedAt = new Date();
+    booking.startedAt = new Date(); // Legacy compatibility
+    booking.visitOtp = undefined; // Clear OTP
+    if (location) {
+      booking.visitLocation = {
+        ...location,
+        verifiedAt: new Date()
+      };
+    }
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Site visit verified successfully',
+      data: booking
+    });
+  } catch (error) {
+    console.error('Verify visit error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verifying visit' });
+  }
+};
+
+/**
  * Mark job as completed (Work Done)
+ */
+/**
+ * Mark job as completed (Work Done) & Generate Payment OTP
  */
 const completeJob = async (req, res) => {
   try {
     const workerId = req.user.id;
     const { id } = req.params;
+    const { workPhotos, workDoneDetails } = req.body;
 
     const booking = await Booking.findOne({ _id: id, workerId });
 
@@ -249,26 +337,62 @@ const completeJob = async (req, res) => {
       });
     }
 
-    // Update booking to WORK_DONE (Wait for Vendor Payment/Settlement)
+    // Generate Payment OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Update booking
     booking.status = BOOKING_STATUS.WORK_DONE;
-    // booking.completedAt = new Date(); // Don't set completedAt yet, wait for settlement
+    booking.paymentOtp = otp;
+
+    if (workPhotos && Array.isArray(workPhotos)) {
+      booking.workPhotos = workPhotos;
+    }
+    if (workDoneDetails) {
+      booking.workDoneDetails = workDoneDetails;
+    }
 
     await booking.save();
 
-    // Notify vendor
+    // Notify user
     const { createNotification } = require('../notificationControllers/notificationController');
     await createNotification({
-      vendorId: booking.vendorId,
-      type: 'worker_completed',
-      title: 'Work Done',
-      message: `Your worker has marked work as done for booking ${booking.bookingNumber}. Please review.`,
+      userId: booking.userId,
+      type: 'work_done',
+      title: 'Work Completed & Ready for Rating',
+      message: `Worker has completed the work. Please rate your experience and confirm by sharing OTP: ${otp}.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
 
+    // Notify vendor
+    await createNotification({
+      vendorId: booking.vendorId,
+      type: 'worker_completed',
+      title: 'Work Done',
+      message: `Your worker has marked work as done for booking ${booking.bookingNumber}.`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    // Explicitly emit socket event to ensure user gets real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: BOOKING_STATUS.WORK_DONE,
+        paymentOtp: otp
+      });
+
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Work Completed',
+        message: `Worker has completed the work. Please confirm & Pay. OTP: ${otp}`,
+        relatedId: booking._id
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Work marked as done',
+      message: 'Work done marked, OTP sent to user',
       data: booking
     });
   } catch (error) {
@@ -277,6 +401,153 @@ const completeJob = async (req, res) => {
       success: false,
       message: 'Failed to complete job. Please try again.'
     });
+  }
+};
+
+/**
+ * Collect Cash & Complete Booking
+ */
+const collectCash = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+    const { otp, amount } = req.body;
+
+    const booking = await Booking.findOne({ _id: id, workerId }).select('+paymentOtp');
+    const Vendor = require('../../models/Vendor');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (booking.status !== BOOKING_STATUS.WORK_DONE) {
+      return res.status(400).json({ success: false, message: 'Work is not marked as done yet' });
+    }
+
+    if (booking.paymentOtp !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    // Update Booking Status
+    booking.status = BOOKING_STATUS.COMPLETED;
+    booking.paymentStatus = PAYMENT_STATUS.SUCCESS;
+    booking.cashCollected = true;
+    booking.cashCollectedBy = 'worker';
+    booking.cashCollectorId = workerId;
+    booking.cashCollectedAt = new Date();
+    booking.completedAt = new Date();
+    booking.paymentOtp = undefined; // Clear OTP
+
+    // Deduct from Vendor Wallet (Negative Balance logic)
+    // "negative balance is deducted from vedors only in both vendor worker cases"
+    // Assuming this means the amount collected is DEBT the vendor owes to the platform (admin)
+    // Or if it's commission based?
+    // "the full control of timeline is with worker till job completion and cash collection"
+    // "when worker collects the cash the neagtive balance is deducted from vedors only"
+    // This implies Vendor Wallet Balance -= Amount Collected (making it negative if they held 0).
+    // Because they (Vendor entity) now hold the cash (physically via worker).
+
+    if (booking.vendorId) {
+      const vendor = await Vendor.findById(booking.vendorId);
+      if (vendor) {
+        // Decrease balance by Full Amount (since cash is collected)
+        // Or remove commission? Usually platform takes commission.
+        // If Vendor collects 1000 cash. Commission is 100.
+        // Vendor owes 100 to Admin.
+        // Wallet decreases by 100?
+        // OR: Vendor Wallet tracks "How much money Vendor holds that belongs to Admin"?
+        // Usually: Wallet Balance = Money Admin Holds for Vendor.
+        // If Vendor collects Cash, they essentially "Withdrew" money instantly.
+        // If they collect 1000, and their share is 900.
+        // They should have received 900. They took 1000.
+        // So they took 100 extra (Admin's share).
+        // Wallet Balance -= 100?
+        // BUT Logic says "negative balance is deducted from vendors only".
+        // Let's assume simplest interpretation: Deduct the Cash Amount from Wallet.
+        // Wait, if I deduct 1000 from Wallet. 
+        // Before: Wallet 0.
+        // After: Wallet -1000.
+        // This means Vendor owes 1000 to Admin. 
+        // But Vendor EARNED 900. So Vendor owes 100.
+        // So we should ADD Vendor Earnings (+900) and SUBTRACT Cash Collected (-1000). 
+        // Net: -100. Correct.
+
+        // Update DUES (Cash Collected)
+        vendor.wallet.dues = (vendor.wallet.dues || 0) + booking.finalAmount;
+
+        // Update EARNINGS (Credit Vendor Share)
+        if (booking.vendorEarnings) {
+          vendor.wallet.earnings = (vendor.wallet.earnings || 0) + booking.vendorEarnings;
+        }
+
+        vendor.wallet.totalCashCollected = (vendor.wallet.totalCashCollected || 0) + booking.finalAmount;
+
+        // Check Auto-Blocking Logic
+        const cashLimit = vendor.wallet.cashLimit || 10000;
+        const currentDues = vendor.wallet.dues;
+
+        if (currentDues > cashLimit) {
+          vendor.wallet.isBlocked = true;
+          vendor.wallet.blockedAt = new Date();
+          vendor.wallet.blockReason = `Cash limit exceeded. Owed: ₹${currentDues}, Limit: ₹${cashLimit}`;
+        }
+
+        await vendor.save();
+
+        // Create Transactions
+        const Transaction = require('../../models/Transaction');
+
+        // 1. Dues Increase (Cash Collected)
+        await Transaction.create({
+          vendorId: vendor._id,
+          bookingId: booking._id,
+          workerId: workerId,
+          type: 'cash_collected',
+          amount: booking.finalAmount,
+          status: 'completed',
+          paymentMethod: 'cash',
+          description: `Cash collected by worker. Dues +${booking.finalAmount}`,
+          metadata: { type: 'dues_increase', collectedBy: 'worker' }
+        });
+
+        // 2. Earnings Credit
+        if (booking.vendorEarnings) {
+          await Transaction.create({
+            vendorId: vendor._id,
+            bookingId: booking._id,
+            type: 'earnings_credit',
+            amount: booking.vendorEarnings,
+            status: 'completed',
+            paymentMethod: 'wallet',
+            description: `Earnings credited for job #${booking.bookingNumber}`,
+            metadata: { type: 'earnings_increase' }
+          });
+        }
+      }
+    }
+
+    await booking.save();
+
+    // Notify User
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'payment_received',
+      title: 'Payment Confirmed',
+      message: `Payment of ₹${booking.finalAmount} verified. Job Completed. Thanks!`,
+      relatedId: booking._id,
+      relatedType: 'booking'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Cash collected and job completed',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Collect cash error:', error);
+    res.status(500).json({ success: false, message: 'Failed to collect cash' });
   }
 };
 
@@ -332,6 +603,8 @@ module.exports = {
   updateJobStatus,
   startJob,
   completeJob,
-  addWorkerNotes
+  addWorkerNotes,
+  verifyVisit,
+  collectCash
 };
 

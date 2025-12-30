@@ -1,16 +1,45 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle } from 'react-icons/fi';
+import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { getBookingById, updateBookingStatus } from '../../services/bookingService';
+import {
+  getBookingById,
+  updateBookingStatus,
+  assignWorker as assignWorkerApi,
+  startSelfJob,
+  verifySelfVisit,
+  completeSelfJob
+} from '../../services/bookingService';
+import { CashCollectionModal, ConfirmDialog } from '../../components/common';
+import vendorWalletService from '../../../../services/vendorWalletService';
+import { toast } from 'react-hot-toast';
 
 const BookingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  const [cashOTP, setCashOTP] = useState('');
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [cashSubmitting, setCashSubmitting] = useState(false);
+  const [isPayWorkerModalOpen, setIsPayWorkerModalOpen] = useState(false);
+  const [payWorkerAmount, setPayWorkerAmount] = useState('');
+  const [payWorkerNotes, setPayWorkerNotes] = useState('');
+  const [paySubmitting, setPaySubmitting] = useState(false);
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [isWorkDoneModalOpen, setIsWorkDoneModalOpen] = useState(false);
+  const [otpInput, setOtpInput] = useState(['', '', '', '']);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    type: 'warning'
+  });
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -46,6 +75,7 @@ const BookingDetails = () => {
           customerName: apiData.userId?.name || apiData.customerName || 'Customer',
           customerPhone: apiData.userId?.phone || apiData.customerPhone || 'Hidden',
           serviceType: apiData.serviceId?.title || apiData.serviceName || apiData.serviceType || 'Service',
+          items: apiData.bookedItems || [],
           location: {
             address: (() => {
               const a = apiData.address;
@@ -57,13 +87,30 @@ const BookingDetails = () => {
             lng: apiData.address?.lng || 0,
             distance: apiData.distance ? `${apiData.distance.toFixed(1)} km` : 'N/A'
           },
-          price: apiData.finalAmount || apiData.price || 0,
+          // Price Breakdown
+          basePrice: parseFloat(apiData.basePrice || 0),
+          tax: parseFloat(apiData.tax || 0),
+          visitingCharges: parseFloat(apiData.visitingCharges || apiData.visitationFee || 0),
+          discount: parseFloat(apiData.discount || 0),
+          platformCommission: parseFloat(apiData.adminCommission || apiData.platformFee || apiData.commission || 0),
+          finalAmount: parseFloat(apiData.finalAmount || 0),
+          vendorEarnings: parseFloat(apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0)),
+
+          // Display Price (Vendor Earnings by default as requested)
+          price: (apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0)).toFixed(2),
+
           timeSlot: {
             date: apiData.scheduledDate ? new Date(apiData.scheduledDate).toLocaleDateString() : 'Today',
             time: apiData.scheduledTime || apiData.timeSlot?.start ? `${apiData.timeSlot.start} - ${apiData.timeSlot.end}` : 'Flexible'
           },
           status: apiData.status,
-          description: apiData.description || apiData.notes || 'No description provided'
+          description: apiData.description || apiData.notes || 'No description provided',
+          assignedTo: apiData.workerId ? { name: apiData.workerId.name } : (apiData.assignedAt ? { name: 'You (Self)' } : null),
+          workerResponse: apiData.workerResponse,
+          workerResponseAt: apiData.workerResponseAt,
+          paymentMethod: apiData.paymentMethod,
+          paymentStatus: apiData.paymentStatus,
+          cashCollected: apiData.cashCollected || false
         };
 
         setBooking(mappedBooking);
@@ -88,12 +135,13 @@ const BookingDetails = () => {
     // Check payment status
     const workerPaymentDone = booking?.workerPaymentStatus === 'PAID';
     const finalSettlementDone = booking?.finalSettlementStatus === 'DONE';
+    const isSelfJob = booking?.assignedTo?.name === 'You (Self)';
 
     const statusFlow = {
       'confirmed': ['assigned', 'visited'],
       'assigned': ['visited'],
       'visited': ['work_done'],
-      'work_done': workerPaymentDone
+      'work_done': (isSelfJob || workerPaymentDone)
         ? (finalSettlementDone ? ['completed'] : ['final_settlement', 'completed'])
         : [],
       'final_settlement': ['completed'],
@@ -103,12 +151,28 @@ const BookingDetails = () => {
   };
 
   const canPayWorker = (booking) => {
-    return booking?.status === 'work_done' && booking?.workerPaymentStatus !== 'PAID';
+    // If assigned to self, no worker payment needed
+    if (booking?.assignedTo?.name === 'You (Self)') return false;
+
+    // Allow payment if work is done or even if marked completed but worker not paid
+    const validStatus = booking?.status === 'work_done' || booking?.status === 'completed';
+    return validStatus && booking?.workerPaymentStatus !== 'PAID';
   };
 
   const canDoFinalSettlement = (booking) => {
-    return booking?.status === 'work_done' &&
-      booking?.workerPaymentStatus === 'PAID' &&
+    // Check if payment is already done (Online SUCCESS or Cash COLLECTED)
+    const isPaid = booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected;
+    const isWorkDone = booking?.status === 'work_done' || booking?.status === 'completed' || booking?.status === 'WORKER_PAID';
+
+    // For self-jobs, final settlement can be done after work is done AND payment is done
+    if (booking?.assignedTo?.name === 'You (Self)') {
+      return isWorkDone && isPaid && booking?.finalSettlementStatus !== 'DONE';
+    }
+
+    // For worker jobs, requires work done, worker paid, and customer payment done
+    return isWorkDone &&
+      (booking?.workerPaymentStatus === 'PAID' || booking?.workerPaymentStatus === 'SUCCESS') &&
+      isPaid &&
       booking?.finalSettlementStatus !== 'DONE';
   };
 
@@ -117,74 +181,158 @@ const BookingDetails = () => {
 
     const availableStatuses = getAvailableStatuses(booking.status, booking);
     if (!availableStatuses.includes(newStatus)) {
-      alert(`Cannot change status from ${booking.status} to ${newStatus}. Please follow the proper flow.`);
+      toast.error(`Cannot change status from ${booking.status} to ${newStatus}. Please follow the proper flow.`);
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to change status to ${newStatus.replace('_', ' ')}?`)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await updateBookingStatus(id, newStatus);
-      window.dispatchEvent(new Event('vendorJobsUpdated'));
-      alert(`Status updated to ${newStatus.replace('_', ' ')} successfully!`);
-      // Reload to get fresh data
-      window.location.reload();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Failed to update status. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Update Status',
+      message: `Are you sure you want to change status to ${newStatus.replace('_', ' ')}?`,
+      type: 'info',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await updateBookingStatus(id, newStatus);
+          window.dispatchEvent(new Event('vendorJobsUpdated'));
+          toast.success(`Status updated to ${newStatus.replace('_', ' ')} successfully!`);
+          window.location.reload();
+        } catch (error) {
+          console.error('Error updating status:', error);
+          toast.error('Failed to update status. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
-  const handlePayWorker = async () => {
-    if (!booking) return;
+  const handlePayWorkerClick = () => {
+    setPayWorkerAmount('');
+    setPayWorkerNotes('');
+    setIsPayWorkerModalOpen(true);
+  };
 
-    if (!window.confirm(`Pay ₹${booking.price} to worker ${booking.assignedTo?.name || 'Worker'}?`)) {
+  const handlePayWorkerSubmit = async () => {
+    if (!payWorkerAmount || isNaN(payWorkerAmount) || parseFloat(payWorkerAmount) <= 0) {
+      toast.error('Please enter a valid amount');
       return;
     }
 
-    setLoading(true);
     try {
-      await updateBookingStatus(id, booking.status, {
-        workerPaymentStatus: 'PAID',
-        workerPaidBy: 'VENDOR'
-      });
-      window.dispatchEvent(new Event('vendorJobsUpdated'));
-      alert('Worker payment completed successfully!');
-      window.location.reload();
+      setPaySubmitting(true);
+      const res = await vendorWalletService.payWorker(
+        booking.id || booking._id,
+        parseFloat(payWorkerAmount),
+        payWorkerNotes
+      );
+
+      if (res.success) {
+        toast.success(res.message || 'Payment recorded successfully');
+        setIsPayWorkerModalOpen(false);
+        // Refresh booking data
+        window.location.reload();
+      } else {
+        toast.error(res.message || 'Failed to record payment');
+      }
     } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('Failed to process payment. Please try again.');
+      toast.error('Failed to process payment');
     } finally {
-      setLoading(false);
+      setPaySubmitting(false);
     }
   };
 
   const handleFinalSettlement = async () => {
     if (!booking) return;
 
-    if (!window.confirm('Mark final settlement as done? This will allow you to complete the booking.')) {
-      return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Final Settlement',
+      message: 'Mark final settlement as done? This will allow you to complete the booking.',
+      type: 'warning',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await updateBookingStatus(id, booking.status, {
+            finalSettlementStatus: 'DONE'
+          });
+          window.dispatchEvent(new Event('vendorJobsUpdated'));
+          toast.success('Final settlement marked as done!');
+          window.location.reload();
+        } catch (error) {
+          console.error('Error updating settlement:', error);
+          toast.error('Failed to update settlement. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  // Handle initiating cash collection (Send OTP) with new Unified Modal
+  const handleInitiateCashCollection = async (totalAmount, extraItems = []) => {
+    try {
+      setCashSubmitting(true);
+      const res = await vendorWalletService.initiateCashCollection(booking.id || booking._id, totalAmount, extraItems);
+      if (res.success) {
+        return res; // Modal handles success toast
+      } else {
+        throw new Error(res.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('Initiate cash error:', error);
+      throw error;
+    } finally {
+      setCashSubmitting(false);
+    }
+  };
+
+  // Handle final confirmation of cash collection with new Unified Modal
+  const handleConfirmCashCollection = async (totalAmount, extraItems, otp) => {
+    try {
+      setCashSubmitting(true);
+      const res = await vendorWalletService.confirmCashCollection(
+        booking.id || booking._id,
+        totalAmount,
+        otp,
+        extraItems
+      );
+
+      if (res.success) {
+        toast.success('Cash collection recorded successfully!');
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        // Reload or update state
+        window.location.reload();
+      } else {
+        throw new Error(res.message || 'Failed to confirm');
+      }
+    } catch (error) {
+      console.error('Confirm cash error:', error);
+      throw error;
+    } finally {
+      setCashSubmitting(false);
+    }
+  };
+
+  // Handle cash collection button click
+  const handleCollectCashClick = () => {
+    setIsCashModalOpen(true);
+  };
+
+  const canCollectCash = (booking) => {
+    // Hide if already collected or paid
+    if (booking?.cashCollected || booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.paymentStatus === 'collected_by_vendor') {
+      return false;
     }
 
-    setLoading(true);
-    try {
-      await updateBookingStatus(id, booking.status, {
-        finalSettlementStatus: 'DONE'
-      });
-      window.dispatchEvent(new Event('vendorJobsUpdated'));
-      alert('Final settlement marked as done!');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error updating settlement:', error);
-      alert('Failed to update settlement. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    // Cash can be collected when booking is completed/work_done and payment was cash/at home
+    const isSelfJob = booking?.assignedTo?.name === 'You (Self)';
+    const validStatus = isSelfJob
+      ? (booking?.status === 'work_done' || booking?.status === 'completed')
+      : booking?.status === 'completed';
+
+    return validStatus &&
+      (booking?.paymentMethod === 'cash' || booking?.paymentMethod === 'pay_at_home');
   };
 
   if (!booking) {
@@ -212,15 +360,112 @@ const BookingDetails = () => {
     navigate(`/vendor/booking/${booking.id}/assign-worker`);
   };
 
-  const handleStartJourney = () => {
-    let destination = '';
-    if (booking.location.lat && booking.location.lng && booking.location.lat !== 0) {
-      destination = `${booking.location.lat},${booking.location.lng}`;
-    } else {
-      destination = encodeURIComponent(booking.location.address);
+  const handleAssignToSelf = async () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Assign to Self',
+      message: 'Are you sure you want to do this job yourself?',
+      type: 'info',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const response = await assignWorkerApi(id, 'SELF');
+          if (response && response.success) {
+            toast.success('Assigned to yourself successfully');
+            window.dispatchEvent(new Event('vendorJobsUpdated'));
+            window.location.reload();
+          } else {
+            throw new Error(response?.message || 'Failed to assign');
+          }
+        } catch (error) {
+          console.error('Error assigning to self:', error);
+          toast.error(error.message || 'Failed to assign to yourself');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleStartJourney = async () => {
+    // If self-job, call the start API first
+    if (booking.assignedTo?.name === 'You (Self)') {
+      try {
+        setLoading(true);
+        await startSelfJob(id);
+        toast.success('Journey Started');
+        // Refresh to update status
+        const response = await getBookingById(id);
+        const apiData = response.data || response;
+        setBooking(prev => ({ ...prev, status: apiData.status }));
+      } catch (error) {
+        console.error('Error starting self journey:', error);
+        toast.error('Failed to start journey');
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-    window.open(url, '_blank');
+
+    navigate(`/vendor/booking/${booking.id || id}/map`);
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return;
+    const newOtp = [...otpInput];
+    newOtp[index] = value;
+    setOtpInput(newOtp);
+    if (value && index < 3) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleVerifyVisit = async () => {
+    const otp = otpInput.join('');
+    if (otp.length !== 4) return toast.error('Enter 4-digit OTP');
+
+    try {
+      setActionLoading(true);
+      if (!navigator.geolocation) {
+        toast.error('Geolocation required for verification');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        try {
+          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+          await verifySelfVisit(id, otp, location);
+          toast.success('Visit Verified');
+          setIsVisitModalOpen(false);
+          window.location.reload();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Verification failed');
+        } finally {
+          setActionLoading(false);
+        }
+      }, (error) => {
+        toast.error('Failed to get location. Please enable GPS.');
+        setActionLoading(false);
+      });
+    } catch (error) {
+      toast.error('Something went wrong');
+      setActionLoading(false);
+    }
+  };
+
+  const handleCompleteWork = async () => {
+    try {
+      setActionLoading(true);
+      await completeSelfJob(id, { workPhotos: ['https://placehold.co/600x400'] });
+      toast.success('Work marked done');
+      setIsWorkDoneModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to complete job');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -242,14 +487,21 @@ const BookingDetails = () => {
                 {booking.serviceType}
               </p>
             </div>
-            <div
-              className="px-3 py-1 rounded-full text-sm font-semibold"
-              style={{
-                background: `${themeColors.button}15`,
-                color: themeColors.button,
-              }}
-            >
-              {booking.status}
+            <div className="flex flex-col items-end gap-1">
+              <div
+                className="px-3 py-1 rounded-full text-sm font-semibold"
+                style={{
+                  background: `${themeColors.button}15`,
+                  color: themeColors.button,
+                }}
+              >
+                {booking.status}
+              </div>
+              {booking.assignedTo?.name === 'You (Self)' && (
+                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md border border-green-100 uppercase tracking-wider">
+                  Personal Job
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -331,7 +583,7 @@ const BookingDetails = () => {
           </div>
 
           <button
-            onClick={() => navigate(`/vendor/booking/${booking.id}/map`)}
+            onClick={handleStartJourney}
             className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
             style={{
               background: themeColors.button,
@@ -356,6 +608,41 @@ const BookingDetails = () => {
           </div>
         )}
 
+        {/* Booked Items Details */}
+        {booking.items && booking.items.length > 0 && (
+          <div
+            className="bg-white rounded-xl p-4 mb-4 shadow-md"
+            style={{
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            <p className="text-sm font-semibold text-gray-700 mb-3">Booked Services</p>
+            <div className="space-y-3">
+              {booking.items.map((item, index) => (
+                <div key={index} className="flex justify-between items-start border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-medium text-gray-800">{item.card?.title || 'Service Item'}</p>
+                    <p className="text-xs text-gray-500">{item.sectionTitle || 'General'}</p>
+                    {item.card?.features && item.card.features.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-1 truncate max-w-[200px]">• {item.card.features.join(', ')}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-800">
+                      ₹{item.card?.price || 0} <span className="text-xs text-gray-500 font-normal">x {item.quantity}</span>
+                    </p>
+                    <p className="text-xs font-bold text-gray-900 mt-1">₹{((item.card?.price || 0) * (item.quantity || 1)).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+              <p className="font-semibold text-gray-700">Total Price</p>
+              <p className="font-bold text-lg" style={{ color: themeColors.button }}>₹{booking.price}</p>
+            </div>
+          </div>
+        )}
+
         {/* Time Slot */}
         <div
           className="bg-white rounded-xl p-4 mb-4 shadow-md"
@@ -373,28 +660,126 @@ const BookingDetails = () => {
           </div>
         </div>
 
-        {/* Price */}
+        {/* Payment Details */}
         <div
           className="bg-white rounded-xl p-4 mb-4 shadow-md"
           style={{
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FiDollarSign className="w-5 h-5" style={{ color: themeColors.icon }} />
-              <div>
-                <p className="text-sm text-gray-600">Estimated Price</p>
-                <p className="text-2xl font-bold" style={{ color: themeColors.button }}>
-                  ₹{booking.price}
-                </p>
+          <div className="flex items-center gap-2 mb-3">
+            <FiDollarSign className="w-5 h-5" style={{ color: themeColors.icon }} />
+            <h3 className="font-bold text-gray-800">Payment Summary</h3>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Base Price</span>
+              <span>₹{(booking.basePrice || 0).toFixed(2)}</span>
+            </div>
+            {(booking.tax > 0) && (
+              <div className="flex justify-between text-gray-600">
+                <span>Tax</span>
+                <span>+₹{(booking.tax || 0).toFixed(2)}</span>
               </div>
+            )}
+            {(booking.visitingCharges > 0) && (
+              <div className="flex justify-between text-gray-600">
+                <span>Convenience Fee</span>
+                <span>+₹{(booking.visitingCharges || 0).toFixed(2)}</span>
+              </div>
+            )}
+            {(booking.discount > 0) && (
+              <div className="flex justify-between text-green-600 font-medium">
+                <span>Discount</span>
+                <span>-₹{(booking.discount || 0).toFixed(2)}</span>
+              </div>
+            )}
+
+            <div className="my-2 border-t border-gray-200"></div>
+
+            <div className="flex justify-between font-bold text-gray-900">
+              <span>Total Amount (User Pays)</span>
+              <span>₹{(booking.finalAmount || 0).toFixed(2)}</span>
+            </div>
+
+            <div className="my-2 border-t border-dashed border-gray-200"></div>
+
+            <div className="flex justify-between text-gray-500 text-xs">
+              <span>Platform Commission</span>
+              <span>-₹{(booking.platformCommission || 0).toFixed(2)}</span>
+            </div>
+
+            <div className="flex justify-between items-center mt-2 bg-green-50 p-2 rounded-lg">
+              <span className="font-bold text-gray-700">Your Net Earnings</span>
+              <span className="font-bold text-xl" style={{ color: themeColors.button }}>
+                ₹{(booking.vendorEarnings || 0).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Work Photos (after completion) */}
+        {booking.workPhotos && booking.workPhotos.length > 0 && booking.assignedTo?.name !== 'You (Self)' && (
+          <div className="bg-white rounded-xl p-4 mb-4 shadow-md border-t-4 border-green-500">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Work Evidence (Photos)</p>
+            <div className="grid grid-cols-2 gap-2">
+              {booking.workPhotos.map((photo, index) => (
+                <div key={index} className="aspect-square rounded-lg overflow-hidden bg-gray-100 border relative group">
+                  <img
+                    src={photo.replace('/api/upload', 'http://localhost:5000/upload')}
+                    alt={`Work evidence ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={() => window.open(photo.replace('/api/upload', 'http://localhost:5000/upload'), '_blank')}
+                      className="bg-white text-gray-900 px-3 py-1 rounded-full text-xs font-bold"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Approval/Reject Buttons */}
+            {booking.status === 'work_done' && booking.workerPaymentStatus !== 'PAID' && booking.assignedTo?.name !== 'You (Self)' && (
+              <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    setConfirmDialog({
+                      isOpen: true,
+                      title: 'Reject Work',
+                      message: 'Reject work? This will notify the worker to fix issues.',
+                      type: 'warning',
+                      onConfirm: () => {
+                        toast.error('Work Marked as Rejected');
+                        // Add actual reject logic here if available
+                      }
+                    });
+                  }}
+                  className="flex-1 py-3 bg-white text-red-600 rounded-xl font-bold text-sm active:scale-95 transition-transform border border-red-200 shadow-sm"
+                >
+                  <FiX className="inline w-4 h-4 mr-1" /> Reject Work
+                </button>
+                <button
+                  onClick={() => {
+                    toast.success('Work Approved!');
+                    const el = document.getElementById('worker-payment-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold text-sm shadow-md shadow-green-200 active:scale-95 transition-transform"
+                >
+                  <FiCheckCircle className="inline w-4 h-4 mr-1" /> Approve Work
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Worker Assignment Status */}
-        {booking.assignedTo && booking.assignedTo !== 'SELF' && (
+        {booking.assignedTo && booking.assignedTo?.name !== 'You (Self)' && (
           <div
             className="bg-white rounded-xl p-4 mb-4 shadow-md"
             style={{
@@ -441,110 +826,132 @@ const BookingDetails = () => {
           </div>
         )}
 
+        {/* Payment Collection Section (New Improved UI) */}
+        {canCollectCash(booking) && (
+          <div
+            className="bg-white rounded-2xl mb-4 overflow-hidden shadow-lg border-none relative group"
+            style={{
+              boxShadow: '0 10px 30px -5px rgba(249, 115, 22, 0.2)',
+            }}
+          >
+            {/* Top Accent Gradient */}
+            <div className="h-2 bg-gradient-to-r from-orange-400 to-orange-600" />
+
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500 shadow-inner">
+                  <FiCreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight">Collect Payment</h3>
+                  <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Step 1: Finish Settlement</p>
+                </div>
+              </div>
+
+              <div className="bg-orange-50/50 rounded-2xl p-4 mb-6 border border-orange-100/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Amount to Collect</span>
+                  <span className="text-2xl font-black text-orange-600">
+                    ₹{(booking.finalAmount || parseFloat(booking.price) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-start gap-2 text-[11px] text-orange-700/80 leading-relaxed">
+                  <FiClock className="w-3 h-3 mt-0.5" />
+                  <span>Customer chose {booking.paymentMethod?.replace('_', ' ') || 'Cash'} payment. Please verify collection to proceed.</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCollectCashClick}
+                disabled={loading}
+                className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 hover:brightness-105"
+                style={{
+                  background: 'linear-gradient(135deg, #F97316, #EA580C)',
+                  boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)',
+                }}
+              >
+                <FiCreditCard className="w-5 h-5" />
+                Collect Cash Now
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Worker Payment Button */}
         {canPayWorker(booking) && (
           <div
-            className="bg-white rounded-xl p-4 mb-4 shadow-md border-2"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              borderColor: '#10B981',
-            }}
+            id="worker-payment-section"
+            className="bg-white rounded-2xl p-5 mb-4 shadow-md border-l-4 border-green-500"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <FiDollarSign className="w-5 h-5" style={{ color: '#10B981' }} />
-              <p className="text-sm font-semibold text-gray-700">Worker Payment</p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                <FiDollarSign className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-gray-800">Worker Payout</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-3">
-              Pay ₹{booking.price} to {booking.assignedTo?.name || 'Worker'}
+            <p className="text-sm text-gray-600 mb-4">
+              Service complete. Pay {booking.assignedTo?.name}'s share to close this booking.
             </p>
             <button
-              onClick={handlePayWorker}
+              onClick={handlePayWorkerClick}
               disabled={loading}
-              className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md hover:brightness-105"
               style={{
-                background: '#10B981',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-              }}
-            >
-              <FiDollarSign className="w-5 h-5" />
-              Pay Worker
-            </button>
-          </div>
-        )}
-
-        {/* Final Settlement Button */}
-        {canDoFinalSettlement(booking) && (
-          <div
-            className="bg-white rounded-xl p-4 mb-4 shadow-md border-2"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              borderColor: '#8B5CF6',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <FiCheckCircle className="w-5 h-5" style={{ color: '#8B5CF6' }} />
-              <p className="text-sm font-semibold text-gray-700">Final Settlement</p>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">
-              Complete final settlement to mark booking as completed
-            </p>
-            <button
-              onClick={handleFinalSettlement}
-              disabled={loading}
-              className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: '#8B5CF6',
-                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+                background: 'linear-gradient(135deg, #10B981, #059669)',
               }}
             >
               <FiCheckCircle className="w-5 h-5" />
-              Mark Final Settlement Done
+              Pay Worker ₹{(booking.vendorEarnings || 0).toLocaleString()}
             </button>
           </div>
         )}
 
-        {/* Status Change Section */}
-        {getAvailableStatuses(booking.status, booking).length > 0 && (
+        {/* Final Settlement Button (Improved UI) */}
+        {canDoFinalSettlement(booking) && (
           <div
-            className="bg-white rounded-xl p-4 mb-4 shadow-md"
+            className="bg-white rounded-2xl mb-4 overflow-hidden shadow-lg border-none relative"
             style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 10px 30px -5px rgba(139, 92, 246, 0.15)',
             }}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <FiEdit className="w-5 h-5" style={{ color: themeColors.button }} />
-              <p className="text-sm font-semibold text-gray-700">Change Status</p>
+            <div className="h-2 bg-gradient-to-r from-violet-400 to-indigo-600" />
+
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-500 shadow-inner">
+                  <FiCheckCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Finish Job</h3>
+                  <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Step 2: Close Booking</p>
+                </div>
+              </div>
+
+              <div className="bg-violet-50/50 rounded-2xl p-4 mb-6 border border-violet-100/50">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <FiCheck className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-700 font-medium">Payment Verified</span>
+                    <p className="text-xs text-gray-500 mt-0.5">Payment has been successfully recorded. You can now close this booking.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleFinalSettlement}
+                disabled={loading}
+                className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 hover:brightness-105"
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                  boxShadow: '0 8px 16px -4px rgba(139, 92, 246, 0.4)',
+                }}
+              >
+                <FiCheckCircle className="w-5 h-5" />
+                Close Booking & Finalize
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {getAvailableStatuses(booking.status, booking).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  disabled={loading}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: `linear-gradient(135deg, ${themeColors.button} 0%, ${themeColors.icon} 100%)`,
-                    color: '#FFFFFF',
-                    boxShadow: `0 2px 8px ${themeColors.button}40`,
-                  }}
-                >
-                  {status.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Current Status: <span className="font-semibold">{booking.status}</span>
-            </p>
-            {booking.workerPaymentStatus === 'PAID' && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ Worker Payment: Paid
-              </p>
-            )}
-            {booking.finalSettlementStatus === 'DONE' && (
-              <p className="text-xs text-purple-600 mt-1">
-                ✓ Final Settlement: Done
-              </p>
-            )}
           </div>
         )}
 
@@ -563,20 +970,252 @@ const BookingDetails = () => {
           </button>
 
           {(booking.status === 'confirmed' || (booking.assignedTo && booking.workerResponse === 'rejected')) && (
-            <button
-              onClick={handleAssignWorker}
-              className="w-full py-4 rounded-xl font-semibold border-2 transition-all active:scale-95"
-              style={{
-                borderColor: themeColors.button,
-                color: themeColors.button,
-                background: 'white',
-              }}
-            >
-              {booking.workerResponse === 'rejected' ? 'Reassign Worker' : 'Assign Worker'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleAssignToSelf}
+                className="flex-1 py-4 rounded-xl font-semibold border-2 transition-all active:scale-95"
+                style={{
+                  borderColor: themeColors.button,
+                  color: themeColors.button,
+                  background: 'white',
+                }}
+              >
+                Do it Myself
+              </button>
+              <button
+                onClick={handleAssignWorker}
+                className="flex-1 py-4 rounded-xl font-semibold text-white transition-all active:scale-95 px-4"
+                style={{
+                  background: themeColors.button,
+                  boxShadow: `0 4px 12px ${themeColors.button}40`,
+                }}
+              >
+                {booking.workerResponse === 'rejected' ? 'Reassign' : 'Assign'}
+              </button>
+            </div>
+          )}
+
+          {/* Self-Job Operational Buttons */}
+          {booking.assignedTo?.name === 'You (Self)' && (
+            <div className="space-y-3 pt-2">
+              {(booking.status === 'confirmed' || booking.status === 'assigned') && (
+                <button
+                  onClick={handleStartJourney}
+                  className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                  }}
+                >
+                  <FiNavigation className="w-5 h-5" />
+                  Start Journey
+                </button>
+              )}
+
+              {booking.status === 'journey_started' && (
+                <button
+                  onClick={() => setIsVisitModalOpen(true)}
+                  className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                  }}
+                >
+                  <FiMapPin className="w-5 h-5" />
+                  Arrived (Arrived at customer's site)
+                </button>
+              )}
+
+              {(booking.status === 'visited' || booking.status === 'in_progress') && (
+                <button
+                  onClick={() => setIsWorkDoneModalOpen(true)}
+                  className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                  }}
+                >
+                  <FiCheckCircle className="w-5 h-5" />
+                  Work Done
+                </button>
+              )}
+            </div>
           )}
         </div>
       </main>
+
+      {/* Unified Cash Collection Modal */}
+      <CashCollectionModal
+        isOpen={isCashModalOpen}
+        onClose={() => setIsCashModalOpen(false)}
+        booking={booking}
+        onInitiateOTP={handleInitiateCashCollection}
+        onConfirm={handleConfirmCashCollection}
+        loading={cashSubmitting}
+      />
+
+      {/* Pay Worker Modal */}
+      {isPayWorkerModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Worker Payout</h3>
+                <button onClick={() => setIsPayWorkerModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="bg-green-50 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <FiUser className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Paying to</p>
+                    <p className="text-lg font-bold text-gray-900">{booking.assignedTo?.name || 'Worker'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Payout Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={payWorkerAmount}
+                    onChange={(e) => setPayWorkerAmount(e.target.value)}
+                    placeholder="Enter amount to pay"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all font-bold text-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notes (Optional)</label>
+                  <textarea
+                    value={payWorkerNotes}
+                    onChange={(e) => setPayWorkerNotes(e.target.value)}
+                    placeholder="e.g. Full payment for job"
+                    rows="2"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handlePayWorkerSubmit}
+                    disabled={paySubmitting || !payWorkerAmount}
+                    className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                    style={{
+                      background: '#10B981',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                    }}
+                  >
+                    {paySubmitting ? 'Processing...' : `Pay ₹${payWorkerAmount || '0'} & Complete Job`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visit OTP Modal */}
+      {isVisitModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Verify Arrival</h3>
+              <button
+                onClick={() => setIsVisitModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">Please enter the 4-digit OTP from the customer to verify your arrival at the location.</p>
+
+            <div className="flex gap-3 justify-center mb-8">
+              {[0, 1, 2, 3].map((i) => (
+                <input
+                  key={i}
+                  id={`otp-input-${i}`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={otpInput[i]}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  className="w-12 h-14 border-2 border-gray-100 rounded-xl text-center text-2xl font-bold focus:border-blue-500 focus:outline-none bg-gray-50 transition-all font-mono"
+                  maxLength={1}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={handleVerifyVisit}
+              disabled={actionLoading}
+              className="w-full py-4 rounded-xl font-bold text-white transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+              }}
+            >
+              {actionLoading ? 'Verifying...' : 'Verify & Arrive'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Work Done Modal */}
+      {isWorkDoneModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Complete Work</h3>
+              <button
+                onClick={() => setIsWorkDoneModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">Are you sure you have completed all the tasks for this service? Clicking "Confirm" will notify the customer for payment.</p>
+
+            <div className="bg-gray-50 p-4 rounded-xl mb-6">
+              <div className="flex items-center gap-3 text-green-600 mb-2">
+                <FiCheckCircle className="w-5 h-5" />
+                <span className="font-semibold">Quality Checklist</span>
+              </div>
+              <ul className="text-xs text-gray-600 space-y-1 ml-8 list-disc">
+                <li>Double check the service result</li>
+                <li>Clean up the work area</li>
+                <li>Ask if customer is satisfied</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={handleCompleteWork}
+              disabled={actionLoading}
+              className="w-full py-4 rounded-xl font-bold text-white transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #059669)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+              }}
+            >
+              {actionLoading ? 'Updating...' : 'Confirm Work Completed'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+      />
 
       <BottomNav />
     </div>
@@ -584,4 +1223,3 @@ const BookingDetails = () => {
 };
 
 export default BookingDetails;
-

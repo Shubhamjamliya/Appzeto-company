@@ -1,13 +1,20 @@
 const Vendor = require('../../models/Vendor');
 const Transaction = require('../../models/Transaction');
+const Settlement = require('../../models/Settlement');
+const Withdrawal = require('../../models/Withdrawal');
+const Booking = require('../../models/Booking');
+const Worker = require('../../models/Worker');
 
 /**
- * Get vendor wallet
+ * Get vendor wallet with ledger balance
+ * Get vendor wallet with ledger details
+ * dues = Amount owed to admin
+ * earnings = Amount admin owes vendor
  */
 const getWallet = async (req, res) => {
   try {
     const vendorId = req.user.id;
-    const vendor = await Vendor.findById(vendorId).select('wallet');
+    const vendor = await Vendor.findById(vendorId).select('wallet name businessName');
 
     if (!vendor) {
       return res.status(404).json({
@@ -16,10 +23,68 @@ const getWallet = async (req, res) => {
       });
     }
 
+    const dues = vendor.wallet?.dues || 0;
+    const earnings = vendor.wallet?.earnings || 0;
+    const totalWithdrawn = vendor.wallet?.totalWithdrawn || 0;
+
+    // Get pending settlements count
+    const pendingSettlements = await Settlement.countDocuments({
+      vendorId,
+      status: 'pending'
+    });
+
+    // Get total cash collected (sum of all cash_collected transactions)
+    const cashCollectedResult = await Transaction.aggregate([
+      {
+        $match: {
+          vendorId: vendor._id,
+          type: 'cash_collected',
+          status: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    // Get total settled amount
+    const settledResult = await Transaction.aggregate([
+      {
+        $match: {
+          vendorId: vendor._id,
+          type: 'settlement',
+          status: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    const totalCashCollected = cashCollectedResult[0]?.total || 0;
+    const totalSettled = settledResult[0]?.total || 0;
+
     res.status(200).json({
       success: true,
       data: {
-        balance: vendor.wallet?.balance || 0
+        dues,
+        earnings,
+        amountDue: dues, // Clarification for frontend but 'dues' is self-explanatory
+        balance: earnings - dues, // Net position for reference (optional)
+        totalWithdrawn,
+        totalCashCollected,
+        totalSettled,
+        pendingSettlements,
+        vendor: {
+          name: vendor.name,
+          businessName: vendor.businessName
+        }
       }
     });
   } catch (error) {
@@ -32,7 +97,7 @@ const getWallet = async (req, res) => {
 };
 
 /**
- * Get vendor transactions
+ * Get vendor transactions/ledger
  */
 const getTransactions = async (req, res) => {
   try {
@@ -49,7 +114,7 @@ const getTransactions = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('bookingId', 'bookingNumber serviceName');
+      .populate('bookingId', 'bookingNumber serviceName scheduledDate');
 
     const total = await Transaction.countDocuments(query);
 
@@ -73,21 +138,287 @@ const getTransactions = async (req, res) => {
 };
 
 /**
- * Request withdrawal
+ * Record cash collection from customer
+ * This DECREASES vendor wallet (vendor owes this amount to admin)
  */
-const requestWithdrawal = async (req, res) => {
+const recordCashCollection = async (req, res) => {
   try {
     const vendorId = req.user.id;
-    const { amount, bankDetails } = req.body;
+    const { bookingId, amount, notes } = req.body;
 
-    if (!amount || amount <= 0) {
+    if (!bookingId || !amount || amount <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid amount'
+        message: 'Booking ID and valid amount are required'
       });
     }
 
     const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    // Verify booking belongs to this vendor
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      vendorId
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found or does not belong to this vendor'
+      });
+    }
+
+    // Dues increase by full cash collected
+    vendor.wallet.dues = (vendor.wallet.dues || 0) + amount;
+
+    // Earnings increase by vendor's share
+    // If booking has vendorEarnings, use it. If not, assume full amount - commission
+    // For now assuming booking.vendorEarnings exists and is correct
+    // If NOT set, we might need to calculate it.
+    // Assuming backend set it on job completion.
+    if (booking.vendorEarnings) {
+      vendor.wallet.earnings = (vendor.wallet.earnings || 0) + booking.vendorEarnings;
+    }
+
+    vendor.wallet.totalCashCollected = (vendor.wallet.totalCashCollected || 0) + amount;
+
+    // Check Auto-Blocking Logic
+    const cashLimit = vendor.wallet.cashLimit || 10000;
+    const currentDues = vendor.wallet.dues;
+
+    if (currentDues > cashLimit) {
+      vendor.wallet.isBlocked = true;
+      vendor.wallet.blockedAt = new Date();
+      vendor.wallet.blockReason = `Cash limit exceeded. Owed: ₹${currentDues}, Limit: ₹${cashLimit}`;
+    }
+
+    await vendor.save();
+
+    // Create transaction record for Cash Collection (DUES increase)
+    await Transaction.create({
+      vendorId,
+      bookingId,
+      type: 'cash_collected',
+      amount, // Current Dues increased by this
+      status: 'completed',
+      paymentMethod: 'cash',
+      description: `Cash collected. Dues +${amount}`,
+      metadata: { notes, type: 'dues_increase' }
+    });
+
+    // Create transaction record for Earnings Credit
+    if (booking.vendorEarnings) {
+      await Transaction.create({
+        vendorId,
+        bookingId,
+        type: 'earnings_credit',
+        amount: booking.vendorEarnings,
+        status: 'completed',
+        paymentMethod: 'system',
+        description: `Earnings credited for booking #${booking.bookingNumber}`,
+        metadata: { type: 'earnings_increase' }
+      });
+    }
+
+    // Update booking payment status
+    booking.paymentStatus = 'paid';
+    booking.paymentMethod = 'cash';
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Cash collection recorded successfully',
+      data: {
+        transaction,
+        newBalance,
+        amountDue: newBalance < 0 ? Math.abs(newBalance) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Record cash collection error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record cash collection'
+    });
+  }
+};
+
+/**
+ * Request settlement (vendor pays admin to clear negative balance)
+ */
+const requestSettlement = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { amount, paymentMethod, paymentReference, paymentProof, notes } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid amount is required'
+      });
+    }
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    const currentDues = vendor.wallet?.dues || 0;
+
+    if (amount > currentDues) {
+      return res.status(400).json({
+        success: false,
+        message: `Settlement amount (₹${amount}) cannot exceed current dues (₹${currentDues})`
+      });
+    }
+
+    // Check for existing pending settlement
+    const existingPending = await Settlement.findOne({
+      vendorId,
+      status: 'pending'
+    });
+
+    if (existingPending) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a pending settlement request. Please wait for it to be processed.'
+      });
+    }
+
+    // Create settlement request
+    const settlement = await Settlement.create({
+      vendorId,
+      amount,
+      balanceBefore: currentDues,
+      balanceAfter: currentDues - amount, // Dues will decrease
+      paymentMethod: paymentMethod || 'upi',
+      paymentReference,
+      paymentProof,
+      vendorNotes: notes,
+      status: 'pending'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Settlement request submitted successfully. Pending admin approval.',
+      data: settlement
+    });
+  } catch (error) {
+    console.error('Request settlement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit settlement request'
+    });
+  }
+};
+
+/**
+ * Request Withdrawal (Vendor requests payout of earnings)
+ */
+const requestWithdrawal = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { amount, bankDetails, notes } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid amount is required' });
+    }
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    const currentEarnings = vendor.wallet?.earnings || 0;
+
+    // Check pending withdrawals?
+    const pendingWithdrawals = await Withdrawal.aggregate([
+      { $match: { vendorId: vendor._id, status: 'pending' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const pendingAmount = pendingWithdrawals[0]?.total || 0;
+    const availableEarnings = currentEarnings - pendingAmount;
+
+    if (amount > availableEarnings) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient earnings. Available: ₹${availableEarnings} (Pending: ₹${pendingAmount})`
+      });
+    }
+
+    const withdrawal = await Withdrawal.create({
+      vendorId,
+      amount,
+      bankDetails,
+      adminNotes: notes,
+      status: 'pending'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Withdrawal request submitted successfully',
+      data: withdrawal
+    });
+
+  } catch (error) {
+    console.error('Request withdrawal error:', error);
+    res.status(500).json({ success: false, message: 'Failed to request withdrawal' });
+  }
+};
+
+/**
+ * Get vendor's settlement history
+ */
+const getSettlements = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { page = 1, limit = 20, status } = req.query;
+
+    const query = { vendorId };
+    if (status) query.status = status;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const settlements = await Settlement.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Settlement.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: settlements,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get settlements error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch settlements'
+    });
+  }
+};
+
+/**
+ * Get wallet summary for dashboard
+ */
+const getWalletSummary = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const vendor = await Vendor.findById(vendorId).select('wallet');
 
     if (!vendor) {
       return res.status(404).json({
@@ -96,41 +427,167 @@ const requestWithdrawal = async (req, res) => {
       });
     }
 
-    const currentBalance = vendor.wallet?.balance || 0;
+    const balance = vendor.wallet?.balance || 0;
 
-    if (currentBalance < amount) {
-      return res.status(400).json({
-        success: false,
-        message: 'Insufficient balance'
-      });
-    }
+    // Get today's cash collections
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Create withdrawal transaction
-    const transaction = await Transaction.create({
-      vendorId,
-      type: 'withdrawal',
-      amount,
-      status: 'pending',
-      description: 'Withdrawal request',
-      balanceBefore: currentBalance,
-      balanceAfter: currentBalance - amount,
-      metadata: { bankDetails }
-    });
+    const todayCollections = await Transaction.aggregate([
+      {
+        $match: {
+          vendorId: vendor._id,
+          type: 'cash_collected',
+          createdAt: { $gte: today }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-    // Deduct from wallet
-    vendor.wallet.balance = currentBalance - amount;
-    await vendor.save();
+    // Get this week's collections
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    const weekCollections = await Transaction.aggregate([
+      {
+        $match: {
+          vendorId: vendor._id,
+          type: 'cash_collected',
+          createdAt: { $gte: weekStart }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
     res.status(200).json({
       success: true,
-      message: 'Withdrawal request submitted',
-      data: transaction
+      data: {
+        dues: vendor.wallet?.dues || 0,
+        earnings: vendor.wallet?.earnings || 0,
+        amountDue: vendor.wallet?.dues || 0,
+        today: {
+          amount: todayCollections[0]?.total || 0,
+          count: todayCollections[0]?.count || 0
+        },
+        thisWeek: {
+          amount: weekCollections[0]?.total || 0,
+          count: weekCollections[0]?.count || 0
+        }
+      }
     });
   } catch (error) {
-    console.error('Request withdrawal error:', error);
+    console.error('Get wallet summary error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process withdrawal'
+      message: 'Failed to fetch wallet summary'
+    });
+  }
+};
+
+/**
+ * Pay worker for a booking
+ */
+const payWorker = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { bookingId, amount, notes } = req.body;
+
+    if (!bookingId || !amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid booking ID and amount are required'
+      });
+    }
+
+    const booking = await Booking.findOne({ _id: bookingId, vendorId });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found or not authorized'
+      });
+    }
+
+    if (!booking.workerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No worker assigned to this booking'
+      });
+    }
+
+    if (booking.workerPaymentStatus === 'PAID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Worker already paid for this booking'
+      });
+    }
+
+    const worker = await Worker.findById(booking.workerId);
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker not found'
+      });
+    }
+
+    // Record Transaction
+    const transaction = new Transaction({
+      vendorId,
+      workerId: worker._id,
+      bookingId: booking._id,
+      type: 'worker_payment',
+      amount: parseFloat(amount),
+      status: 'completed',
+      paymentMethod: 'cash',
+      description: `Payment for booking #${booking.bookingNumber}. ${notes || ''}`,
+      metadata: {
+        notes
+      }
+    });
+
+    // Update Worker balance (optional - depends on if we track worker earnings in wallet)
+    if (!worker.wallet) worker.wallet = { balance: 0 };
+    worker.wallet.balance += parseFloat(amount);
+
+    // Update Booking
+    booking.workerPaymentStatus = 'PAID';
+    booking.isWorkerPaid = true;
+    booking.workerPaidAt = new Date();
+    booking.status = 'completed'; // Job is fully done and paid
+    booking.completedAt = booking.completedAt || new Date();
+
+    await Promise.all([
+      transaction.save(),
+      worker.save(),
+      booking.save()
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: `Payment of ₹${amount} recorded for ${worker.name}`,
+      data: {
+        bookingId: booking._id,
+        workerName: worker.name,
+        amount: parseFloat(amount)
+      }
+    });
+  } catch (error) {
+    console.error('Pay worker error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record payment'
     });
   }
 };
@@ -138,5 +595,10 @@ const requestWithdrawal = async (req, res) => {
 module.exports = {
   getWallet,
   getTransactions,
+  recordCashCollection,
+  requestSettlement,
+  getSettlements,
+  getWalletSummary,
+  payWorker,
   requestWithdrawal
 };

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiArrowLeft, FiSearch, FiShare2 } from 'react-icons/fi';
+import { FiArrowLeft, FiSearch, FiShare2, FiBell } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 const BannerSection = ({ banners = [], onBack, onSearch, onShare, showStickyNav = false, bannerRef = null }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (banners.length <= 1) return;

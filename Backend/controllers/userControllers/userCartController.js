@@ -57,8 +57,12 @@ const addToCart = async (req, res) => {
       serviceCount,
       rating,
       reviews,
-      vendorId
+      vendorId,
+      sectionTitle, // Capture section info
+      card // Capture card details
     } = req.body;
+
+    console.log(`[AddToCart] Request details - Title: ${title}, Section: ${sectionTitle}`);
 
     // Verify service exists (only if serviceId is provided)
     let service = null;
@@ -108,7 +112,9 @@ const addToCart = async (req, res) => {
         serviceCount: serviceCount || 1,
         rating: rating || '4.8',
         reviews: reviews || '10k+',
-        vendorId: vendorId || null
+        vendorId: vendorId || null,
+        sectionTitle: sectionTitle || 'General',
+        card: card || null
       };
 
       // Only add serviceId and categoryId if they are provided

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Vendor = require('../../models/Vendor');
 const { validationResult } = require('express-validator');
 
@@ -9,13 +10,19 @@ const getProfile = async (req, res) => {
     const vendorId = req.user.id;
 
     const vendor = await Vendor.findById(vendorId).select('-password -__v');
-
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor not found'
-      });
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
+
+    const Booking = require('../../models/Booking');
+    const [ratingData] = await Booking.aggregate([
+      { $match: { vendorId: new mongoose.Types.ObjectId(vendorId), rating: { $ne: null } } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+
+    const totalJobs = await Booking.countDocuments({ vendorId });
+    const completedJobs = await Booking.countDocuments({ vendorId, status: 'completed' });
+    const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
 
     res.status(200).json({
       success: true,
@@ -27,13 +34,14 @@ const getProfile = async (req, res) => {
         phone: vendor.phone,
         service: vendor.service,
         address: vendor.address || null,
-        rating: 0, // TODO: Calculate from reviews
-        totalJobs: 0, // TODO: Count from bookings
-        completionRate: 0, // TODO: Calculate from bookings
+        rating: ratingData ? ratingData.avgRating : 0,
+        totalJobs,
+        completionRate,
         approvalStatus: vendor.approvalStatus,
         isPhoneVerified: vendor.isPhoneVerified || false,
         isEmailVerified: vendor.isEmailVerified || false,
         profilePhoto: vendor.profilePhoto || null,
+        aadharDocument: vendor.aadhar?.document || null,
         createdAt: vendor.createdAt,
         updatedAt: vendor.updatedAt
       }
@@ -62,7 +70,9 @@ const updateProfile = async (req, res) => {
     }
 
     const vendorId = req.user.id;
-    const { name, businessName, address } = req.body;
+    const { name, businessName, address, profilePhoto, serviceCategory, skills, aadharDocument } = req.body;
+
+    console.log('Update Vendor Profile Body:', JSON.stringify(req.body, null, 2));
 
     const vendor = await Vendor.findById(vendorId);
 
@@ -77,14 +87,34 @@ const updateProfile = async (req, res) => {
     if (name) vendor.name = name.trim();
     if (businessName !== undefined) vendor.businessName = businessName ? businessName.trim() : null;
     if (address) {
-      vendor.address = {
-        addressLine1: address.addressLine1 || vendor.address?.addressLine1 || '',
-        addressLine2: address.addressLine2 || vendor.address?.addressLine2 || '',
-        city: address.city || vendor.address?.city || '',
-        state: address.state || vendor.address?.state || '',
-        pincode: address.pincode || vendor.address?.pincode || '',
-        landmark: address.landmark || vendor.address?.landmark || ''
-      };
+      if (typeof address === 'string') {
+        // If address is coming as string from simple form
+        vendor.address = {
+          ...vendor.address,
+          fullAddress: address
+        };
+      } else {
+        vendor.address = {
+          addressLine1: address.addressLine1 || vendor.address?.addressLine1 || '',
+          addressLine2: address.addressLine2 || vendor.address?.addressLine2 || '',
+          city: address.city || vendor.address?.city || '',
+          state: address.state || vendor.address?.state || '',
+          pincode: address.pincode || vendor.address?.pincode || '',
+          landmark: address.landmark || vendor.address?.landmark || ''
+        };
+      }
+    }
+
+    if (profilePhoto !== undefined) vendor.profilePhoto = profilePhoto;
+    if (serviceCategory) vendor.service = serviceCategory;
+    // Assuming 'skills' field exists in Vendor model or we ignore it if not.
+    // If aadharDocument exists and is not empty, update it
+    if (aadharDocument) {
+      if (vendor.aadhar) {
+        vendor.aadhar.document = aadharDocument;
+      } else {
+        vendor.aadhar = { document: aadharDocument };
+      }
     }
 
     await vendor.save();
@@ -102,7 +132,9 @@ const updateProfile = async (req, res) => {
         address: vendor.address,
         approvalStatus: vendor.approvalStatus,
         isPhoneVerified: vendor.isPhoneVerified,
-        isEmailVerified: vendor.isEmailVerified
+        isEmailVerified: vendor.isEmailVerified,
+        profilePhoto: vendor.profilePhoto,
+        service: vendor.service
       }
     });
   } catch (error) {

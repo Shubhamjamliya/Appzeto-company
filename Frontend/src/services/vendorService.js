@@ -22,6 +22,18 @@ const vendorService = {
   // Update real-time location
   updateLocation: async (lat, lng) => {
     return api.put('/vendors/profile/location', { lat, lng });
+  },
+
+  // Get dashboard stats
+  getDashboardStats: async () => {
+    const response = await api.get('/vendors/dashboard/stats');
+    return response.data;
+  },
+
+  // Get revenue analytics
+  getRevenueAnalytics: async (period) => {
+    const response = await api.get(`/vendors/dashboard/revenue?period=${period}`);
+    return response.data;
   }
 };
 

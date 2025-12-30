@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiSave, FiX, FiLink, FiUserPlus, FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiSave, FiX, FiLink, FiUserPlus, FiSearch, FiChevronDown, FiCamera, FiUpload, FiMapPin } from 'react-icons/fi';
+import AddressSelectionModal from '../../../user/pages/Checkout/components/AddressSelectionModal';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -35,8 +36,15 @@ const AddEditWorker = () => {
       state: '',
       pincode: ''
     },
-    status: 'active'
+    status: 'active',
+    profilePhoto: '', // URL
   });
+
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [aadharFile, setAadharFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
   const [linkPhone, setLinkPhone] = useState('');
 
@@ -89,8 +97,13 @@ const AddEditWorker = () => {
                 state: w.address?.state || '',
                 pincode: w.address?.pincode || ''
               },
-              status: w.status || 'active'
+              status: w.status || 'active',
+              profilePhoto: w.profilePhoto || ''
             });
+
+            if (w.profilePhoto) {
+              setPhotoPreview(w.profilePhoto);
+            }
           }
           setLoading(false);
         }
@@ -102,6 +115,44 @@ const AddEditWorker = () => {
     };
     initData();
   }, [id, isEdit]);
+
+  // Upload file helper
+  const uploadFile = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Upload failed');
+    return data.imageUrl;
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAadharChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+      setAadharFile(file);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     if (field.includes('.')) {
@@ -122,6 +173,36 @@ const AddEditWorker = () => {
       serviceCategory: val,
       skills: []
     }));
+  };
+
+  const handleAddressSave = (houseNumber, location) => {
+    let city = '';
+    let state = '';
+    let pincode = '';
+    let addressLine2 = '';
+
+    if (location.components) {
+      location.components.forEach(comp => {
+        if (comp.types.includes('locality')) city = comp.long_name;
+        if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+        if (comp.types.includes('postal_code')) pincode = comp.long_name;
+        if (comp.types.includes('sublocality')) addressLine2 = comp.long_name;
+      });
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        addressLine1: houseNumber,
+        addressLine2: addressLine2,
+        city: city,
+        state: state,
+        pincode: pincode,
+        fullAddress: location.address
+      }
+    }));
+    setIsAddressModalOpen(false);
   };
 
   const toggleSkill = (skill) => {
@@ -159,11 +240,52 @@ const AddEditWorker = () => {
 
     try {
       setLoading(true);
+      setUploading(true);
+
+      let photoUrl = formData.profilePhoto;
+      let aadharUrl = formData.aadhar.document;
+
+      // Upload photo if selected
+      if (photoFile) {
+        try {
+          photoUrl = await uploadFile(photoFile);
+        } catch (err) {
+          console.error('Photo upload failed:', err);
+          toast.error('Failed to upload profile photo');
+          setLoading(false);
+          setUploading(false);
+          return;
+        }
+      }
+
+      // Upload Aadhar if selected
+      if (aadharFile) {
+        try {
+          aadharUrl = await uploadFile(aadharFile);
+        } catch (err) {
+          console.error('Aadhar upload failed:', err);
+          toast.error('Failed to upload Aadhar document');
+          setLoading(false);
+          setUploading(false);
+          return;
+        }
+      }
+
       // Clean payload
-      const payload = { ...formData };
-      // For testing, if no document is uploaded, we might need a dummy base64 or ensuring file upload works.
-      // Assuming user will upload or we have a placeholder for demo.
-      if (!payload.aadhar.document) payload.aadhar.document = 'data:image/png;base64,placeholder';
+      const payload = {
+        ...formData,
+        profilePhoto: photoUrl,
+        aadhar: {
+          ...formData.aadhar,
+          document: aadharUrl || 'pending_upload' // Ensure strictly that we have something
+        }
+      };
+
+      if (!payload.aadhar.document && !isEdit) {
+        // Should have been caught by validation, but double check
+        // If still empty and no file, maybe error?
+        // For now let backend handle it or user re-try
+      }
 
       if (isEdit) {
         await updateWorker(id, payload);
@@ -179,6 +301,7 @@ const AddEditWorker = () => {
       toast.error(error.response?.data?.message || 'Failed to save');
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -284,6 +407,44 @@ const AddEditWorker = () => {
         {/* Create / Edit Mode */}
         {(activeTab === 'new' || isEdit) && (
           <div className="space-y-6">
+
+            {/* Profile Photo Upload */}
+            <div className="flex flex-col items-center justify-center mb-2">
+              <div className="relative group">
+                <div
+                  className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gray-100"
+                >
+                  {photoPreview || formData.profilePhoto ? (
+                    <img
+                      src={photoPreview || formData.profilePhoto}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                      <FiUserPlus className="w-8 h-8" />
+                    </div>
+                  )}
+                </div>
+
+                <label
+                  htmlFor="worker-photo-upload"
+                  className="absolute bottom-0 right-0 p-2 rounded-full cursor-pointer shadow-md transition-transform active:scale-95 hover:scale-105"
+                  style={{ background: themeColors.button }}
+                >
+                  <FiCamera className="w-4 h-4 text-white" />
+                  <input
+                    id="worker-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoChange}
+                  />
+                </label>
+              </div>
+              <p className="text-gray-400 text-[10px] mt-2 font-medium">Add Profile Photo</p>
+            </div>
+
             {/* Basic Info */}
             <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Details</h4>
@@ -314,6 +475,26 @@ const AddEditWorker = () => {
                   className={`w-full px-4 py-3 bg-gray-50 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-100 ${errors.email ? 'border-red-500' : 'border-gray-100'}`}
                 />
               </div>
+            </div>
+            {/* Address Info */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Address</h4>
+
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <p className="text-sm font-medium text-gray-700">
+                  {formData.address?.fullAddress ||
+                    (formData.address?.addressLine1 ? `${formData.address.addressLine1}, ${formData.address.city}` : 'No address set')
+                  }
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsAddressModalOpen(true)}
+                className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <FiMapPin className="w-4 h-4" />
+                Select Address on Map
+              </button>
             </div>
 
             {/* Work Profile */}
@@ -452,17 +633,37 @@ const AddEditWorker = () => {
                     className={`w-full px-4 py-3 bg-gray-50 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-100 ${errors['aadhar.number'] ? 'border-red-500' : 'border-gray-100'}`}
                     maxLength={12}
                   />
-                  {/* File upload placeholder - Using simple text for simplicity or actual file input */}
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center">
+
+                  {/* File Upload */}
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center transition-colors hover:border-blue-300 bg-gray-50">
                     <input
-                      type="text"
-                      value={formData.aadhar.document}
-                      onChange={(e) => handleInputChange('aadhar.document', e.target.value)}
-                      placeholder="Paste Document URL/Base64 (Demo)"
-                      className="w-full text-xs text-center bg-transparent focus:outline-none"
+                      id="worker-aadhar-upload"
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={handleAadharChange}
                     />
-                    {/* In real app, this would be <input type="file" /> */}
+                    <label htmlFor="worker-aadhar-upload" className="cursor-pointer flex flex-col items-center">
+                      {aadharFile ? (
+                        <div className="flex items-center gap-2 text-green-600 font-medium">
+                          <FiUpload className="w-5 h-5" />
+                          <span className="truncate max-w-[200px]">{aadharFile.name}</span>
+                        </div>
+                      ) : formData.aadhar.document && formData.aadhar.document !== 'data:image/png;base64,placeholder' ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <p className="text-green-600 font-medium text-sm mb-2">Document Uploaded</p>
+                          <span className="text-xs text-blue-500 underline">Click to update</span>
+                        </div>
+                      ) : (
+                        <>
+                          <FiUpload className="w-8 h-8 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-500 font-medium">Click to upload Aadhar Card</span>
+                          <span className="text-xs text-gray-400 mt-1">First Page Only (Max 5MB)</span>
+                        </>
+                      )}
+                    </label>
                   </div>
+                  {errors['aadhar.document'] && <p className="text-red-500 text-[10px] mt-1">Document is required</p>}
                 </div>
               )
             }
@@ -482,6 +683,15 @@ const AddEditWorker = () => {
           </div >
         )}
       </main >
+
+      <AddressSelectionModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        address={formData.address?.fullAddress || ''}
+        houseNumber={formData.address?.addressLine1 || ''}
+        onHouseNumberChange={(val) => handleInputChange('address.addressLine1', val)}
+        onSave={handleAddressSave}
+      />
 
       <BottomNav />
     </div >

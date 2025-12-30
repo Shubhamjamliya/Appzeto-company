@@ -512,10 +512,26 @@ const updateServicePage = async (req, res) => {
         }));
       }
 
-      service.page = {
-        ...service.page,
-        ...sanitizedPage
-      };
+      // Explicitly update fields to ensure Mongoose detects changes
+      if (sanitizedPage.ratingTitle !== undefined) service.page.ratingTitle = sanitizedPage.ratingTitle;
+      if (sanitizedPage.ratingValue !== undefined) service.page.ratingValue = sanitizedPage.ratingValue;
+      if (sanitizedPage.bookingsText !== undefined) service.page.bookingsText = sanitizedPage.bookingsText;
+      if (sanitizedPage.paymentOffersEnabled !== undefined) service.page.paymentOffersEnabled = sanitizedPage.paymentOffersEnabled;
+
+      if (sanitizedPage.banners) {
+        service.page.banners = sanitizedPage.banners;
+      }
+
+      if (sanitizedPage.paymentOffers) {
+        service.page.paymentOffers = sanitizedPage.paymentOffers;
+      }
+
+      if (sanitizedPage.serviceCategoriesGrid) {
+        service.page.serviceCategoriesGrid = sanitizedPage.serviceCategoriesGrid;
+      }
+
+      // Mark as modified to ensure saving
+      service.markModified('page');
     }
 
     await service.save();

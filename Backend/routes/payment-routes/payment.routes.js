@@ -9,7 +9,10 @@ const {
   processWalletPayment,
   processRefund,
   getPaymentHistory,
-  confirmPayAtHome
+  confirmPayAtHome,
+  createPlanOrder,
+  verifyPlanPayment,
+  getUpgradeDetails
 } = require('../../controllers/paymentControllers/paymentController');
 
 // Validation rules
@@ -39,6 +42,9 @@ router.post('/wallet', authenticate, isUser, walletPaymentValidation, processWal
 router.post('/refund', authenticate, isUser, refundValidation, processRefund);
 router.post('/pay-at-home', authenticate, isUser, walletPaymentValidation, confirmPayAtHome);
 router.get('/history', authenticate, isUser, getPaymentHistory);
+router.post('/plan/create-order', authenticate, isUser, createPlanOrder);
+router.post('/plan/verify', authenticate, isUser, verifyPlanPayment);
+router.get('/plan/upgrade-details', authenticate, isUser, getUpgradeDetails);
 
 module.exports = router;
 

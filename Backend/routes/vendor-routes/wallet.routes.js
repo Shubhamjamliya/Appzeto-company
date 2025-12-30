@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../middleware/authMiddleware');
 const { isVendor } = require('../../middleware/roleMiddleware');
-const { getWallet, getTransactions, requestWithdrawal } = require('../../controllers/vendorControllers/vendorWalletController');
+const { getWallet, getTransactions, getWalletSummary } = require('../../controllers/vendorControllers/vendorWalletController');
 
-// Routes
+// Legacy Routes (keeping backward compatibility)
 router.get('/wallet', authenticate, isVendor, getWallet);
 router.get('/transactions', authenticate, isVendor, getTransactions);
-router.post('/withdraw', authenticate, isVendor, requestWithdrawal);
+router.get('/summary', authenticate, isVendor, getWalletSummary);
 
 module.exports = router;

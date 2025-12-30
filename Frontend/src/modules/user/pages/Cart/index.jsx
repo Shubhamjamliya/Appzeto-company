@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiShoppingCart, FiTrash2, FiPlus, FiMinus, FiLoader } from 'react-icons/fi';
+import { FiArrowLeft, FiShoppingCart, FiTrash2, FiPlus, FiMinus, FiLoader, FiBell } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import BottomNav from '../../components/layout/BottomNav';
@@ -155,12 +155,11 @@ const Cart = () => {
     const unitOriginalPrice = item.originalPrice || (item.unitPrice || (item.price / (item.serviceCount || 1)));
     return sum + (unitOriginalPrice * (item.serviceCount || 1));
   }, 0);
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-30">
-        <div className="px-4 pt-4 pb-3">
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
@@ -178,6 +177,12 @@ const Cart = () => {
               )}
             </div>
           </div>
+          <button
+            onClick={() => navigate('/user/notifications')}
+            className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <FiBell className="w-6 h-6 text-gray-700" />
+          </button>
         </div>
       </header>
 

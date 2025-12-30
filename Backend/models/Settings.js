@@ -17,6 +17,12 @@ const settingsSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  commissionPercentage: {
+    type: Number,
+    default: 10,
+    min: 0,
+    max: 100
+  },
   // Future extensible fields
   currency: {
     type: String,

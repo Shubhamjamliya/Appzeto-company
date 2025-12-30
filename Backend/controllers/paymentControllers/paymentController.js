@@ -1,5 +1,7 @@
 const Booking = require('../../models/Booking');
 const User = require('../../models/User');
+const Settings = require('../../models/Settings');
+const Plan = require('../../models/Plan');
 const { validationResult } = require('express-validator');
 const { PAYMENT_STATUS, BOOKING_STATUS } = require('../../utils/constants');
 const { createOrder, verifyPayment, refundPayment } = require('../../services/razorpayService');
@@ -131,6 +133,13 @@ const verifyPaymentWebhook = async (req, res) => {
       booking.status = BOOKING_STATUS.CONFIRMED;
     }
 
+    // Calculate commission
+    const settings = await Settings.findOne({ type: 'global' });
+    const commissionRate = settings?.commissionPercentage || 10;
+    const commission = (booking.finalAmount * commissionRate) / 100;
+    booking.adminCommission = parseFloat(commission.toFixed(2));
+    booking.vendorEarnings = parseFloat((booking.finalAmount - commission).toFixed(2));
+
     await booking.save();
 
     // Send notification to user
@@ -231,6 +240,13 @@ const processWalletPayment = async (req, res) => {
     if ([BOOKING_STATUS.PENDING, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.AWAITING_PAYMENT].includes(booking.status)) {
       booking.status = BOOKING_STATUS.CONFIRMED;
     }
+
+    // Calculate commission
+    const settings = await Settings.findOne({ type: 'global' });
+    const commissionRate = settings?.commissionPercentage || 10;
+    const commission = (booking.finalAmount * commissionRate) / 100;
+    booking.adminCommission = parseFloat(commission.toFixed(2));
+    booking.vendorEarnings = parseFloat((booking.finalAmount - commission).toFixed(2));
 
     await booking.save();
 
@@ -440,6 +456,13 @@ const confirmPayAtHome = async (req, res) => {
     booking.paymentStatus = PAYMENT_STATUS.PENDING;
     booking.status = BOOKING_STATUS.CONFIRMED;
 
+    // Calculate commission and earnings (projected)
+    const settings = await Settings.findOne({ type: 'global' });
+    const commissionRate = settings?.commissionPercentage || 10;
+    const commission = (booking.finalAmount * commissionRate) / 100;
+    booking.adminCommission = parseFloat(commission.toFixed(2));
+    booking.vendorEarnings = parseFloat((booking.finalAmount - commission).toFixed(2));
+
     await booking.save();
 
     // Notify Vendor that booking is confirmed
@@ -466,12 +489,134 @@ const confirmPayAtHome = async (req, res) => {
   }
 };
 
+const calculateUpgradeAmount = (currentPlan, newPlanPrice) => {
+  if (!currentPlan || !currentPlan.isActive) return { amount: newPlanPrice, credit: 0 };
+
+  const now = new Date();
+  const expiry = new Date(currentPlan.expiry);
+
+  if (expiry <= now) return { amount: newPlanPrice, credit: 0 };
+
+  const totalDuration = 30 * 24 * 60 * 60 * 1000;
+  const remainingTime = expiry.getTime() - now.getTime();
+
+  let remainingRatio = remainingTime / totalDuration;
+  if (remainingRatio > 1) remainingRatio = 1;
+  if (remainingRatio < 0) remainingRatio = 0;
+
+  const credit = Math.floor((currentPlan.price || 0) * remainingRatio);
+
+  if (credit <= 0) return { amount: newPlanPrice, credit: 0 };
+
+  let finalAmount = newPlanPrice - credit;
+  if (finalAmount < 0) finalAmount = 0;
+
+  return { amount: Math.ceil(finalAmount), credit };
+};
+
+const getUpgradeDetails = async (req, res) => {
+  try {
+    const { planId } = req.query;
+    if (!planId) return res.status(400).json({ success: false, message: 'Plan ID required' });
+
+    const newPlan = await Plan.findById(planId);
+    if (!newPlan) return res.status(404).json({ success: false, message: 'Plan not found' });
+
+    const user = await User.findById(req.user.id);
+    const { amount, credit } = calculateUpgradeAmount(user.plans, newPlan.price);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        originalPrice: newPlan.price,
+        credit,
+        finalAmount: amount
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+
+
+
+
+
+const createPlanOrder = async (req, res) => {
+  try {
+    const { planId } = req.body;
+    const plan = await Plan.findById(planId);
+    if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' });
+
+    const user = await User.findById(req.user.id);
+
+    // Calculate dynamic pricing
+    const { amount } = calculateUpgradeAmount(user.plans, plan.price);
+
+    // Add 18% Tax
+    const amountWithTax = Math.ceil(amount * 1.18);
+
+    const orderResult = await createOrder(
+      amountWithTax,
+      'INR',
+      `PLAN_${Date.now()}`,
+      { type: 'plan', planId, userId: req.user.id }
+    );
+    if (!orderResult.success) {
+      return res.status(500).json({ success: false, message: 'Order creation failed' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        orderId: orderResult.orderId,
+        amount: orderResult.amount / 100,
+        key: process.env.RAZORPAY_KEY_ID
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const verifyPlanPayment = async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId } = req.body;
+
+    // Import verifyPayment if needed, but it's destructured at top
+    const isValid = verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+    if (!isValid) return res.status(400).json({ success: false, message: 'Invalid signature' });
+
+    const plan = await Plan.findById(planId);
+    const user = await User.findById(req.user.id);
+
+    user.plans = {
+      isActive: true,
+      name: plan.name,
+      expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      price: plan.price
+    };
+
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Plan activated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createPaymentOrder,
   verifyPaymentWebhook,
   processWalletPayment,
   processRefund,
   getPaymentHistory,
-  confirmPayAtHome
+  confirmPayAtHome,
+  createPlanOrder,
+  verifyPlanPayment,
+  getUpgradeDetails
 };
 

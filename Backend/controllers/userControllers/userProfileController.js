@@ -26,7 +26,9 @@ const getProfile = async (req, res) => {
         phone: user.phone || null,
         isPhoneVerified: user.isPhoneVerified || false,
         isEmailVerified: user.isEmailVerified || false,
+        profilePhoto: user.profilePhoto || null,
         addresses: user.addresses || [],
+        plans: user.plans || {},
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
@@ -55,7 +57,7 @@ const updateProfile = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { name, email, addresses } = req.body;
+    const { name, email, addresses, profilePhoto } = req.body;
 
     const user = await User.findById(userId);
 
@@ -80,6 +82,9 @@ const updateProfile = async (req, res) => {
       user.email = email.toLowerCase();
     }
 
+    // Update profile photo
+    if (profilePhoto) user.profilePhoto = profilePhoto;
+
     // Update addresses
     if (addresses && Array.isArray(addresses)) {
       user.addresses = addresses;
@@ -96,7 +101,10 @@ const updateProfile = async (req, res) => {
         email: user.email,
         phone: user.phone,
         isPhoneVerified: user.isPhoneVerified,
-        isEmailVerified: user.isEmailVerified
+        isEmailVerified: user.isEmailVerified,
+        profilePhoto: user.profilePhoto || null,
+        addresses: user.addresses || [],
+        plans: user.plans || {}
       }
     });
   } catch (error) {

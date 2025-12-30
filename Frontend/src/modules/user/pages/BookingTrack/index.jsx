@@ -5,6 +5,7 @@ import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone } from 'react
 import { bookingService } from '../../../../services/bookingService';
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
+import PaymentVerificationModal from '../../components/booking/PaymentVerificationModal';
 
 // Zomato-like Premium Map Style (Silver/Clean)
 const mapStyles = [
@@ -44,6 +45,7 @@ const BookingTrack = () => {
   const [routePath, setRoutePath] = useState([]);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
   const [isNavigationMode, setIsNavigationMode] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -148,6 +150,15 @@ const BookingTrack = () => {
 
     return () => clearInterval(intervalId);
   }, [id, isLoaded]);
+
+  // Handle Payment Modal Visibility
+  useEffect(() => {
+    if (booking && booking.customerConfirmationOTP && !booking.cashCollected) {
+      setShowPaymentModal(true);
+    } else {
+      setShowPaymentModal(false);
+    }
+  }, [booking]);
 
   const [heading, setHeading] = useState(0);
   const prevLocationRef = useRef(null);
@@ -483,8 +494,14 @@ const BookingTrack = () => {
             </a>
           )}
         </div>
-
       </div>
+
+      {/* Payment Verification Modal */}
+      <PaymentVerificationModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        booking={booking}
+      />
     </div>
   );
 };

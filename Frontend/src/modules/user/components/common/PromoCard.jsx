@@ -17,7 +17,7 @@ const PromoCard = memo(({ title, subtitle, buttonText, image, onClick, className
         <img
           src={image}
           alt={title || 'Promo'}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-fill"
           loading="lazy"
           decoding="async"
         />

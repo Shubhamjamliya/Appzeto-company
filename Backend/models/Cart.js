@@ -58,6 +58,26 @@ const cartItemSchema = new mongoose.Schema({
     type: String,
     default: '10k+'
   },
+  // Section info (from service catalog)
+  sectionTitle: {
+    type: String,
+    default: 'General'
+  },
+  sectionId: {
+    type: String,
+    default: null
+  },
+  // Card details (matching service catalog structure)
+  card: {
+    title: String,
+    subtitle: String,
+    price: Number,
+    originalPrice: Number,
+    duration: String,
+    description: String,
+    imageUrl: String,
+    features: [String]
+  },
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
@@ -83,7 +103,7 @@ const cartSchema = new mongoose.Schema({
 });
 
 // Update updatedAt on save
-cartSchema.pre('save', function(next) {
+cartSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

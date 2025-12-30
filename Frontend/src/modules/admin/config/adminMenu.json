@@ -44,6 +44,11 @@
     ]
   },
   {
+    "title": "Scrap Items",
+    "route": "/admin/scrap",
+    "children": []
+  },
+  {
     "title": "Service Catalog",
     "route": "/admin/user-categories",
     "children": [
@@ -81,6 +86,11 @@
       "Custom Messages",
       "Notification Settings"
     ]
+  },
+  {
+    "title": "Settlements",
+    "route": "/admin/settlements",
+    "children": []
   },
   {
     "title": "Plans",

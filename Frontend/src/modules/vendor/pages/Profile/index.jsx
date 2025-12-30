@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiArrowRight, FiFileText, FiSettings, FiChevronRight, FiCreditCard, FiTarget, FiLogOut } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiArrowRight, FiFileText, FiSettings, FiChevronRight, FiCreditCard, FiTarget, FiLogOut, FiTrash2 } from 'react-icons/fi';
 import { FaWallet } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
@@ -18,6 +18,18 @@ const Profile = () => {
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
+
+  const menuItems = [
+    { id: 1, label: 'My Plans', icon: FiFileText, path: '/vendor/my-plans' },
+    { id: 2, label: 'Wallet', icon: FaWallet, path: '/vendor/wallet' },
+    { id: 3, label: 'Buy Scrap', icon: FiTrash2, path: '/vendor/scrap' },
+    { id: 4, label: 'Plus Membership', icon: FiTarget, path: '/vendor/plus-membership' },
+    { id: 5, label: 'My Ratings', icon: FiStar, path: '/vendor/my-ratings' },
+    { id: 6, label: 'Manage Payment Methods', icon: FiCreditCard, path: '/vendor/manage-payment-methods' },
+    { id: 7, label: 'Manage Address', icon: FiMapPin, path: '/vendor/address-management' },
+    { id: 8, label: 'Settings', icon: FiSettings, path: '/vendor/settings' },
+    { id: 9, label: 'About Appzeto', icon: null, customIcon: 'A', path: '/vendor/about-appzeto' },
+  ];
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +54,31 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      setIsLoading(true);
+      // Try to load from local storage first for immediate display
+      const storedVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+      if (storedVendorData && Object.keys(storedVendorData).length > 0) {
+        setProfile({
+          name: storedVendorData.name || 'Vendor Name',
+          businessName: storedVendorData.businessName || null,
+          phone: storedVendorData.phone || '',
+          email: storedVendorData.email || '',
+          address: storedVendorData.address ?
+            (typeof storedVendorData.address === 'string' ? storedVendorData.address :
+              `${storedVendorData.address.addressLine1 || ''} ${storedVendorData.address.addressLine2 || ''} ${storedVendorData.address.city || ''} ${storedVendorData.address.state || ''} ${storedVendorData.address.pincode || ''}`.trim() || 'Not set')
+            : 'Not set',
+          rating: storedVendorData.rating || 0,
+          totalJobs: storedVendorData.totalJobs || 0,
+          completionRate: storedVendorData.completionRate || 0,
+          serviceCategory: storedVendorData.service || '',
+          skills: [],
+          photo: storedVendorData.profilePhoto || null,
+          approvalStatus: storedVendorData.approvalStatus,
+          isPhoneVerified: storedVendorData.isPhoneVerified || false,
+          isEmailVerified: storedVendorData.isEmailVerified || false
+        });
+        setIsLoading(false); // Show content immediately
+      }
+
       setError(null);
       try {
         const response = await vendorAuthService.getProfile();
@@ -50,7 +86,8 @@ const Profile = () => {
           const vendorData = response.vendor;
           // Format address
           const addressString = vendorData.address
-            ? `${vendorData.address.addressLine1 || ''} ${vendorData.address.addressLine2 || ''} ${vendorData.address.city || ''} ${vendorData.address.state || ''} ${vendorData.address.pincode || ''}`.trim() || 'Not set'
+            ? (typeof vendorData.address === 'string' ? vendorData.address :
+              `${vendorData.address.addressLine1 || ''} ${vendorData.address.addressLine2 || ''} ${vendorData.address.city || ''} ${vendorData.address.state || ''} ${vendorData.address.pincode || ''}`.trim() || 'Not set')
             : 'Not set';
 
           setProfile({
@@ -71,48 +108,17 @@ const Profile = () => {
           });
           localStorage.setItem('vendorData', JSON.stringify(vendorData));
         } else {
-          setError(response.message || 'Failed to fetch profile');
-          toast.error(response.message || 'Failed to fetch profile');
-          // Fallback to local storage if API fails
-          const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
-          if (localVendorData && Object.keys(localVendorData).length > 0) {
-            setProfile({
-              name: localVendorData.name || 'Vendor Name',
-              businessName: localVendorData.businessName || null,
-              phone: localVendorData.phone || '',
-              email: localVendorData.email || '',
-              address: 'Not set',
-              rating: 0,
-              totalJobs: 0,
-              completionRate: 0,
-              serviceCategory: localVendorData.service || '',
-              skills: [],
-              photo: localVendorData.profilePhoto || null
-            });
-            toast.info('Loaded profile from local storage (API failed)');
+          // If API fails but we have local data, stick with it?
+          if (!storedVendorData || Object.keys(storedVendorData).length === 0) {
+            setError(response.message || 'Failed to fetch profile');
+            toast.error(response.message || 'Failed to fetch profile');
           }
         }
       } catch (err) {
         console.error('Error fetching vendor profile:', err);
-        setError(err.response?.data?.message || 'Failed to fetch profile');
-        toast.error(err.response?.data?.message || 'Failed to fetch profile');
-        // Fallback to local storage if API fails
-        const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
-        if (localVendorData && Object.keys(localVendorData).length > 0) {
-          setProfile({
-            name: localVendorData.name || 'Vendor Name',
-            businessName: localVendorData.businessName || null,
-            phone: localVendorData.phone || '',
-            email: localVendorData.email || '',
-            address: 'Not set',
-            rating: 0,
-            totalJobs: 0,
-            completionRate: 0,
-            serviceCategory: localVendorData.service || '',
-            skills: [],
-            photo: localVendorData.profilePhoto || null
-          });
-          toast.info('Loaded profile from local storage (API failed)');
+        if (!storedVendorData || Object.keys(storedVendorData).length === 0) {
+          setError(err.response?.data?.message || 'Failed to fetch profile');
+          toast.error(err.response?.data?.message || 'Failed to fetch profile');
         }
       } finally {
         setIsLoading(false);
@@ -120,6 +126,13 @@ const Profile = () => {
     };
 
     fetchProfile();
+    window.addEventListener('vendorDataUpdated', fetchProfile);
+    window.addEventListener('vendorProfileUpdated', fetchProfile);
+
+    return () => {
+      window.removeEventListener('vendorDataUpdated', fetchProfile);
+      window.removeEventListener('vendorProfileUpdated', fetchProfile);
+    };
   }, []);
 
   if (isLoading) {
@@ -373,252 +386,50 @@ const Profile = () => {
         </div>
 
         {/* Menu List Section */}
-        <div className="px-4 mb-4">
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-              boxShadow: '0 6px 20px rgba(41, 173, 129, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06)',
-              border: '1.5px solid rgba(41, 173, 129, 0.12)',
-            }}
-          >
-            {/* MY Plans */}
-            <button
-              onClick={() => navigate('/vendor/my-plans')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiFileText className="w-5 h-5" style={{ color: themeColors.button }} />
+        <div className="px-4 mb-4 space-y-3">
+          {menuItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-teal-200 hover:shadow-md transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-4">
+                  {item.customIcon ? (
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors group-hover:bg-teal-50"
+                      style={{
+                        backgroundColor: hexToRgba(themeColors.button, 0.1),
+                        border: `1px solid ${hexToRgba(themeColors.button, 0.2)}`,
+                      }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: themeColors.button }}>{item.customIcon}</span>
+                    </div>
+                  ) : (
+                    IconComponent && (
+                      <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors"
+                        style={{ backgroundColor: hexToRgba(themeColors.button, 0.1) }}
+                      >
+                        <IconComponent className="w-6 h-6" style={{ color: themeColors.button }} />
+                      </div>
+                    )
+                  )}
+                  <span className="text-[15px] font-bold text-gray-800 text-left">
+                    {item.label}
+                  </span>
                 </div>
-                <span className="text-sm font-bold text-gray-800">MY Plans</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Wallet */}
-            <button
-              onClick={() => navigate('/vendor/wallet')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FaWallet className="w-5 h-5" style={{ color: themeColors.button }} />
+                <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                  <FiChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
-                <span className="text-sm font-bold text-gray-800">Wallet</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Plus Membership */}
-            <button
-              onClick={() => navigate('/vendor/plus-membership')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiTarget className="w-5 h-5" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-sm font-bold text-gray-800">Plus Membership</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* My Ratings */}
-            <button
-              onClick={() => navigate('/vendor/my-ratings')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiStar className="w-5 h-5" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-sm font-bold text-gray-800">My Ratings</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Manage Payment Methods */}
-            <button
-              onClick={() => navigate('/vendor/manage-payment-methods')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiCreditCard className="w-5 h-5" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-sm font-bold text-gray-800">Manage Payment Methods</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Manage Address */}
-            <button
-              onClick={() => navigate('/vendor/address-management')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiMapPin className="w-5 h-5" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-sm font-bold text-gray-800">Manage Address</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Settings */}
-            <button
-              onClick={() => navigate('/vendor/settings')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.12),
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <FiSettings className="w-5 h-5" style={{ color: themeColors.button }} />
-                </div>
-                <span className="text-sm font-bold text-gray-800">Settings</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* About Appzeto */}
-            <button
-              onClick={() => navigate('/vendor/about-appzeto')}
-              className="w-full flex items-center justify-between p-4 transition-all duration-300 border-b border-gray-100 active:scale-[0.98]"
-              style={{
-                borderBottom: '1px solid rgba(229, 231, 235, 0.8)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 166, 166, 0.03) 0%, rgba(0, 166, 166, 0.01) 100%)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
-                  style={{
-                    backgroundColor: hexToRgba(themeColors.button, 0.15),
-                    border: `2px solid ${hexToRgba(themeColors.button, 0.25)}`,
-                    boxShadow: `0 2px 6px ${hexToRgba(themeColors.button, 0.15)}`,
-                  }}
-                >
-                  <span className="text-xs font-bold" style={{ color: themeColors.button }}>A</span>
-                </div>
-                <span className="text-sm font-bold text-gray-800">About Appzeto</span>
-              </div>
-              <FiChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-          </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Logout Button */}
-        <div className="px-4 mt-4 mb-3">
+        <div className="px-4 mb-3">
           <button
             type="button"
             onClick={async (e) => {
@@ -629,7 +440,6 @@ const Profile = () => {
                 toast.success('Logged out successfully');
                 navigate('/vendor/login');
               } catch (error) {
-                // Even if API call fails, clear local storage
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
                 localStorage.removeItem('vendorData');
@@ -639,17 +449,16 @@ const Profile = () => {
             }}
             className="w-full font-semibold py-3 rounded-xl active:scale-98 transition-all text-white flex items-center justify-center gap-2"
             style={{
-              backgroundColor: '#2874F0',
-              boxShadow: '0 4px 12px rgba(40, 116, 240, 0.3)',
-              cursor: 'pointer'
+              backgroundColor: '#EF4444',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#1e5fd4';
-              e.target.style.boxShadow = '0 6px 16px rgba(40, 116, 240, 0.4)';
+              e.target.style.backgroundColor = '#DC2626';
+              e.target.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#2874F0';
-              e.target.style.boxShadow = '0 4px 12px rgba(40, 116, 240, 0.3)';
+              e.target.style.backgroundColor = '#EF4444';
+              e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
             }}
           >
             <FiLogOut className="w-5 h-5" />

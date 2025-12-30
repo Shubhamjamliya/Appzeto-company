@@ -10,6 +10,7 @@ import BottomNav from '../../components/layout/BottomNav';
 import workerService from '../../../../services/workerService';
 import { publicCatalogService } from '../../../../services/catalogService';
 import { toast } from 'react-hot-toast';
+import AddressSelectionModal from '../../../user/pages/Checkout/components/AddressSelectionModal';
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -34,7 +35,9 @@ const EditProfile = () => {
     profilePhoto: null,
     status: 'OFFLINE'
   });
-
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -78,6 +81,32 @@ const EditProfile = () => {
     initData();
   }, []);
 
+  const uploadFile = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message || 'Upload failed');
+    return data.imageUrl;
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleInputChange = (field, value) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
@@ -105,6 +134,37 @@ const EditProfile = () => {
         : [...prev.skills, skill];
       return { ...prev, skills };
     });
+  };
+
+  const handleAddressSave = (houseNumber, location) => {
+    // Extract components from Google Maps location
+    let city = '';
+    let state = '';
+    let pincode = '';
+    let addressLine2 = '';
+
+    if (location.components) {
+      location.components.forEach(comp => {
+        if (comp.types.includes('locality')) city = comp.long_name;
+        if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+        if (comp.types.includes('postal_code')) pincode = comp.long_name;
+        if (comp.types.includes('sublocality')) addressLine2 = comp.long_name;
+      });
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        addressLine1: houseNumber || prev.address.addressLine1,
+        addressLine2: addressLine2,
+        city: city || prev.address.city,
+        state: state || prev.address.state,
+        pincode: pincode || prev.address.pincode,
+        fullAddress: location.address // Store the full formatted address string
+      }
+    }));
+    setIsAddressModalOpen(false);
   };
 
   const validate = () => {
@@ -135,6 +195,18 @@ const EditProfile = () => {
         status: formData.status
       };
 
+      if (photoFile) {
+        try {
+          const photoUrl = await uploadFile(photoFile);
+          payload.profilePhoto = photoUrl;
+        } catch (uploadErr) {
+          console.error('Photo upload failed', uploadErr);
+          toast.error('Failed to upload photo');
+          setSaving(false);
+          return;
+        }
+      }
+
       await workerService.updateProfile(payload);
       toast.success('Profile updated successfully');
 
@@ -147,7 +219,8 @@ const EditProfile = () => {
         serviceCategory: payload.serviceCategory,
         skills: payload.skills,
         address: payload.address,
-        status: payload.status
+        status: payload.status,
+        profilePhoto: payload.profilePhoto || currentWorker.profilePhoto
       }));
 
       navigate('/worker/profile');
@@ -179,20 +252,27 @@ const EditProfile = () => {
 
         {/* Profile Photo */}
         <div className="flex flex-col items-center">
-          <div className="relative">
+          <div className="relative cursor-pointer" onClick={() => document.getElementById('photo-upload').click()}>
             <div className="w-24 h-24 rounded-full bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center">
-              {formData.profilePhoto ? (
-                <img src={formData.profilePhoto} className="w-full h-full object-cover" alt="Profile" />
+              {photoPreview || formData.profilePhoto ? (
+                <img src={photoPreview || formData.profilePhoto} className="w-full h-full object-cover" alt="Profile" />
               ) : (
                 <div className="bg-gray-100 w-full h-full flex items-center justify-center">
                   <FiUser className="w-10 h-10 text-gray-300" />
                 </div>
               )}
             </div>
-            {/* Camera Icon - Visual only for now unless upload implemented */}
+            {/* Camera Icon */}
             <div className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full text-white ring-2 ring-white shadow-sm">
               <FiCamera className="w-4 h-4" />
             </div>
+            <input
+              type="file"
+              id="photo-upload"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
           </div>
           <p className="text-xs text-gray-400 mt-2 font-medium">Tap to change photo</p>
         </div>
@@ -274,6 +354,35 @@ const EditProfile = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Address Details */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4 border border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <FiMapPin className="text-blue-600" />
+            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Address Details</h2>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <p className="text-sm font-medium text-gray-700">
+                {formData.address?.fullAddress ||
+                  `${formData.address?.addressLine1 || ''} ${formData.address?.city || ''} ${formData.address?.state || ''} ${formData.address?.pincode || ''}`
+                }
+              </p>
+              {!formData.address?.fullAddress && !formData.address?.addressLine1 && (
+                <p className="text-xs text-gray-400 italic mt-1">No address set</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsAddressModalOpen(true)}
+              className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+            >
+              <FiMapPin className="w-4 h-4" />
+              Build/Change Location on Map
+            </button>
           </div>
         </div>
 
@@ -418,8 +527,19 @@ const EditProfile = () => {
 
       </main>
 
+
+
+      <AddressSelectionModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        address={formData.address?.fullAddress || ''} // Passing for initial view if supported later
+        houseNumber={formData.address?.addressLine1 || ''}
+        onHouseNumberChange={(val) => handleInputChange('address.addressLine1', val)}
+        onSave={handleAddressSave}
+      />
+
       <BottomNav />
-    </div>
+    </div >
   );
 };
 

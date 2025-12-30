@@ -77,13 +77,14 @@ const getDashboardStats = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: '$finalAmount' }
+          totalRevenue: { $sum: '$finalAmount' },
+          vendorEarnings: { $sum: '$vendorEarnings' }
         }
       }
     ]);
 
     const totalRevenue = revenueResult[0]?.totalRevenue || 0;
-    const vendorEarnings = totalRevenue * 0.8; // 20% platform commission
+    const vendorEarnings = revenueResult[0]?.vendorEarnings || 0;
 
     // Recent bookings (last 5, excluding accepted but unpaid)
     const recentBookings = await Booking.find({
@@ -154,6 +155,7 @@ const getRevenueAnalytics = async (req, res) => {
             }
           },
           revenue: { $sum: '$finalAmount' },
+          earnings: { $sum: '$vendorEarnings' },
           bookings: { $sum: 1 }
         }
       },

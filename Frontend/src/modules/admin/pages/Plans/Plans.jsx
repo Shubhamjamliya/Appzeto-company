@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getPlans, createPlan, updatePlan, deletePlan } from '../../services/planService';
 import { categoryService, serviceService } from '../../../../services/catalogService';
-import { FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiList } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiList, FiPackage, FiTool, FiChevronRight } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 
 const Plans = () => {
@@ -9,7 +9,7 @@ const Plans = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
-  const [formData, setFormData] = useState({ name: 'Silver', price: '', services: [] });
+  const [formData, setFormData] = useState({ name: 'Silver', price: '', services: [], freeCategories: [], freeServices: [] });
 
   const PLAN_TYPES = ['Silver', 'Gold', 'Diamond', 'Platinum'];
 
@@ -67,7 +67,6 @@ const Plans = () => {
   const [filteredServices, setFilteredServices] = useState([]); // Services for selected category
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedService, setSelectedService] = useState('');
-  const [customService, setCustomService] = useState('');
 
   useEffect(() => {
     fetchInitialData();
@@ -130,41 +129,10 @@ const Plans = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddService = () => {
-    let serviceToAdd = '';
-    if (selectedService) {
-      const serviceObj = servicesList.find(s => (s.id || s._id) === selectedService);
-      if (serviceObj) serviceToAdd = serviceObj.title;
-    } else if (customService.trim()) {
-      serviceToAdd = customService.trim();
-    }
-
-    if (serviceToAdd) {
-      if (!formData.services.includes(serviceToAdd)) {
-        setFormData(prev => ({
-          ...prev,
-          services: [...prev.services, serviceToAdd]
-        }));
-        // Reset inputs
-        setSelectedService('');
-        setCustomService('');
-      } else {
-        toast.error('Service already added');
-      }
-    }
-  };
-
-  const removeService = (indexToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      services: prev.services.filter((_, index) => index !== indexToRemove)
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...formData }; // Services is already an array
+      const payload = { ...formData };
 
       if (currentPlan) {
         await updatePlan(currentPlan._id, payload);
@@ -186,13 +154,14 @@ const Plans = () => {
     setFormData({
       name: plan.name,
       price: plan.price,
-      services: plan.services || []
+      services: plan.services || [],
+      freeCategories: plan.freeCategories || [],
+      freeServices: plan.freeServices || []
     });
     setIsModalOpen(true);
     // Reset selections
     setSelectedCategory('');
     setSelectedService('');
-    setCustomService('');
   };
 
   const handleDelete = async (id) => {
@@ -209,12 +178,11 @@ const Plans = () => {
 
   const openCreateModal = () => {
     setCurrentPlan(null);
-    setFormData({ name: 'Silver', price: '', services: [] });
+    setFormData({ name: 'Silver', price: '', services: [], freeCategories: [], freeServices: [] });
     setIsModalOpen(true);
     // Reset selections
     setSelectedCategory('');
     setSelectedService('');
-    setCustomService('');
   };
 
   return (
@@ -256,16 +224,38 @@ const Plans = () => {
                   <div className="space-y-3 mb-6">
                     <h4 className={`text-sm font-semibold uppercase tracking-wider ${style.subtext}`}>Includes</h4>
                     <div className="space-y-2">
-                      {plan.services.map((service, idx) => (
-                        <div key={idx} className={`flex items-start gap-2 text-sm ${style.text}`}>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0 ${style.check}`}>
-                            <FiCheck className="w-3 h-3" />
-                          </div>
-                          <span>{service}</span>
+                      {/* Display Free Categories First */}
+                      {plan.freeCategories && plan.freeCategories.length > 0 && (
+                        <div className={`flex flex-col gap-1 text-sm ${style.text}`}>
+                          {plan.freeCategories.map((catId, idx) => {
+                            const cat = categories.find(c => (c.id || c._id) === catId || (c.id || c._id) === (catId._id || catId));
+                            return cat ? (
+                              <div key={`c-${idx}`} className="flex items-center gap-2">
+                                <FiCheck className={`w-4 h-4 ${style.check} rounded-full p-0.5`} />
+                                <span>Unlimited {cat.title}</span>
+                              </div>
+                            ) : null;
+                          })}
                         </div>
-                      ))}
-                      {(!plan.services || plan.services.length === 0) && (
-                        <span className={`text-sm italic ${style.subtext}`}>No specific services listed</span>
+                      )}
+
+                      {/* Display Free Services */}
+                      {plan.freeServices && plan.freeServices.length > 0 && (
+                        <div className={`flex flex-col gap-1 text-sm ${style.text}`}>
+                          {plan.freeServices.map((svcId, idx) => {
+                            const svc = servicesList.find(s => (s.id || s._id) === svcId || (s.id || s._id) === (svcId._id || svcId));
+                            return svc ? (
+                              <div key={`s-${idx}`} className="flex items-center gap-2">
+                                <FiCheck className={`w-4 h-4 ${style.check} rounded-full p-0.5`} />
+                                <span>Free {svc.title}</span>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+
+                      {(!plan.freeCategories?.length && !plan.freeServices?.length) && (
+                        <span className={`text-sm italic ${style.subtext}`}>No benefits configured</span>
                       )}
                     </div>
                   </div>
@@ -300,149 +290,200 @@ const Plans = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200 my-8">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">{currentPlan ? 'Edit Plan' : 'Create New Plan'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200 my-8 flex flex-col max-h-[90vh]">
+
+            {/* Modal Header */}
+            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">{currentPlan ? 'Edit Configuration' : 'Create New Plan'}</h2>
+                <p className="text-sm text-gray-500 mt-1">Define plan details and benefits</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="bg-white p-2 rounded-full text-gray-400 hover:text-gray-600 shadow-sm border border-gray-200 transition-all hover:rotate-90">
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
-                <select
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                  required
-                >
-                  {PLAN_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Modal Content - Scrollable */}
+            <div className="p-8 overflow-y-auto custom-scrollbar space-y-8">
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                  required
-                  placeholder="e.g. 999"
-                  min="0"
-                />
-              </div>
+              {/* Basic Info Section */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Plan Type</label>
+                  <select
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all font-medium"
+                    required
+                  >
+                    {PLAN_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Services
-                </label>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-3 space-y-3">
-                  {/* Category Selector */}
-                  <div>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.title}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Service Selector */}
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedService}
-                      onChange={(e) => {
-                        setSelectedService(e.target.value);
-                        setCustomService(''); // Clear custom if selecting from list
-                      }}
-                      disabled={!selectedCategory}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-200 disabled:text-gray-500"
-                    >
-                      <option value="">Select Service</option>
-                      {filteredServices.map(service => (
-                        <option key={service.id || service._id} value={service.id || service._id}>{service.title}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="text-center text-xs text-gray-400 font-medium my-1">- OR -</div>
-
-                  {/* Custom Service Input */}
-                  <div className="flex gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Monthly Price (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
                     <input
-                      type="text"
-                      value={customService}
-                      onChange={(e) => {
-                        setCustomService(e.target.value);
-                        setSelectedService(''); // Clear select if typing custom
-                      }}
-                      placeholder="Type custom service name..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all font-bold text-gray-800"
+                      required
+                      placeholder="999"
+                      min="0"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Boxed Benefits Section */}
+              <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                      <FiCheck className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-gray-800">Plan Benefits</h3>
+                      <p className="text-xs text-gray-500">Configure free services included in this plan</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-white space-y-6">
+                  {/* Selector Row */}
+                  <div className="flex flex-col md:flex-row gap-3 items-end">
+                    <div className="flex-1 w-full space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Category</label>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Category...</option>
+                        {categories.map(cat => (
+                          <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-center pb-3 text-gray-400">
+                      <FiChevronRight className="w-5 h-5 hidden md:block" />
+                    </div>
+
+                    <div className="flex-1 w-full space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Specific Service (Optional)</label>
+                      <select
+                        value={selectedService}
+                        onChange={(e) => setSelectedService(e.target.value)}
+                        disabled={!selectedCategory}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="">All Services in Category</option>
+                        {filteredServices.map(service => (
+                          <option key={service.id || service._id} value={service.id || service._id}>{service.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={handleAddService}
-                      disabled={!selectedService && !customService.trim()}
-                      className="px-4 py-2 bg-slate-800 text-white text-sm rounded-md hover:bg-slate-900 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      disabled={!selectedCategory}
+                      onClick={() => {
+                        if (selectedService) {
+                          if (!formData.freeServices.includes(selectedService)) {
+                            setFormData(p => ({ ...p, freeServices: [...p.freeServices, selectedService] }));
+                          }
+                        } else {
+                          if (!formData.freeCategories.includes(selectedCategory)) {
+                            setFormData(p => ({ ...p, freeCategories: [...p.freeCategories, selectedCategory] }));
+                          }
+                        }
+                        setSelectedService('');
+                      }}
+                      className="h-[42px] px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/20 active:scale-95 transition-all w-full md:w-auto"
                     >
-                      Add
+                      Add Benefit
                     </button>
                   </div>
-                </div>
 
-                {/* Included Services List */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase">Included Services ({formData.services.length})</h4>
-                  {formData.services.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic">No services added yet.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {formData.services.map((service, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm border border-blue-100">
-                          <span>{service}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeService(index)}
-                            className="hover:text-red-500 transition-colors ml-1 focus:outline-none"
-                          >
-                            <FiX className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                  {/* Divider */}
+                  <div className="h-px bg-gray-100 w-full"></div>
+
+                  {/* Active List */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-gray-700">Active Benefits</p>
+
+                    <div className="flex flex-wrap gap-3">
+                      {/* Categories */}
+                      {formData.freeCategories.map((catId, idx) => {
+                        const cat = categories.find(c => (c.id || c._id) === catId);
+                        return (
+                          <div key={`c-tag-${idx}`} className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-sm font-medium shadow-sm">
+                            <FiPackage className="w-4 h-4" />
+                            <span>{cat ? cat.title : 'Category'}</span>
+                            <span className="bg-indigo-200 text-indigo-800 text-[10px] px-1.5 rounded-full uppercase">All Free</span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(p => ({ ...p, freeCategories: p.freeCategories.filter(id => id !== catId) }))}
+                              className="ml-1 p-0.5 hover:bg-white rounded-full transition-colors text-indigo-400 hover:text-red-500"
+                            >
+                              <FiX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* Services */}
+                      {formData.freeServices.map((svcId, idx) => {
+                        const svc = servicesList.find(s => (s.id || s._id) === svcId);
+                        return (
+                          <div key={`s-tag-${idx}`} className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-sm font-medium shadow-sm">
+                            <FiTool className="w-4 h-4" />
+                            <span>{svc ? svc.title : 'Service'}</span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(p => ({ ...p, freeServices: p.freeServices.filter(id => id !== svcId) }))}
+                              className="ml-1 p-0.5 hover:bg-white rounded-full transition-colors text-emerald-400 hover:text-red-500"
+                            >
+                              <FiX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {formData.freeCategories.length === 0 && formData.freeServices.length === 0 && (
+                        <p className="text-gray-400 text-sm italic w-full">No benefits added yet. Select a category above to start.</p>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
-                >
-                  {currentPlan ? 'Update Plan' : 'Create Plan'}
-                </button>
-              </div>
-            </form>
+            {/* Modal Footer */}
+            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-8 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-600/20 active:scale-95"
+              >
+                {currentPlan ? 'Save Changes' : 'Create Plan'}
+              </button>
+            </div>
           </div>
         </div>
       )}

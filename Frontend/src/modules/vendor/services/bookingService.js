@@ -105,6 +105,46 @@ export const updateBookingStatus = async (bookingId, status, data = {}) => {
 };
 
 /**
+ * Start Self Job (Vendor)
+ */
+export const startSelfJob = async (bookingId) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/self/start`);
+  return response.data;
+};
+
+/**
+ * Verify Self Visit (Vendor)
+ */
+export const verifySelfVisit = async (bookingId, otp, location) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/self/visit/verify`, { otp, location });
+  return response.data;
+};
+
+/**
+ * Complete Self Job (Vendor)
+ */
+export const completeSelfJob = async (bookingId, data) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/self/complete`, data);
+  return response.data;
+};
+
+/**
+ * Collect Self Cash (Vendor)
+ */
+export const collectSelfCash = async (bookingId, otp, amount) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/self/payment/collect`, { otp, amount });
+  return response.data;
+};
+
+/**
+ * Pay Worker (Worker Payment Settlement)
+ */
+export const payWorker = async (bookingId) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/pay-worker`);
+  return response.data;
+};
+
+/**
  * Get pending booking alerts
  * @returns {Promise<Array>} List of pending bookings
  */
@@ -123,3 +163,15 @@ export const getPendingAlerts = async () => {
   }
 };
 
+/**
+ * Get vendor ratings and reviews
+ */
+export const getRatings = async (params = {}) => {
+  try {
+    const response = await api.get('/vendors/bookings/ratings', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching ratings:', error);
+    throw error;
+  }
+};

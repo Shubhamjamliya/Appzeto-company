@@ -57,6 +57,8 @@ const UpdateProfile = lazyLoad(() => import('../pages/UpdateProfile'));
 const Login = lazyLoad(() => import('../pages/login'));
 const Signup = lazyLoad(() => import('../pages/signup'));
 const ServiceDynamic = lazyLoad(() => import('../pages/ServiceDynamic'));
+const Scrap = lazyLoad(() => import('../pages/Scrap'));
+const Notifications = lazyLoad(() => import('../pages/Notifications'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -68,6 +70,9 @@ const LoadingFallback = () => (
   </div>
 );
 
+// Import Live Booking Card
+import LiveBookingCard from '../components/booking/LiveBookingCard';
+
 const UserRoutes = () => {
   const location = useLocation();
 
@@ -78,6 +83,9 @@ const UserRoutes = () => {
   // Pages where BottomNav should be shown
   const bottomNavPages = ['/user', '/user/', '/user/rewards', '/user/cart', '/user/account'];
   const shouldShowBottomNav = bottomNavPages.includes(location.pathname);
+
+  // Check if we hide the live booking card (e.g. if we are on the specific booking details page)
+  const isBookingDetailsPage = location.pathname.match(/^\/user\/booking\/[a-zA-Z0-9]+$/);
 
   return (
     <ErrorBoundary>
@@ -91,7 +99,7 @@ const UserRoutes = () => {
             {/* Protected routes (auth required) */}
             <Route path="/" element={<ProtectedRoute userType="user"><Home /></ProtectedRoute>} />
             <Route path="/native" element={<ProtectedRoute userType="user"><Native /></ProtectedRoute>} />
-            <Route path="/:slug" element={<ProtectedRoute userType="user"><ServiceDynamic /></ProtectedRoute>} />
+
             <Route path="/rewards" element={<ProtectedRoute userType="user"><Rewards /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute userType="user"><Account /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute userType="user"><Cart /></ProtectedRoute>} />
@@ -109,9 +117,13 @@ const UserRoutes = () => {
             <Route path="/my-rating" element={<ProtectedRoute userType="user"><MyRating /></ProtectedRoute>} />
             <Route path="/about-homster" element={<ProtectedRoute userType="user"><AboutHomster /></ProtectedRoute>} />
             <Route path="/update-profile" element={<ProtectedRoute userType="user"><UpdateProfile /></ProtectedRoute>} />
+            <Route path="/scrap" element={<ProtectedRoute userType="user"><Scrap /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute userType="user"><Notifications /></ProtectedRoute>} />
+            <Route path="/:slug" element={<ProtectedRoute userType="user"><ServiceDynamic /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>
+      {!isBookingDetailsPage && <LiveBookingCard />}
       {shouldShowBottomNav && <BottomNav />}
     </ErrorBoundary>
   );

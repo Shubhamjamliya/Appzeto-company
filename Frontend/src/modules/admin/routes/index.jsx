@@ -19,7 +19,10 @@ const Bookings = lazy(() => import('../pages/Bookings'));
 const Payments = lazy(() => import('../pages/Payments'));
 const Reports = lazy(() => import('../pages/Reports'));
 const Notifications = lazy(() => import('../pages/Notifications'));
+
 const Plans = lazy(() => import('../pages/Plans/Plans'));
+const Scrap = lazy(() => import('../pages/Scrap'));
+const Settlements = lazy(() => import('../pages/Settlements'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -58,7 +61,9 @@ const AdminRoutes = () => {
           <Route path="payments/*" element={<Payments />} />
           <Route path="reports/*" element={<Reports />} />
           <Route path="notifications/*" element={<Notifications />} />
+          <Route path="scrap" element={<Scrap />} />
           <Route path="plans" element={<Plans />} />
+          <Route path="settlements/*" element={<Settlements />} />
           <Route path="settings/*" element={<Settings />} />
         </Route>
       </Routes>

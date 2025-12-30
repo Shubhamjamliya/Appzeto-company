@@ -5,13 +5,16 @@ import { FiArrowLeft, FiShoppingCart, FiTrash2, FiMinus, FiPlus, FiPhone, FiHome
 import { MdStar } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
-import BottomNav from '../../components/layout/BottomNav';
 import AddressSelectionModal from './components/AddressSelectionModal';
 import TimeSlotModal from './components/TimeSlotModal';
 import VendorSearchModal from './components/VendorSearchModal';
 import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
 import { cartService } from '../../../../services/cartService';
+import { configService } from '../../../../services/configService';
+import { getPlans } from '../../services/planService';
+import { userAuthService } from '../../../../services/authService';
+import LiveBookingCard from '../../components/booking/LiveBookingCard';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -24,10 +27,10 @@ const toAssetUrl = (url) => {
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const category = location.state?.category || null; // Get category from navigation state
+  const category = location.state?.category || null;
+  const plan = location.state?.plan || null;
 
   const [cartItems, setCartItems] = useState([]);
-  const [isPlusAdded, setIsPlusAdded] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
   const [address, setAddress] = useState('');
@@ -46,7 +49,10 @@ const Checkout = () => {
 
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
+
   const [selectedTime, setSelectedTime] = useState(null);
+  const [visitedFee, setVisitedFee] = useState(29);
+  const [gstPercentage, setGstPercentage] = useState(18);
 
   // Check if Razorpay is loaded (defer to avoid blocking initial render)
   useEffect(() => {
@@ -80,8 +86,60 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    loadCart();
-  }, [category]);
+    // Load config settings
+    const loadConfig = async () => {
+      try {
+        const response = await configService.getSettings();
+        if (response.success && response.settings) {
+          if (!plan) setVisitedFee(response.settings.visitedCharges || 29);
+          else setVisitedFee(0);
+          setGstPercentage(response.settings.gstPercentage || 18);
+        }
+      } catch (error) {
+        console.error('Failed to load config', error);
+      }
+    };
+
+    const loadUserAddresses = async () => {
+      try {
+        const response = await userAuthService.getProfile();
+        if (response.success && response.user?.addresses?.length > 0) {
+          const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
+          setAddress(defaultAddr.addressLine1);
+          setHouseNumber(defaultAddr.addressLine2 || '');
+          setAddressDetails({
+            address: defaultAddr.addressLine1,
+            lat: defaultAddr.lat,
+            lng: defaultAddr.lng,
+            type: defaultAddr.type,
+            city: defaultAddr.city,
+            state: defaultAddr.state,
+            pincode: defaultAddr.pincode
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load user addresses', error);
+      }
+    };
+
+    if (plan) {
+      setCartItems([{
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        description: plan.description,
+        isPlan: true,
+        serviceCount: 1
+      }]);
+      setLoading(false);
+      loadConfig();
+      loadUserAddresses();
+    } else {
+      loadCart();
+      loadConfig();
+      loadUserAddresses();
+    }
+  }, [category, plan]);
 
   const loadCart = async () => {
     try {
@@ -149,17 +207,15 @@ const Checkout = () => {
     }
   };
 
-  const handleAddPlus = () => {
-    setIsPlusAdded(!isPlusAdded);
-  };
+
 
   const getAddressComponent = (type) => {
     return addressDetails?.components?.find(c => c.types.includes(type))?.long_name || '';
   };
 
   const handleProceed = async () => {
-    if (!addressDetails || !selectedDate || !selectedTime) {
-      if (!addressDetails) setShowAddressModal(true);
+    if (!addressDetails || !selectedDate || !selectedTime || !houseNumber) {
+      if (!addressDetails || !houseNumber) setShowAddressModal(true);
       else if (!selectedDate || !selectedTime) setShowTimeSlotModal(true);
       return;
     }
@@ -181,15 +237,31 @@ const Checkout = () => {
         ? firstItem.serviceId._id || firstItem.serviceId.id
         : firstItem.serviceId;
 
+      const bookedItemsData = cartItems.map(item => ({
+        sectionTitle: item.sectionTitle || item.category || 'General',
+        sectionId: item.sectionId || null,
+        card: {
+          title: item.card?.title || item.title,
+          subtitle: item.card?.subtitle || item.description || '',
+          price: item.card?.price || item.price || 0,
+          originalPrice: item.card?.originalPrice || item.originalPrice || null,
+          duration: item.card?.duration || item.duration || '',
+          description: item.card?.description || item.description || '',
+          imageUrl: item.card?.imageUrl || item.icon || '',
+          features: item.card?.features || []
+        },
+        quantity: item.serviceCount || 1
+      }));
+
       const response = await bookingService.create({
         serviceId,
         address: {
           type: addressDetails?.type || 'home',
           addressLine1: addressDetails?.addressLine1 || address,
           addressLine2: houseNumber,
-          city: getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
-          state: getAddressComponent('administrative_area_level_1') || 'State',
-          pincode: getAddressComponent('postal_code') || '000000',
+          city: addressDetails?.city || getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
+          state: addressDetails?.state || getAddressComponent('administrative_area_level_1') || 'State',
+          pincode: addressDetails?.pincode || getAddressComponent('postal_code') || '000000',
           lat: addressDetails?.lat,
           lng: addressDetails?.lng
         },
@@ -200,30 +272,39 @@ const Checkout = () => {
           end: getTimeSlots().find(slot => slot.value === selectedTime)?.end || selectedTime
         },
         amount: amountToPay,
+
+        // Pass Full Breakdown to Backend
+        basePrice: totalOriginalPrice,
+        discount: savings,
+        tax: taxesAndFee,
+        visitationFee: finalVisitedFee,
+
         paymentMethod: 'online',
-        isPlusAdded: isPlusAdded
+        bookedItems: bookedItemsData
       });
 
       if (response.success) {
         setBookingRequest(response.data);
-        setCurrentStep('accepted');
-        setAcceptedVendor({
-          ...(response.data.vendorId || {
-            name: 'Professional Assigned',
-            businessName: 'Expert Service Pro',
-            rating: 4.8,
-            totalJobs: 156,
-            avatar: '/assets/provider-avatar.png'
-          }),
-          price: response.data.finalAmount || amountToPay,
-          distance: 'within 5km',
-          estimatedTime: '15-30 min'
-        });
+
+        // If the backend returns an assigned vendor immediately (rare but possible)
+        if (response.data.vendorId && (response.data.status === 'ACCEPTED' || response.data.status === 'ASSIGNED')) {
+          setCurrentStep('accepted');
+          setAcceptedVendor({
+            ...(response.data.vendorId || {}),
+            price: response.data.finalAmount || amountToPay,
+            distance: 'within 5km', // default
+            estimatedTime: '15-30 min'
+          });
+          setSearchingVendors(false); // Finished search
+        } else {
+          // Normal flow: Entered pooling/searching
+          setCurrentStep('waiting'); // Waiting for vendor acceptance
+          // Keep searchingVendors = true to disable buttons and show progress
+        }
       }
     } catch (error) {
-      toast.error('No vendors available at this time. Please try again.');
+      toast.error('Failed to initiate booking request. Please try again.');
       setShowVendorModal(false);
-    } finally {
       setSearchingVendors(false);
     }
   };
@@ -262,6 +343,7 @@ const Checkout = () => {
 
         setAcceptedVendor(vendorData);
         setCurrentStep('accepted');
+        setSearchingVendors(false);
         toast.success(`${vendorData.businessName} accepted your booking!`);
 
         // Close modal after 2 seconds to show "Proceed to Pay" button
@@ -311,9 +393,10 @@ const Checkout = () => {
         type: 'home',
         addressLine1: address,
         addressLine2: houseNumber,
-        city: getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
-        state: getAddressComponent('administrative_area_level_1') || 'State',
-        pincode: getAddressComponent('postal_code') || '123456',
+        city: addressDetails?.city || getAddressComponent('locality') || getAddressComponent('administrative_area_level_2') || 'City',
+        state: addressDetails?.state || getAddressComponent('administrative_area_level_1') || 'State',
+        pincode: addressDetails?.pincode || getAddressComponent('postal_code') || '123456',
+
         landmark: addressDetails?.landmark || '',
         lat: addressDetails?.lat || null,
         lng: addressDetails?.lng || null
@@ -333,16 +416,42 @@ const Checkout = () => {
         ? firstItem.serviceId._id || firstItem.serviceId.id
         : firstItem.serviceId;
 
+      // Prepare bookedItems array matching Service catalog structure
+      const bookedItemsData = cartItems.map(item => ({
+        sectionTitle: item.sectionTitle || item.category || 'General',
+        sectionId: item.sectionId || null,
+        card: {
+          title: item.card?.title || item.title || 'Unknown Service',
+          subtitle: item.card?.subtitle || item.description || '',
+          price: item.card?.price || item.price || 0,
+          originalPrice: item.card?.originalPrice || item.originalPrice || null,
+          duration: item.card?.duration || item.duration || '',
+          description: item.card?.description || item.description || '',
+          imageUrl: item.card?.imageUrl || item.icon || '',
+          features: item.card?.features || []
+        },
+        quantity: item.serviceCount || 1
+      }));
+
+      console.log('BookedItems payload constructed:', JSON.stringify(bookedItemsData, null, 2));
+
       const bookingResponse = await bookingService.create({
         serviceId: serviceId,
         address: addressObj,
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: getTimeSlots().find(slot => slot.value === selectedTime)?.display || selectedTime,
         timeSlot: timeSlotObj,
-        userNotes: `Items: ${cartItems.map(i => i.title).join(', ')}`,
-        paymentMethod: 'razorpay',
+        // userNotes: null, // Removed per request
+        paymentMethod: amountToPay === 0 ? 'plan_benefit' : 'online',
         amount: amountToPay,
-        isPlusAdded: isPlusAdded
+
+        // Pass Full Breakdown to Backend
+        basePrice: totalOriginalPrice,
+        discount: savings,
+        tax: taxesAndFee,
+        visitationFee: finalVisitedFee,
+
+        bookedItems: bookedItemsData
       });
 
       if (!bookingResponse.success) {
@@ -358,9 +467,21 @@ const Checkout = () => {
       setBookingRequest(booking);
       toast.dismiss();
 
+      // Clear cart immediately as search starts (consumes items)
+      try {
+        if (category) {
+          await cartService.removeCategoryItems(category);
+        } else {
+          await cartService.clearCart();
+        }
+        // catch silently - search is primary, cart clear is secondary cleanup
+      } catch (err) {
+        console.error('Failed to clear cart after search start', err);
+      }
+
       // Move to waiting state - alerts sent to nearby vendors
       setCurrentStep('waiting');
-      setSearchingVendors(false);
+      // Keep searchingVendors true to disable button
       toast.success('Finding nearby vendors... Alerts sent to vendors within 10km!');
 
     } catch (error) {
@@ -505,7 +626,20 @@ const Checkout = () => {
   };
 
   const handlePayment = async () => {
-    if (paymentMethod === 'online') {
+    if (totalAmount === 0) {
+      // Free booking covered by plan
+      toast.success('Booking confirmed!');
+      // Clear cart
+      try {
+        await cartService.clearCart();
+        setCartItems([]);
+      } catch (error) { }
+
+      // Navigate
+      if (bookingRequest) {
+        navigate(`/user/booking-confirmation/${bookingRequest._id}`, { replace: true });
+      }
+    } else if (paymentMethod === 'online') {
       await handleOnlinePayment();
     } else {
       await handlePayAtHome();
@@ -529,16 +663,164 @@ const Checkout = () => {
   };
 
   const handleCartClick = () => {
+    if (plan) return; // Disable cart click for plan
     navigate('/user/cart');
   };
 
-  // Calculate totals
-  const itemTotal = cartItems.reduce((sum, item) => sum + (item.price || 0), 0);
-  const totalOriginalPrice = cartItems.reduce((sum, item) => sum + ((item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1)), 0);
+  // Fetch plan upgrade details if applicable
+  const [upgradePreview, setUpgradePreview] = useState(null);
+  const isUpgrade = location.state?.isUpgrade;
+
+  useEffect(() => {
+    if (plan && isUpgrade) {
+      const fetchUpgradeDetails = async () => {
+        try {
+          const res = await paymentService.getUpgradeDetails(plan.id);
+          if (res.success) {
+            setUpgradePreview(res.data);
+          }
+        } catch (error) {
+          console.error(error);
+          toast.error('Failed to calculate upgrade price');
+        }
+      };
+      fetchUpgradeDetails();
+    }
+  }, [plan, isUpgrade]);
+
+  const handlePlanPayment = async () => {
+    try {
+      if (!razorpayLoaded) {
+        toast.error('Payment gateway not ready');
+        return;
+      }
+
+      const response = await paymentService.createPlanOrder(plan.id);
+      if (response.success) {
+        const { orderId, amount, key } = response.data;
+
+        const options = {
+          key,
+          amount: amount * 100,
+          currency: 'INR',
+          name: 'Appzeto',
+          description: `Payment for ${plan.name} ${isUpgrade ? '(Upgrade)' : ''}`,
+          order_id: orderId,
+          handler: async (response) => {
+            try {
+              await paymentService.verifyPlanPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planId: plan.id
+              });
+              toast.success('Subscription activated successfully!');
+              navigate('/user');
+            } catch (e) {
+              toast.error('Verification failed');
+            }
+          },
+          prefill: {
+            contact: userPhone
+          },
+          theme: {
+            color: themeColors.primary
+          }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Payment initiation failed');
+    }
+  };
+
+  // Fetch plan and user profile to determine discounts
+  useEffect(() => {
+    const fetchBenefits = async () => {
+      try {
+        const [plansRes, userRes] = await Promise.all([
+          getPlans(),
+          userAuthService.getProfile(), // Ensure we have latest status
+        ]);
+
+        if (plansRes.success && userRes.success && userRes.user?.plans?.isActive) {
+          const userPlanName = userRes.user.plans.name;
+          const activePlan = plansRes.data.find(p => p.name === userPlanName);
+
+          if (activePlan) {
+            setPlanBenefits({
+              name: activePlan.name,
+              freeCategories: activePlan.freeCategories || [],
+              freeServices: activePlan.freeServices || []
+            });
+            console.log('Active Plan Benefits:', activePlan);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load plan benefits', e);
+      }
+    };
+
+    // Only fetch if not a plan purchase (standard checkout)
+    if (!plan) {
+      fetchBenefits();
+    }
+  }, [plan]);
+
+  const [planBenefits, setPlanBenefits] = useState({ name: '', freeCategories: [], freeServices: [] });
+
+  // Calculate totals with Plan Benefits
+  const calculateItemPrice = (item) => {
+    if (plan) return item.price || 0; // Plan purchase
+
+    // Check if free
+    const isFreeCategory = item.categoryId && planBenefits.freeCategories.some(cat => {
+      const catId = cat._id || cat;
+      return String(catId) === String(item.categoryId);
+    });
+
+    // Determine serviceId
+    // item.serviceId could be populated object or ID string.
+    // If not present, fallback to item._id? No, item._id is likely CartItem ID.
+    // We strictly need the Service ID.
+    // Assuming cart items always have serviceId populated or as ID.
+    const serviceIdRaw = item.serviceId?._id || item.serviceId;
+
+    // If we can't find serviceId, we can't check benefit
+    if (!serviceIdRaw) return item.price || 0;
+
+    const isFreeService = planBenefits.freeServices.some(svc => {
+      const svcId = svc._id || svc;
+      return String(svcId) === String(serviceIdRaw);
+    });
+
+    if (isFreeCategory || isFreeService) {
+      return 0;
+    }
+    return item.price || 0;
+  };
+
+  const itemTotal = cartItems.reduce((sum, item) => sum + calculateItemPrice(item), 0);
+  // Calculate savings including Plan Savings
+  const totalOriginalPrice = cartItems.reduce((sum, item) => {
+    const original = (item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1);
+    // If priced 0, original is huge saving
+    return sum + original;
+  }, 0);
+
   const savings = totalOriginalPrice - itemTotal;
-  const taxesAndFee = 45;
-  const visitedFee = 29;
-  const totalAmount = itemTotal + (isPlusAdded ? 249 : 0) + taxesAndFee + visitedFee;
+  const taxesAndFee = Math.round((itemTotal * gstPercentage) / 100);
+  // Visited fee logic: if Total is 0 (All free), user might still pay visited fee?
+  // User says "no payemtn". So maybe visited fee also waived? Or user pays visited fee?
+  // "ask direct servicebooking" -> implies fully free.
+  // I'll set visitedFee to 0 if itemTotal is 0?
+  // Configurable?
+  // Assuming "Free under plan" means NO Payment.
+  const finalVisitedFee = itemTotal === 0 ? 0 : visitedFee;
+
+  const totalAmount = itemTotal + taxesAndFee + finalVisitedFee;
   const amountToPay = totalAmount;
 
   // Date and time slot helper functions
@@ -623,7 +905,6 @@ const Checkout = () => {
             <p className="text-gray-400 text-sm mt-2">Add services to get started</p>
           </div>
         </main>
-        <BottomNav />
       </div>
     );
   }
@@ -680,35 +961,50 @@ const Checkout = () => {
                     <p className="text-sm text-gray-600">{item.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: themeColors.button }}>
+                {!item.isPlan && (
+                  <div className="flex items-center gap-2 border rounded-lg" style={{ borderColor: themeColors.button }}>
+                    <button
+                      onClick={() => handleQuantityChange(item._id, -1)}
+                      className="p-2 transition-colors"
+                      onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <FiMinus className="w-4 h-4" style={{ color: themeColors.button }} />
+                    </button>
+                    <span className="px-3 py-1 text-sm font-medium text-black">{item.serviceCount || 1}</span>
+                    <button
+                      onClick={() => handleQuantityChange(item._id, 1)}
+                      className="p-2 transition-colors"
+                      onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      <FiPlus className="w-4 h-4" style={{ color: themeColors.button }} />
+                    </button>
+                  </div>
+                )}
+                {!item.isPlan && (
                   <button
-                    onClick={() => handleQuantityChange(item._id, -1)}
-                    className="p-2 transition-colors"
-                    onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    onClick={() => handleRemoveItem(item._id)}
+                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                   >
-                    <FiMinus className="w-4 h-4" style={{ color: themeColors.button }} />
+                    <FiTrash2 className="w-4 h-4" />
                   </button>
-                  <span className="px-3 py-1 text-sm font-medium text-black">{item.serviceCount || 1}</span>
-                  <button
-                    onClick={() => handleQuantityChange(item._id, 1)}
-                    className="p-2 transition-colors"
-                    onMouseEnter={(e) => e.target.style.backgroundColor = `${themeColors.brand.teal}1A`}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                  >
-                    <FiPlus className="w-4 h-4" style={{ color: themeColors.button }} />
-                  </button>
-                </div>
-                <button
-                  onClick={() => handleRemoveItem(item._id)}
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <FiTrash2 className="w-4 h-4" />
-                </button>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-bold text-black">₹{(item.price || 0).toLocaleString('en-IN')}</span>
-                {(() => {
+                <span className="text-base font-bold text-black">
+                  {calculateItemPrice(item) === 0 ? (
+                    <span className="text-green-600">Free</span>
+                  ) : (
+                    `₹${(item.price || 0).toLocaleString('en-IN')}`
+                  )}
+                </span>
+                {calculateItemPrice(item) === 0 && (
+                  <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
+                    WITH PLAN
+                  </span>
+                )}
+                {calculateItemPrice(item) > 0 && (() => {
                   const unitPrice = item.unitPrice || (item.price / (item.serviceCount || 1));
                   const unitOriginalPrice = item.originalPrice || unitPrice;
                   const currentTotal = item.price;
@@ -727,62 +1023,9 @@ const Checkout = () => {
           ))}
         </div>
 
-        {/* Plus Membership Plan */}
-        <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: `${themeColors.brand.teal}1A` }}>
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-start gap-3 flex-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: themeColors.button }}>
-                <MdStar className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-bold text-black mb-1">plus</h3>
-                <p className="text-sm text-gray-700 mb-1">6 months plan</p>
-                <p className="text-xs text-gray-600 mb-2">
-                  Get 10% off on all bookings, upto ₹100.
-                </p>
-                <button className="text-xs font-medium hover:underline" style={{ color: themeColors.button }}>
-                  View all benefits
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-col items-end">
-              <button
-                onClick={handleAddPlus}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={isPlusAdded ? {
-                  backgroundColor: themeColors.button,
-                  color: 'white'
-                } : {
-                  backgroundColor: 'white',
-                  border: `1px solid ${themeColors.button}`,
-                  color: themeColors.button
-                }}
-                onMouseEnter={(e) => {
-                  if (!isPlusAdded) {
-                    e.target.style.backgroundColor = `${themeColors.brand.teal}1A`;
-                  } else {
-                    e.target.style.backgroundColor = themeColors.button;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isPlusAdded) {
-                    e.target.style.backgroundColor = 'white';
-                  } else {
-                    e.target.style.backgroundColor = themeColors.button;
-                  }
-                }}
-              >
-                {isPlusAdded ? 'Added' : 'Add'}
-              </button>
-              <div className="mt-1 flex flex-col items-end">
-                <span className="text-sm font-bold text-black">₹249</span>
-                <span className="text-xs text-gray-400 line-through">₹699</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* ... */}
 
-        {/* Verified Customer */}
+
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -808,59 +1051,64 @@ const Checkout = () => {
             Payment Summary
           </h3>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center group">
-              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Item Total</span>
-              <div className="flex items-center gap-2">
-                {totalOriginalPrice > itemTotal && (
-                  <span className="text-xs text-slate-400 line-through">
-                    ₹{totalOriginalPrice.toLocaleString('en-IN')}
-                  </span>
-                )}
-                <span className="text-sm font-bold text-slate-900">₹{itemTotal.toLocaleString('en-IN')}</span>
-              </div>
+          <div className="space-y-3">
+            {/* Original Price (before plan) */}
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">Item Total</span>
+              <span className="text-sm font-medium text-slate-900">
+                ₹{totalOriginalPrice.toLocaleString('en-IN')}
+              </span>
             </div>
 
-            {isPlusAdded && (
-              <div className="flex justify-between items-center -mx-5 px-5 py-3 border-y" style={{ backgroundColor: `${themeColors.brand.teal}0D`, borderColor: `${themeColors.brand.teal}1A` }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}26` }}>
-                    <MdStar className="w-4 h-4" style={{ color: themeColors.button }} />
-                  </div>
-                  <span className="text-sm font-semibold" style={{ color: themeColors.button }}>Plus Membership</span>
-                </div>
-                <span className="text-sm font-bold" style={{ color: themeColors.button }}>₹249</span>
+            {/* Discount Line */}
+            {savings > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-green-600">Discount</span>
+                <span className="text-sm font-medium text-green-600">-₹{savings.toLocaleString('en-IN')}</span>
               </div>
             )}
 
-            <div className="space-y-3 pb-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500">Taxes and Fee</span>
-                <span className="text-sm font-medium text-slate-900">₹{taxesAndFee}</span>
+            {/* Upgrade Credit (for plan upgrades) */}
+            {upgradePreview && upgradePreview.credit > 0 && (
+              <div className="flex justify-between items-center text-green-600">
+                <span className="text-sm font-medium">Plan Credit</span>
+                <span className="text-sm font-bold">-₹{upgradePreview.credit.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500">Visited Fee</span>
-                <span className="text-sm font-medium text-slate-900">₹{visitedFee}</span>
-              </div>
-            </div>
+            )}
 
-            <div className="border-t border-slate-100 pt-5 mt-1">
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Payable</span>
-                  <span className="text-2xl font-black text-slate-900 leading-none">
-                    ₹{totalAmount.toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <div className="text-right">
-                  {totalOriginalPrice > itemTotal && (
-                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full animate-pulse">
-                      <MdStar className="w-3 h-3" />
-                      SAVED ₹{(totalOriginalPrice - itemTotal).toLocaleString('en-IN')}
-                    </span>
-                  )}
-                </div>
+            {/* Taxes */}
+            {taxesAndFee > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">GST ({gstPercentage}%)</span>
+                <span className="text-sm font-medium text-slate-700">₹{taxesAndFee.toLocaleString('en-IN')}</span>
               </div>
+            )}
+
+            {/* Visited Fee */}
+            {finalVisitedFee > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">Convenience Fee</span>
+                <span className="text-sm font-medium text-slate-700">₹{finalVisitedFee.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="border-t border-slate-200 pt-4 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-base font-bold text-slate-900">Total Payable</span>
+                <span className="text-xl font-black text-slate-900">
+                  {totalAmount === 0 ? (
+                    <span className="text-green-600">FREE</span>
+                  ) : (
+                    `₹${totalAmount.toLocaleString('en-IN')}`
+                  )}
+                </span>
+              </div>
+              {savings > 0 && (
+                <p className="text-xs text-green-600 mt-1 text-right font-medium">
+                  You save ₹{savings.toLocaleString('en-IN')} with {planBenefits.name}!
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -876,8 +1124,8 @@ const Checkout = () => {
           </button>
         </div>
 
-        {/* Payment Method Selection - Only show when vendor accepted */}
-        {currentStep === 'payment' && (
+        {/* Payment Method Selection - Only show when vendor accepted and amount > 0 */}
+        {currentStep === 'payment' && totalAmount > 0 && (
           <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
             <h3 className="text-base font-bold text-black mb-4">Select Payment Method</h3>
             <div className="space-y-3">
@@ -944,9 +1192,9 @@ const Checkout = () => {
       </main>
 
       {/* Bottom Action Button */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 z-40">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
         {/* Selected Address and Slot Display */}
-        {(selectedDate && selectedTime && houseNumber) && (
+        {(houseNumber || addressDetails) && (
           <div className="px-4 pt-3 pb-2 border-b border-gray-100">
             <div className="space-y-2.5">
               {/* Address */}
@@ -975,16 +1223,15 @@ const Checkout = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-600 mb-0.5">Time Slot</p>
                   <p className="text-sm font-medium text-black">
-                    {selectedDate && (() => {
+                    {selectedDate ? (() => {
                       const { day, date: dateNum } = formatDate(selectedDate);
                       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                       const month = monthNames[selectedDate.getMonth()];
-                      return `${day}, ${dateNum} ${month}`;
-                    })()}
-                    {selectedTime && (() => {
-                      const timeSlot = getTimeSlots().find(slot => slot.value === selectedTime);
-                      return timeSlot ? ` • ${timeSlot.display}` : '';
-                    })()}
+                      const timeStr = selectedTime && getTimeSlots().find(slot => slot.value === selectedTime)?.display ? ` • ${getTimeSlots().find(slot => slot.value === selectedTime).display}` : '';
+                      return `${day}, ${dateNum} ${month}${timeStr}`;
+                    })() : (
+                      <span className="text-gray-400">Select Date & Time</span>
+                    )}
                   </p>
                 </div>
                 <button
@@ -1000,9 +1247,10 @@ const Checkout = () => {
 
         <div className="p-4">
           <button
-            onClick={selectedDate && selectedTime && houseNumber ?
-              (currentStep === 'payment' ? handlePayment : handleSearchVendors) :
-              handleProceed}
+            onClick={plan ? handlePlanPayment :
+              selectedDate && selectedTime && houseNumber ?
+                (currentStep === 'payment' ? handlePayment : handleSearchVendors) :
+                handleProceed}
             disabled={searchingVendors}
             className="w-full text-white py-3 rounded-lg text-base font-semibold transition-colors disabled:opacity-50"
             style={{ backgroundColor: themeColors.button }}
@@ -1010,17 +1258,19 @@ const Checkout = () => {
             onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.button}
           >
             {searchingVendors ? 'Searching for vendors...' :
-              currentStep === 'payment' ? (paymentMethod === 'online' ? 'Proceed to Pay' : 'Confirm Booking') :
-                selectedDate && selectedTime && houseNumber ?
-                  'Find nearby vendors' :
-                  'Add address and slot'}
+              currentStep === 'payment' ? (totalAmount === 0 ? 'Confirm Booking (Free)' : (paymentMethod === 'online' ? 'Proceed to Pay' : 'Confirm Booking')) :
+                plan ? 'Proceed to Payment' :
+                  selectedDate && selectedTime && houseNumber ?
+                    'Find nearby vendors' :
+                    (houseNumber || addressDetails) ? 'Select Time Slot' : 'Add address and slot'}
           </button>
         </div>
 
 
       </div>
 
-      <BottomNav />
+      {/* Live Booking Status Card (Visible when minimized) */}
+      <LiveBookingCard key={bookingRequest?._id || 'default'} />
 
       {/* Vendor Search Modal */}
       <VendorSearchModal

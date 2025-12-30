@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { body } = require('express-validator');
 const { authenticate } = require('../../middleware/authMiddleware');
@@ -10,7 +11,13 @@ const {
   rejectBooking,
   assignWorker,
   updateBookingStatus,
-  addVendorNotes
+  addVendorNotes,
+  startSelfJob,
+  verifySelfVisit,
+  completeSelfJob,
+  collectSelfCash,
+  payWorker,
+  getVendorRatings
 } = require('../../controllers/bookingControllers/vendorBookingController');
 
 // Validation rules
@@ -19,7 +26,11 @@ const rejectBookingValidation = [
 ];
 
 const assignWorkerValidation = [
-  body('workerId').isMongoId().withMessage('Valid worker ID is required')
+  body('workerId').custom((value) => {
+    if (value === 'SELF') return true;
+    if (mongoose.Types.ObjectId.isValid(value)) return true;
+    throw new Error('Valid worker ID or "SELF" is required');
+  })
 ];
 
 const updateStatusValidation = [
@@ -32,7 +43,7 @@ const addNotesValidation = [
 ];
 
 // Routes
-// Routes
+router.get('/ratings', authenticate, isVendor, getVendorRatings);
 router.get('/', authenticate, isVendor, getVendorBookings);
 router.get('/:id', authenticate, isVendor, getBookingById);
 router.post('/:id/accept', authenticate, isVendor, acceptBooking);
@@ -40,6 +51,15 @@ router.post('/:id/reject', authenticate, isVendor, rejectBookingValidation, reje
 router.post('/:id/assign-worker', authenticate, isVendor, assignWorkerValidation, assignWorker);
 router.put('/:id/status', authenticate, isVendor, updateStatusValidation, updateBookingStatus);
 router.post('/:id/notes', authenticate, isVendor, addNotesValidation, addVendorNotes);
+
+// Self-Job Routes
+router.post('/:id/self/start', authenticate, isVendor, startSelfJob);
+router.post('/:id/self/visit/verify', authenticate, isVendor, verifySelfVisit);
+router.post('/:id/self/complete', authenticate, isVendor, completeSelfJob);
+router.post('/:id/self/payment/collect', authenticate, isVendor, collectSelfCash);
+
+// Payment Route
+router.post('/:id/pay-worker', authenticate, isVendor, payWorker);
 
 module.exports = router;
 

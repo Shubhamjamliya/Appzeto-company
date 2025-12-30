@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiStar } from 'react-icons/fi';
 import { getPlans } from '../../services/planService';
+import { userAuthService } from '../../../../services/authService';
 import { toast } from 'react-hot-toast';
 
 const MyPlan = () => {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Helper to determine card styling based on plan name
@@ -51,18 +53,22 @@ const MyPlan = () => {
   };
 
   useEffect(() => {
-    fetchPlans();
+    fetchData();
   }, []);
 
-  const fetchPlans = async () => {
+  const fetchData = async () => {
     try {
-      const res = await getPlans();
-      if (res.success) {
-        setPlans(res.data);
-      }
+      const [plansRes, userRes] = await Promise.all([
+        getPlans(),
+        userAuthService.getProfile()
+      ]);
+
+      if (plansRes.success) setPlans(plansRes.data);
+      if (userRes.success) setUser(userRes.user);
+
     } catch (error) {
       console.error(error);
-      toast.error('Could not load plans');
+      toast.error('Could not load data');
     } finally {
       setLoading(false);
     }
@@ -99,10 +105,31 @@ const MyPlan = () => {
               const style = getCardStyle(plan.name);
               const isBestValue = plan.name.toLowerCase().includes('gold') || plan.name.toLowerCase().includes('diamond');
 
+              const currentPlan = user?.plans;
+              const hasActivePlan = currentPlan?.isActive;
+              const isCurrent = hasActivePlan && currentPlan?.name === plan.name;
+
+              // Upgrade logic: if user has plan, check price
+              // If user has NO active plan, everything is selectable (Upgrade false)
+              const userPlanPrice = currentPlan?.price || 0;
+              const isUpgrade = hasActivePlan && plan.price > userPlanPrice;
+
+              // Disable logic: 
+              // 1. Current Plan -> Disabled
+              // 2. Lower Plan -> Disabled (User said "only upgrade")
+              // 3. Same Price Plan (if different name) -> Disabled? Assume yes.
+              const isDowngradeOrSame = hasActivePlan && plan.price <= userPlanPrice && !isCurrent;
+
+              const isDisabled = isCurrent || isDowngradeOrSame;
+
+              let buttonText = `Select ${plan.name}`;
+              if (isCurrent) buttonText = 'Current Plan';
+              if (isUpgrade) buttonText = 'Upgrade';
+
               return (
                 <div
                   key={plan._id}
-                  className={`relative rounded-3xl p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border flex flex-col h-full ${style.container}`}
+                  className={`relative rounded-3xl p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border flex flex-col h-full ${style.container} ${isDisabled ? 'opacity-80 grayscale-[0.5]' : ''}`}
                 >
                   {/* Popular Badge */}
                   {isBestValue && (
@@ -139,8 +166,24 @@ const MyPlan = () => {
                   </div>
 
                   <div className="mt-auto">
-                    <button className={`w-full py-3.5 px-4 rounded-xl font-bold shadow-md transition-all active:scale-95 ${style.button}`}>
-                      Select {plan.name}
+                    <button
+                      onClick={() => {
+                        navigate('/user/checkout', {
+                          state: {
+                            plan: {
+                              id: plan._id,
+                              name: plan.name,
+                              price: plan.price,
+                              description: plan.description || `${plan.duration || 'Monthly'} Plan`
+                            },
+                            isUpgrade
+                          }
+                        });
+                      }}
+                      disabled={isDisabled}
+                      className={`w-full py-3.5 px-4 rounded-xl font-bold shadow-md transition-all active:scale-95 ${style.button} ${isDisabled ? 'cursor-not-allowed opacity-70' : ''}`}
+                    >
+                      {buttonText}
                     </button>
                   </div>
                 </div>

@@ -1,7 +1,10 @@
+const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
 const Service = require('../../models/Service');
 const Category = require('../../models/Category');
 const User = require('../../models/User');
+const Vendor = require('../../models/Vendor');
+const Worker = require('../../models/Worker');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');
@@ -30,9 +33,34 @@ const createBooking = async (req, res) => {
       timeSlot,
       userNotes,
       paymentMethod,
-      amount, // Accept amount from frontend
-      isPlusAdded
+      amount,
+      isPlusAdded,
+      bookedItems, // Array of specific items from cart
+      visitingCharges: reqVisitingCharges,
+      visitationFee: reqVisitationFee, // Backward compatibility
+      basePrice: reqBasePrice,
+      discount: reqDiscount,
+      tax: reqTax
     } = req.body;
+
+    let visitingCharges = reqVisitingCharges !== undefined ? reqVisitingCharges : (reqVisitationFee || 0);
+
+    console.log('[CreateBooking] bookedItems received:', JSON.stringify(bookedItems, null, 2));
+
+    // Calculate total value from booked items or fallback to base (Move to top)
+    let totalServiceValue = 0;
+    if (bookedItems && bookedItems.length > 0) {
+      totalServiceValue = bookedItems.reduce((sum, item) => {
+        const itemPrice = item.card?.price || item.price || 0;
+        return sum + (itemPrice * (item.quantity || 1));
+      }, 0);
+    }
+    // Note: Fallback to service.basePrice is done later if totalServiceValue is 0 AND service is loaded.
+    // But we need 'service' to define fallback.
+    // 'service' is loaded at line 46.
+    // So we must calculate it AFTER loading service but BEFORE usage.
+    // Usage is at line 98. Service loaded at 46.
+    // So distinct placement: AFTER line 52.
 
     // Handle serviceId if it's an object (from populated cart data)
     if (typeof serviceId === 'object' && serviceId._id) {
@@ -48,6 +76,17 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Calculate total value from booked items or fallback to service base price immediately after service load
+    if (totalServiceValue === 0 && bookedItems && bookedItems.length > 0) {
+      // It was calculated above? No, I defined variable but didn't assign fallback yet.
+      // Let's just do the whole calc here correctly.
+    }
+
+    // RE-EVALUATE: Better to consolidate the logic at one place: AFTER service load.
+    if (totalServiceValue === 0) { // If not calculated from items or items were 0 price
+      totalServiceValue = service.basePrice || 500;
+    }
+
     // Verify user exists
     const user = await User.findById(userId);
     if (!user) {
@@ -60,34 +99,134 @@ const createBooking = async (req, res) => {
     // Don't assign vendor initially - send to nearby vendors instead
     // Vendor will be assigned when a vendor accepts the booking
 
-    // Calculate pricing - use amount from frontend if provided, otherwise calculate
-    let basePrice, discount, tax, finalAmount;
-
-    if (amount && amount > 0) {
-      // Use amount from frontend (from cart total)
-      finalAmount = amount;
-      basePrice = Math.round(amount / 1.18); // Reverse calculate base from final (assuming 18% tax)
-      tax = amount - basePrice;
-      discount = 0;
-    } else {
-      // Fallback to service pricing
-      basePrice = service.basePrice || 500; // Default minimum ₹500
-      discount = service.discountPrice ? (basePrice - service.discountPrice) : 0;
-      tax = Math.round(basePrice * 0.18); // 18% GST
-      finalAmount = basePrice - discount + tax;
-    }
-
-    // Ensure minimum amount for Razorpay (₹1)
-    if (finalAmount < 1) {
-      finalAmount = 1;
-    }
-
-    // Get category for the service
+    // Get category for the service FIRST (needed for plan validation)
     const categoryId = service.categoryId || service.categoryIds?.[0];
     const category = categoryId ? await Category.findById(categoryId) : null;
 
-    // Create booking with REQUESTED status (no vendor assigned yet)
+    // Calculate pricing - use amount from frontend if provided, otherwise calculate
+    let basePrice, discount, tax, finalAmount;
+    let bookingStatus = BOOKING_STATUS.SEARCHING;
+    let bookingPaymentStatus = PAYMENT_STATUS.PENDING;
+
+    // Check if this is a PLAN BENEFIT booking
+    if (paymentMethod === 'plan_benefit') {
+      const Plan = require('../../models/Plan');
+
+      // Validate user has active plan
+      if (!user.plans || !user.plans.isActive) {
+        return res.status(400).json({ success: false, message: 'No active plan found' });
+      }
+
+      const userPlan = await Plan.findOne({ name: user.plans.name });
+      if (!userPlan) {
+        return res.status(400).json({ success: false, message: 'Plan details not found' });
+      }
+
+      // Check if service or category is covered
+      const isCategoryCovered = categoryId && userPlan.freeCategories &&
+        userPlan.freeCategories.some(cat => String(cat) === String(categoryId));
+      const isServiceCovered = serviceId && userPlan.freeServices &&
+        userPlan.freeServices.some(svc => String(svc) === String(serviceId));
+
+      if (isCategoryCovered || isServiceCovered) {
+        // Valid Free Booking - user pays 0, but vendor gets paid by admin
+        // FIX: Use totalServiceValue for basePrice to show real cost in DB
+        basePrice = totalServiceValue > 0 ? totalServiceValue : (service.basePrice || 500);
+        discount = basePrice; // Full discount for user
+        tax = 0;
+        visitingCharges = 0;
+        finalAmount = 0; // User pays nothing
+        bookingStatus = BOOKING_STATUS.SEARCHING;
+        bookingPaymentStatus = PAYMENT_STATUS.SUCCESS;
+      } else {
+        return res.status(400).json({ success: false, message: 'Service not covered by your plan' });
+      }
+    } else if (amount && amount > 0) {
+      // Use amount from frontend (from cart total)
+      finalAmount = amount;
+
+      if (reqBasePrice !== undefined && reqTax !== undefined) {
+        // Use breakdown provided by frontend
+        basePrice = reqBasePrice;
+        discount = reqDiscount || 0;
+        tax = reqTax;
+        visitingCharges = (reqVisitingCharges !== undefined) ? reqVisitingCharges : (visitingCharges || 49);
+      } else {
+        // Backward compatibility: Reverse calculate
+        // Ensure visitation fee is present
+        if (!visitingCharges) visitingCharges = 49;
+
+        // Reverse calculate base from final (Excluding fee)
+        // Amount = (Base + Tax) + Fee -> Amount - Fee = Base * 1.18
+        basePrice = Math.round((amount - visitingCharges) / 1.18);
+        tax = amount - basePrice - visitingCharges;
+        discount = 0;
+      }
+    } else {
+      // Fallback to service pricing
+      if (!visitingCharges) visitingCharges = 49;
+
+      basePrice = service.basePrice || 500; // Default minimum ₹500
+      discount = service.discountPrice ? (basePrice - service.discountPrice) : 0;
+      tax = Math.round(basePrice * 0.18); // 18% GST
+      finalAmount = basePrice - discount + tax + visitationFee;
+    }
+
+    // Calculate vendor earnings and admin commission
+    // Calculate total value from booked items or fallback to base
+    // Calculate total value from booked items or fallback to base
+    // Logic moved to top of function to ensure availability for pricing checks
+
+    const commissionRate = 0.10; // 10% admin commission
+    let vendorEarnings, adminCommission;
+
+    if (paymentMethod === 'plan_benefit') {
+      // Vendor gets full amount from admin (or should we deduct commission too? use full value for now based on user request "earning money as on non free")
+      // User said: "we shows vendor the earning money on service as on non free"
+      // Usually "earnings" = "price - commission".
+      // If user pays 0, Vendor still expects (Price - Commission) or Full Price?
+      // "same no need to change on vendor" -> Implies logic should be identical to paid booking?
+      // If paid booking: User pays 1000. Vendor gets 900.
+      // If free booking: User pays 0. Vendor gets ???
+      // If vendor sees "500", it means they see 500.
+      // If real value is 800.
+      // I will give vendor the full value (or minus commission) based on totalServiceValue.
+      // Let's assume vendor gets (Value - Commission) always, but for Plan Benefit, Admin pays it.
+
+      adminCommission = 0; // Admin doesn't take commission from... wait. Admin PAYS vendor.
+      // If Admin pays vendor, Admin pays (Price - Commission)? No, Admin pays Vendor's share.
+      // Let's set vendorEarnings = totalServiceValue - (totalServiceValue * commissionRate).
+
+      const potentialCommission = Math.round(totalServiceValue * commissionRate);
+      vendorEarnings = totalServiceValue - potentialCommission; // Standard earnings logic
+
+      // But wait, step 129 had: vendorEarnings = servicePrice; (Full price).
+      // If previously it was Full Price, maybe that's what user expects?
+      // User said: "we shows vendor the earning money on service as on non free"
+      // Non-free earnings = Price - Commission.
+      // So I will apply commission deduction.
+
+      adminCommission = 0; // Admin absorbs the cost, so technically commission is 0 recorded against user payment? 
+      // Actually, let's keep it simple: Vendor gets what they would get if user paid.
+      // If user paid X, Vendor gets X * 0.9.
+      // So Vendor Earnings = totalServiceValue * 0.9.
+
+    } else {
+      // Regular booking - calculate commission
+      adminCommission = Math.round(totalServiceValue * commissionRate);
+      vendorEarnings = totalServiceValue - adminCommission;
+    }
+
+    // Ensure minimum amount for Razorpay (₹1) for paid bookings
+    if (finalAmount < 1 && paymentMethod !== 'plan_benefit') {
+      finalAmount = 1;
+    }
+
+    // Create booking
     const bookingNumber = `BK${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+    console.log('[CreateBooking] About to save with bookedItems:', JSON.stringify(bookedItems || [], null, 2));
+
     const booking = await Booking.create({
       bookingNumber,
       userId,
@@ -98,10 +237,16 @@ const createBooking = async (req, res) => {
       serviceCategory: category?.title || 'General',
       description: service.description,
       serviceImages: service.images || [],
+      serviceImages: service.images || [],
+      bookedItems: (Array.isArray(bookedItems) && bookedItems.length > 0) ? bookedItems : [],
+      // Force bookedItems assignment and verify
       basePrice,
       discount,
       tax,
+      visitingCharges,
       finalAmount,
+      vendorEarnings,
+      adminCommission,
       address: {
         type: address.type || 'home',
         addressLine1: address.addressLine1,
@@ -119,19 +264,23 @@ const createBooking = async (req, res) => {
         start: timeSlot.start,
         end: timeSlot.end
       },
-      userNotes: userNotes || null,
-      isPlusAdded: isPlusAdded || false,
+      // userNotes: userNotes || null, // Removed
+      // isPlusAdded: isPlusAdded || false, // Removed
       paymentMethod: paymentMethod || null,
-      status: BOOKING_STATUS.SEARCHING, // Initial search phase (hidden from user until payment/confirmed)
-      paymentStatus: PAYMENT_STATUS.PENDING
+      status: bookingStatus,
+      paymentStatus: bookingPaymentStatus
     });
 
     // If Plus membership was added, update user status
     if (isPlusAdded) {
       const expiryDate = new Date();
       expiryDate.setFullYear(expiryDate.getFullYear() + 1); // 1 year membership
-      user.isPlusMember = true;
-      user.plusExpiry = expiryDate;
+      user.plans = {
+        isActive: true,
+        name: 'Plus Membership',
+        expiry: expiryDate,
+        price: 999 // Or fetch based on constants if needed, hardcoding placeholder or 0
+      };
       await user.save();
       console.log(`User ${userId} upgraded to Plus Membership until ${expiryDate}`);
     }
@@ -258,11 +407,13 @@ const getUserBookings = async (req, res) => {
     // Build query
     const query = { userId };
     if (status) {
-      query.status = status;
+      if (status.includes(',')) {
+        query.status = { $in: status.split(',') };
+      } else {
+        query.status = status;
+      }
     } else {
-      // By default, exclude 'searching' bookings (which are not yet paid/confirmed/accepted)
-      // Allow AWAITING_PAYMENT so user can see what to pay for
-      query.status = { $nin: [BOOKING_STATUS.SEARCHING] };
+      // Default: Fetch all, including SEARCHING. Frontend will filter for active.
     }
     if (startDate || endDate) {
       query.scheduledDate = {};
@@ -314,6 +465,7 @@ const getBookingById = async (req, res) => {
     const { id } = req.params;
 
     const booking = await Booking.findOne({ _id: id, userId })
+      .select('+visitOtp +paymentOtp') // Include secure OTPs for the user
       .populate('userId', 'name phone email')
       .populate('vendorId', 'name businessName phone email address')
       .populate('serviceId', 'title description iconUrl images')
@@ -382,17 +534,98 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Update booking
+    // --- REFUND & CANCELLATION FEE LOGIC ---
+    let refundAmount = 0;
+    let cancellationFee = 0;
+    let refundMessage = '';
+
+    const hasStartedJourney = !!booking.journeyStartedAt;
+    const isPaid = booking.paymentStatus === PAYMENT_STATUS.SUCCESS;
+    const isWalletOrOnline = ['wallet', 'razorpay', 'upi', 'card'].includes(booking.paymentMethod);
+    const isCash = booking.paymentMethod === 'cash';
+
+    if (hasStartedJourney) {
+      // SCENARIO: Worker/Vendor already started journey
+      // Policy: Charge convenience fee (visitingCharges)
+      cancellationFee = booking.visitingCharges || 49;
+
+      if (isPaid && isWalletOrOnline) {
+        // User paid upfront -> Refund (Total - Fee)
+        refundAmount = Math.max(0, booking.finalAmount - cancellationFee);
+        refundMessage = `Booking cancelled after journey start. Refund of ₹${refundAmount} initiated (Cancellation Fee: ₹${cancellationFee} deducted).`;
+      } else {
+        // User hasn't paid (e.g. COD or pending) -> Charge Fee from Wallet (allow negative)
+        // No refund, but debt created (or deducted if balance exists)
+        refundAmount = 0;
+        refundMessage = `Booking cancelled after journey start. Cancellation fee of ₹${cancellationFee} charged to your wallet.`;
+
+        // We need to charge this fee.
+        // We will handle wallet debit below.
+      }
+    } else {
+      // SCENARIO: Cancelled before journey start
+      // Policy: Full Refund
+      cancellationFee = 0;
+
+      if (isPaid && isWalletOrOnline) {
+        refundAmount = booking.finalAmount;
+        refundMessage = `Booking cancelled successfully. Full refund of ₹${refundAmount} initiated to your wallet.`;
+      } else {
+        refundAmount = 0;
+        refundMessage = 'Booking cancelled successfully.';
+      }
+    }
+
+    // Update User Wallet
+    if (refundAmount > 0 || cancellationFee > 0) {
+      const User = require('../../models/User');
+      const Transaction = require('../../models/Transaction');
+
+      const user = await User.findById(userId);
+
+      // 1. Process Refund
+      if (refundAmount > 0) {
+        user.wallet.balance = (user.wallet.balance || 0) + refundAmount;
+
+        await Transaction.create({
+          userId: user._id,
+          type: 'refund',
+          amount: refundAmount,
+          status: 'completed',
+          paymentMethod: 'wallet',
+          description: `Refund for booking #${booking.bookingNumber}`,
+          bookingId: booking._id,
+          balanceAfter: user.wallet.balance
+        });
+
+        booking.paymentStatus = PAYMENT_STATUS.REFUNDED;
+      }
+
+      // 2. Process Cancellation Fee (Debit)
+      // Only debit if it wasn't already deducted from the refund (i.e., case where user hasn't paid yet)
+      if (cancellationFee > 0 && !isPaid) {
+        user.wallet.balance = (user.wallet.balance || 0) - cancellationFee;
+
+        await Transaction.create({
+          userId: user._id,
+          type: 'debit',
+          amount: cancellationFee,
+          status: 'completed',
+          paymentMethod: 'wallet',
+          description: `Cancellation fee for booking #${booking.bookingNumber}`,
+          bookingId: booking._id,
+          balanceAfter: user.wallet.balance
+        });
+      }
+
+      await user.save();
+    }
+
+    // Update booking status
     booking.status = BOOKING_STATUS.CANCELLED;
     booking.cancelledAt = new Date();
     booking.cancelledBy = 'user';
     booking.cancellationReason = cancellationReason || 'Cancelled by user';
-
-    // If payment was successful, initiate refund
-    if (booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
-      booking.paymentStatus = PAYMENT_STATUS.REFUNDED;
-      // TODO: Process refund through payment gateway
-    }
 
     await booking.save();
 
@@ -401,24 +634,33 @@ const cancelBooking = async (req, res) => {
       userId,
       type: 'booking_cancelled',
       title: 'Booking Cancelled',
-      message: `Your booking ${booking.bookingNumber} has been cancelled.`,
+      message: refundMessage || `Your booking ${booking.bookingNumber} has been cancelled.`,
       relatedId: booking._id,
       relatedType: 'booking'
     });
 
     // Send notification to vendor
-    await createNotification({
-      vendorId: booking.vendorId,
-      type: 'booking_cancelled',
-      title: 'Booking Cancelled',
-      message: `Booking ${booking.bookingNumber} has been cancelled by the customer.`,
-      relatedId: booking._id,
-      relatedType: 'booking'
-    });
+    if (booking.vendorId) {
+      await createNotification({
+        vendorId: booking.vendorId,
+        type: 'booking_cancelled',
+        title: 'Booking Cancelled',
+        message: `Booking ${booking.bookingNumber} has been cancelled by the customer.`,
+        relatedId: booking._id,
+        relatedType: 'booking'
+      });
+    }
+
+    // Notify worker if assigned
+    if (booking.workerId) {
+      // Assuming worker notification logic exists or reusing vendor type or create generic
+      // For now, if no worker schema notification method specific, skipping or adding generic.
+      // (Your system usually notifies vendors/users).
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Booking cancelled successfully',
+      message: refundMessage || 'Booking cancelled successfully',
       data: booking
     });
   } catch (error) {
@@ -538,11 +780,11 @@ const addReview = async (req, res) => {
       });
     }
 
-    // Check if booking is completed
-    if (booking.status !== BOOKING_STATUS.COMPLETED) {
+    // Check if booking is completed or work is done
+    if (booking.status !== BOOKING_STATUS.COMPLETED && booking.status !== BOOKING_STATUS.WORK_DONE) {
       return res.status(400).json({
         success: false,
-        message: 'Can only review completed bookings'
+        message: 'Can only review bookings after work is done'
       });
     }
 
@@ -562,7 +804,35 @@ const addReview = async (req, res) => {
 
     await booking.save();
 
-    // TODO: Update service/worker/vendor ratings
+    // Helper to update cumulative rating on Model
+    const updateCumulativeRating = async (Model, docId, newRating) => {
+      try {
+        const doc = await Model.findById(docId);
+        if (!doc) return;
+
+        const oldTotal = doc.totalReviews || 0;
+        const oldRating = doc.rating || 0;
+
+        const newTotal = oldTotal + 1;
+        const updatedRating = ((oldRating * oldTotal) + newRating) / newTotal;
+
+        doc.rating = Number(updatedRating.toFixed(2));
+        doc.totalReviews = newTotal;
+        await doc.save();
+      } catch (err) {
+        console.error(`Error updating rating for ${Model.modelName}:`, err);
+      }
+    };
+
+    // Update Vendor Rating (Always)
+    if (booking.vendorId) {
+      await updateCumulativeRating(Vendor, booking.vendorId, rating);
+    }
+
+    // Update Worker Rating (Only if worker was assigned)
+    if (booking.workerId) {
+      await updateCumulativeRating(Worker, booking.workerId, rating);
+    }
 
     // Send notification to vendor
     await createNotification({

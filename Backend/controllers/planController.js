@@ -3,7 +3,7 @@ const Plan = require('../models/Plan');
 // Create Plan
 exports.createPlan = async (req, res) => {
   try {
-    const { name, price, services } = req.body;
+    const { name, price, services, freeCategories, freeServices } = req.body;
 
     // Check if plan exists
     const existingPlan = await Plan.findOne({ name });
@@ -11,7 +11,7 @@ exports.createPlan = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Plan with this name already exists' });
     }
 
-    const plan = new Plan({ name, price, services });
+    const plan = new Plan({ name, price, services, freeCategories, freeServices });
     await plan.save();
     res.status(201).json({ success: true, data: plan });
   } catch (error) {

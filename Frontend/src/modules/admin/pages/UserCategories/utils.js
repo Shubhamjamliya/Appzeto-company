@@ -125,9 +125,8 @@ export const ensureIds = (catalog) => {
             sec.seeAllTargetCategoryId || getTargetCategoryIdFromRoute(sec.seeAllRoutePath),
           cards: Array.isArray(sec.cards)
             ? sec.cards.map((c) => ({
+              ...c,
               id: c.id || `hcard-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-              title: c.title || "",
-              imageUrl: c.imageUrl || "",
               targetCategoryId: c.targetCategoryId || getTargetCategoryIdFromRoute(c.routePath),
             }))
             : [],

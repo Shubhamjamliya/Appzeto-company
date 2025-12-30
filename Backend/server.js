@@ -36,6 +36,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// DEBUG: Log Booking Request Body
+app.use('/api/users/bookings', (req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('DEBUG: POST /api/users/bookings BODY:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 
 
 // Logging middleware
@@ -65,6 +73,10 @@ app.use('/api/user/wallet', require('./routes/user-routes/userWallet.routes'));
 app.use('/api/users/bookings', require('./routes/user-routes/booking.routes'));
 app.use('/api/users', require('./routes/user-routes/cart.routes'));
 
+// Scrap routes
+const scrapRoutes = require('./routes/scrap.routes');
+app.use('/api/scrap', scrapRoutes);
+
 // Vendor routes
 app.use('/api/vendors/auth', require('./routes/vendor-routes/auth.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/profile.routes'));
@@ -81,12 +93,14 @@ app.use('/api/workers/auth', require('./routes/worker-routes/auth.routes'));
 app.use('/api/workers', require('./routes/worker-routes/profile.routes'));
 app.use('/api/workers', require('./routes/worker-routes/job.routes'));
 app.use('/api/workers', require('./routes/worker-routes/dashboard.routes'));
+app.use('/api/workers/wallet', require('./routes/worker-routes/wallet.routes'));
 
 // Admin routes
 app.use('/api/admin/auth', require('./routes/admin-routes/adminAuth.routes'));
 app.use('/api/admin', require('./routes/admin-routes/dashboard.routes'));
 app.use('/api/admin', require('./routes/admin-routes/userManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/vendorManagement.routes'));
+app.use('/api/admin', require('./routes/admin-routes/workerManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/categoryManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/serviceManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/homePageManagement.routes'));
@@ -95,10 +109,18 @@ app.use('/api/admin', require('./routes/admin-routes/paymentManagement.routes'))
 app.use('/api/admin', require('./routes/admin-routes/upload.routes'));
 app.use('/api/admin', require('./routes/admin-routes/planManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/settings.routes'));
+app.use('/api/admin/settlements', require('./routes/admin-routes/settlementManagement.routes'));
+app.use('/api/image', require('./routes/admin-routes/image.routes'));
+
+// Vendor Wallet/Ledger routes
+// Vendor Wallet/Ledger routes
+// WARNING: This mounts at /api/vendors, meaning routes inside are relative to that.
+// e.g., router.post('/withdrawal') becomes /api/vendors/withdrawal
+app.use('/api/vendors', require('./routes/vendor-routes/vendorWallet.routes'));
 
 // Booking routes
 app.use('/api/bookings', require('./routes/booking-routes/userBooking.routes'));
-// app.use('/api/vendors/bookings', require('./routes/booking-routes/vendorBooking.routes')); - Removed duplicate
+app.use('/api/bookings/cash', require('./routes/booking-routes/cashCollection.routes'));
 
 // Payment routes
 app.use('/api/payments', require('./routes/payment-routes/payment.routes'));
@@ -109,6 +131,7 @@ app.use('/api/notifications', require('./routes/notification.routes'));
 // Public routes (no authentication required)
 app.use('/api/public', require('./routes/public-routes/catalog.routes'));
 app.use('/api/public', require('./routes/public-routes/plan.routes'));
+app.use('/api/public', require('./routes/public-routes/config.routes'));
 
 // 404 handler
 app.use((req, res) => {
@@ -162,4 +185,8 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
 }
 
 module.exports = app;
+
+
+
+
 

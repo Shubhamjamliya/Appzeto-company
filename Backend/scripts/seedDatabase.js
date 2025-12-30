@@ -512,7 +512,7 @@ const seedDatabase = async () => {
         slug: 'electrical-repair',
         categoryIds: [repairCategory._id],
         iconUrl: '',
-        badge: null,
+        badge: 'bestseller',
         basePrice: 200,
         discountPrice: null,
         page: {
@@ -522,9 +522,132 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Services', imageUrl: '', badge: '' },
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Maintenance', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Installation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Ceiling Fan Installation',
+                rating: '4.85',
+                reviews: '12K',
+                price: '149',
+                duration: '30 mins',
+                features: ['Standard installation', 'Wiring check included'],
+                imageUrl: ''
+              },
+              {
+                title: 'Switchboard Installation',
+                rating: '4.80',
+                reviews: '8K',
+                price: '299',
+                duration: '45 mins',
+                features: ['Up to 6 modules', 'Safety check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Inverter Installation',
+                rating: '4.88',
+                reviews: '5K',
+                price: '599',
+                duration: '60 mins',
+                features: ['Battery connection', 'Load testing'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Services',
+            anchorId: 'services',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Wiring Upgrade',
+                rating: '4.85',
+                reviews: '2K',
+                price: '999',
+                duration: '2 hrs',
+                features: ['Per room', 'Standard copper wiring'],
+                imageUrl: ''
+              },
+              {
+                title: 'Earthing Installation/Check',
+                rating: '4.92',
+                reviews: '1.5K',
+                price: '1499',
+                duration: '3 hrs',
+                features: ['Deep rod installation', 'Safety check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Fan Repair (Noise/Speed)',
+                rating: '4.75',
+                reviews: '15K',
+                price: '199',
+                duration: '45 mins',
+                features: ['Capacitor check', 'Bearing check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Switch/Socket Repair',
+                rating: '4.82',
+                reviews: '20K',
+                price: '99',
+                duration: '20 mins',
+                features: ['Per unit', 'Replacement not included'],
+                imageUrl: ''
+              },
+              {
+                title: 'Fuse/MCB Repair',
+                rating: '4.90',
+                reviews: '3K',
+                price: '249',
+                duration: '30 mins',
+                features: ['Circuit check', 'Safety assurance'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Maintenance',
+            anchorId: 'maintenance',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Full Home Electrical Audit',
+                rating: '4.95',
+                reviews: '2K',
+                price: '499',
+                duration: '60 mins',
+                features: ['Wiring health check', 'Appliance load check', 'Safety audit'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: true,
         rating: 4.82,
@@ -545,9 +668,132 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Services', imageUrl: '', badge: '' },
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Maintenance', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Installation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Tap Installation',
+                rating: '4.80',
+                reviews: '50K',
+                price: '149',
+                duration: '30 mins',
+                features: ['Standard Tap', 'Leak check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Wash Basin Installation',
+                rating: '4.75',
+                reviews: '10K',
+                price: '599',
+                duration: '60 mins',
+                features: ['Secure mounting', 'Pipe connection'],
+                imageUrl: ''
+              },
+              {
+                title: 'Western Commode Installation',
+                rating: '4.85',
+                reviews: '5K',
+                price: '899',
+                duration: '90 mins',
+                features: ['Grouting', 'Level check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Services',
+            anchorId: 'services',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Water Tank Cleaning (500L-1000L)',
+                rating: '4.88',
+                reviews: '5K',
+                price: '999',
+                duration: '60 mins',
+                features: ['Mechanized cleaning', 'Sludge removal', 'Disinfection'],
+                imageUrl: ''
+              },
+              {
+                title: 'Drain Cleaning',
+                rating: '4.85',
+                reviews: '20K',
+                price: '349',
+                duration: '30 mins',
+                features: ['Acid wash', 'High pressure flow'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Tap Repair',
+                rating: '4.78',
+                reviews: '60K',
+                price: '129',
+                duration: '30 mins',
+                features: ['Washer replacement', 'Leak fix'],
+                imageUrl: ''
+              },
+              {
+                title: 'Pipe Leakage Fix',
+                rating: '4.82',
+                reviews: '25K',
+                price: '299',
+                duration: '45 mins',
+                features: ['Diagnosis', 'Minor patch work'],
+                imageUrl: ''
+              },
+              {
+                title: 'Flush Tank Repair',
+                rating: '4.76',
+                reviews: '12K',
+                price: '349',
+                duration: '40 mins',
+                features: ['Siphon check', 'Valve replacement'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Maintenance',
+            anchorId: 'maintenance',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Full Bathroom Plumbing Check',
+                rating: '4.90',
+                reviews: '3K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Leak detection', 'Pressure check', 'Fixture check'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: true,
         rating: 4.78,
@@ -568,9 +814,114 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Services', imageUrl: '', badge: '' },
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Maintenance', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Installation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Curtain Rod Installation',
+                rating: '4.80',
+                reviews: '15K',
+                price: '199',
+                duration: '30 mins',
+                features: ['Per rod', 'Drilling included'],
+                imageUrl: ''
+              },
+              {
+                title: 'Lock Installation',
+                rating: '4.85',
+                reviews: '5K',
+                price: '349',
+                duration: '45 mins',
+                features: ['Door handle/lock', 'Secure fitting'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Services',
+            anchorId: 'services',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Furniture Polishing',
+                rating: '4.85',
+                reviews: '2K',
+                price: '1499',
+                duration: '3 hrs',
+                features: ['Dining Table (6 seater)', 'Buffing and Waxing'],
+                imageUrl: ''
+              },
+              {
+                title: 'Bed Assembly',
+                rating: '4.88',
+                reviews: '2K',
+                price: '599',
+                duration: '90 mins',
+                features: ['Queen/King size', 'Hydraulic check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Door Repair/Adjustment',
+                rating: '4.75',
+                reviews: '10K',
+                price: '299',
+                duration: '45 mins',
+                features: ['Hinge fixing', 'Alignment'],
+                imageUrl: ''
+              },
+              {
+                title: 'Drawer Repair',
+                rating: '4.70',
+                reviews: '8K',
+                price: '249',
+                duration: '30 mins',
+                features: ['Channel replacement', 'Alignment'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Maintenance',
+            anchorId: 'maintenance',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Furniture Tightening Service',
+                rating: '4.80',
+                reviews: '1K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Tightening loose screws', 'Checking hinges', 'General stability'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: false,
         rating: 4.76,
@@ -802,9 +1153,95 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Cleaning', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Machine not starting/power issue',
+                rating: '4.80',
+                reviews: '15K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Circuit check', 'Power cord check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Water leakage',
+                rating: '4.78',
+                reviews: '12K',
+                price: '349',
+                duration: '40 mins',
+                features: ['Pipe check', 'Seal replacement check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Noise/Vibration issue',
+                rating: '4.75',
+                reviews: '10K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Drum balance', 'Suspension check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Installation/Uninstallation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Installation',
+                rating: '4.85',
+                reviews: '20K',
+                price: '449',
+                duration: '30 mins',
+                features: ['Inlet/Outlet connection', 'Demo', 'Leveling'],
+                imageUrl: ''
+              },
+              {
+                title: 'Uninstallation',
+                rating: '4.82',
+                reviews: '5K',
+                price: '299',
+                duration: '20 mins',
+                features: ['Safe removal', 'Pipe packing'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Maintenance',
+            anchorId: 'maintenance',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Deep Drum Cleaning',
+                rating: '4.90',
+                reviews: '8K',
+                price: '699',
+                duration: '60 mins',
+                features: ['Scale removal', 'Disinfection', 'Smell removal'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: true,
         rating: 4.79,
@@ -825,9 +1262,86 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Service', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Water not heating',
+                rating: '4.77',
+                reviews: '10K',
+                price: '349',
+                duration: '45 mins',
+                features: ['Element check', 'Thermostat check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Water leakage',
+                rating: '4.75',
+                reviews: '8K',
+                price: '299',
+                duration: '40 mins',
+                features: ['Tank check', 'Valve check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Installation/Uninstallation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Geyser Installation',
+                rating: '4.82',
+                reviews: '15K',
+                price: '549',
+                duration: '45 mins',
+                features: ['Wall mounting', 'Connection'],
+                imageUrl: ''
+              },
+              {
+                title: 'Geyser Uninstallation',
+                rating: '4.80',
+                reviews: '4K',
+                price: '299',
+                duration: '20 mins',
+                features: ['Safe removal'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Service',
+            anchorId: 'service',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Geyser Servicing',
+                rating: '4.85',
+                reviews: '6K',
+                price: '499',
+                duration: '60 mins',
+                features: ['Descaling', 'Tank cleaning', 'Safety valve check'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: false,
         rating: 4.77,
@@ -848,9 +1362,86 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Service', imageUrl: '', badge: '' },
+            { title: 'Installation', imageUrl: '', badge: '' },
+            { title: 'Repairs', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Services',
+            anchorId: 'services',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Regular Service',
+                rating: '4.85',
+                reviews: '12K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Filter cleaning', 'TDS check', 'Exterior cleaning'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Installation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Installation',
+                rating: '4.82',
+                reviews: '8K',
+                price: '499',
+                duration: '45 mins',
+                features: ['Mounting', 'Inlet connection'],
+                imageUrl: ''
+              },
+              {
+                title: 'Uninstallation',
+                rating: '4.80',
+                reviews: '3K',
+                price: '299',
+                duration: '20 mins',
+                features: ['Safe removal'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Filter Change',
+                rating: '4.88',
+                reviews: '15K',
+                price: '199',
+                duration: '30 mins',
+                features: ['Labour only', 'Spares extra'],
+                imageUrl: ''
+              },
+              {
+                title: 'Leakage Repair',
+                rating: '4.75',
+                reviews: '5K',
+                price: '299',
+                duration: '30 mins',
+                features: ['Pipe check', 'Housing check'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: false,
         rating: 4.8,
@@ -871,9 +1462,67 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Service', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Cooling issue',
+                rating: '4.81',
+                reviews: '25K',
+                price: '449',
+                duration: '45 mins',
+                features: ['Gas check', 'Compressor check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Water leakage',
+                rating: '4.76',
+                reviews: '10K',
+                price: '349',
+                duration: '30 mins',
+                features: ['Drain check', 'Seal usage'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Maintenance',
+            anchorId: 'maintenance',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'General Servicing',
+                rating: '4.85',
+                reviews: '5K',
+                price: '599',
+                duration: '60 mins',
+                features: ['Coil cleaning', 'Tray cleaning'],
+                imageUrl: ''
+              },
+              {
+                title: 'Gas Refill',
+                rating: '4.88',
+                reviews: '8K',
+                price: '1999',
+                duration: '60 mins',
+                features: ['Complete refill', 'Leak check'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: true,
         rating: 4.81,
@@ -894,13 +1543,152 @@ const seedDatabase = async () => {
           paymentOffersEnabled: true,
           paymentOffers: [],
           banners: [],
-          serviceCategoriesGrid: []
+          serviceCategoriesGrid: [
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Service', imageUrl: '', badge: '' }
+          ]
         },
-        sections: [],
+        sections: [
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Not heating',
+                rating: '4.79',
+                reviews: '8K',
+                price: '299',
+                duration: '45 mins',
+                features: ['Magnetron check', 'Capacitor check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Buttons not working',
+                rating: '4.75',
+                reviews: '5K',
+                price: '249',
+                duration: '30 mins',
+                features: ['Panel check', 'Membrane check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Service',
+            anchorId: 'service',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Deep Cleaning',
+                rating: '4.82',
+                reviews: '3K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Grease removal', 'Odor removal'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
         status: SERVICE_STATUS.ACTIVE,
         isPopular: false,
         rating: 4.79,
         totalBookings: 75000
+      },
+      {
+        title: 'Television/LCD Repair',
+        slug: 'tv-lcd-repair',
+        categoryIds: [applianceCategory._id],
+        iconUrl: '',
+        badge: 'NEW',
+        basePrice: 350,
+        discountPrice: null,
+        page: {
+          ratingTitle: 'TV/LCD Repair',
+          ratingValue: '4.80',
+          bookingsText: '50K+ Bookings',
+          paymentOffersEnabled: true,
+          paymentOffers: [],
+          banners: [],
+          serviceCategoriesGrid: [
+            { title: 'Repairs', imageUrl: '', badge: '' },
+            { title: 'Installation', imageUrl: '', badge: '' }
+          ]
+        },
+        sections: [
+          {
+            title: 'Repairs',
+            anchorId: 'repairs',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'Display not working',
+                rating: '4.80',
+                reviews: '5K',
+                price: '399',
+                duration: '45 mins',
+                features: ['Signal check', 'Screen check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Sound issue',
+                rating: '4.78',
+                reviews: '3K',
+                price: '349',
+                duration: '40 mins',
+                features: ['Speaker check', 'Audio board check'],
+                imageUrl: ''
+              },
+              {
+                title: 'Power issue',
+                rating: '4.82',
+                reviews: '4K',
+                price: '299',
+                duration: '30 mins',
+                features: ['Power supply check', 'Cord check'],
+                imageUrl: ''
+              }
+            ]
+          },
+          {
+            title: 'Installation/Uninstallation',
+            anchorId: 'installation',
+            navImageUrl: '',
+            navBadge: '',
+            type: 'standard',
+            cards: [
+              {
+                title: 'TV Installation (Wall Mount)',
+                rating: '4.85',
+                reviews: '10K',
+                price: '499',
+                duration: '45 mins',
+                features: ['Secure mounting', 'Level check'],
+                imageUrl: ''
+              },
+              {
+                title: 'TV Uninstallation',
+                rating: '4.82',
+                reviews: '2K',
+                price: '299',
+                duration: '30 mins',
+                features: ['Safe removal', 'Packaging help'],
+                imageUrl: ''
+              }
+            ]
+          }
+        ],
+        status: SERVICE_STATUS.ACTIVE,
+        isPopular: true,
+        rating: 4.80,
+        totalBookings: 50000
       }
     ];
 

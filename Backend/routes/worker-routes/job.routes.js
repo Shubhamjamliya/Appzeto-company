@@ -9,7 +9,9 @@ const {
   updateJobStatus,
   startJob,
   completeJob,
-  addWorkerNotes
+  addWorkerNotes,
+  verifyVisit,
+  collectCash
 } = require('../../controllers/bookingControllers/workerBookingController');
 
 // Validation rules
@@ -27,7 +29,9 @@ router.get('/jobs', authenticate, isWorker, getAssignedJobs);
 router.get('/jobs/:id', authenticate, isWorker, getJobById);
 router.put('/jobs/:id/status', authenticate, isWorker, updateStatusValidation, updateJobStatus);
 router.post('/jobs/:id/start', authenticate, isWorker, startJob);
+router.post('/jobs/:id/visit/verify', authenticate, isWorker, verifyVisit);
 router.post('/jobs/:id/complete', authenticate, isWorker, completeJob);
+router.post('/jobs/:id/payment/collect', authenticate, isWorker, collectCash);
 router.post('/jobs/:id/notes', authenticate, isWorker, addNotesValidation, addWorkerNotes);
 
 module.exports = router;

@@ -23,6 +23,35 @@ const toAssetUrl = (url) => {
   return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
 };
 
+// Add Animation Styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    40% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-pop-in {
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  @keyframes flyToCart {
+    0% { transform: scale(1); opacity: 1; left: var(--start-x); top: var(--start-y); }
+    100% { transform: scale(0.1); opacity: 0; left: var(--end-x); top: var(--end-y); }
+  }
+  .fly-item {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    z-index: 9999;
+    pointer-events: none;
+    animation: flyToCart 0.8s ease-in-out forwards;
+    background-size: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+`;
+document.head.appendChild(style);
+
 const ServiceDynamic = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -111,8 +140,36 @@ const ServiceDynamic = () => {
 
   const handleBack = () => navigate('/user');
 
-  const handleAddClick = async (item, sectionTitle) => {
+  const handleAddClick = async (item, sectionTitle, event) => {
     try {
+      // Trigger Animation
+      if (event && event.target) {
+        const btn = event.target.getBoundingClientRect();
+        const startX = btn.left + btn.width / 2;
+        const startY = btn.top + btn.height / 2;
+
+        // Destination: Bottom Cart Summary (Fixed Position)
+        // Adjust these to match the "View Cart" button or icon position approximately
+        const endX = window.innerWidth / 2;
+        const endY = window.innerHeight - 40;
+
+        // Create Flying Element
+        const flyEl = document.createElement('div');
+        flyEl.classList.add('fly-item');
+        flyEl.style.backgroundImage = `url(${toAssetUrl(item.imageUrl || service.icon)})`;
+        flyEl.style.setProperty('--start-x', `${startX}px`);
+        flyEl.style.setProperty('--start-y', `${startY}px`);
+        flyEl.style.setProperty('--end-x', `${endX}px`);
+        flyEl.style.setProperty('--end-y', `${endY}px`);
+
+        document.body.appendChild(flyEl);
+
+        // Remove element after animation
+        setTimeout(() => {
+          document.body.removeChild(flyEl);
+        }, 800);
+      }
+
       // Get service and vendor IDs from the service data
       const cartItemData = {
         serviceId: service.id, // Service ID from the formatted response
@@ -128,6 +185,18 @@ const ServiceDynamic = () => {
         rating: item.rating || "4.8",
         reviews: item.reviews || "10k+",
         vendorId: service.vendorId || null,
+        // Section and Card info for booking model
+        sectionTitle: sectionTitle || 'General',
+        card: {
+          title: item.title,
+          subtitle: item.subtitle || '',
+          price: parseInt(item.price?.toString().replace(/,/g, '') || 0),
+          originalPrice: item.originalPrice ? parseInt(item.originalPrice.toString().replace(/,/g, '')) : null,
+          duration: item.duration || '',
+          description: item.description || '',
+          imageUrl: item.imageUrl || '',
+          features: item.features || []
+        }
       };
 
       const response = await cartService.addToCart(cartItemData);
@@ -337,7 +406,7 @@ const ServiceDynamic = () => {
                           />
                         </div>
                         <button
-                          onClick={() => handleAddClick(card, section.title)}
+                          onClick={(e) => handleAddClick(card, section.title, e)}
                           className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white text-primary-600 font-bold px-6 py-1.5 rounded-lg shadow-md border border-primary-200 hover:bg-primary-50 active:scale-95 transition-all text-sm"
                         >
                           Add
@@ -425,8 +494,8 @@ const ServiceDynamic = () => {
                         )}
                       </div>
                       <button
-                        onClick={() => {
-                          handleAddClick(selectedCard, selectedCard.sectionTitle);
+                        onClick={(e) => {
+                          handleAddClick(selectedCard, selectedCard.sectionTitle, e);
                           setShowDetailModal(false);
                         }}
                         className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"

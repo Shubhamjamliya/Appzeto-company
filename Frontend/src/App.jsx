@@ -13,39 +13,24 @@ function App() {
           <Toaster
             position="top-center"
             reverseOrder={false}
-            gutter={8}
-            containerClassName=""
-            containerStyle={{}}
             toastOptions={{
-              // Default options
-              className: '',
-              duration: 3000,
+              duration: 3000, // Global default
               style: {
-                background: '#363636',
+                background: '#333',
                 color: '#fff',
+                borderRadius: '10px',
+                padding: '12px 20px',
               },
-              // Success options
               success: {
                 duration: 3000,
                 style: {
-                  background: '#10b981',
-                  color: '#fff',
-                },
-                iconTheme: {
-                  primary: '#fff',
-                  secondary: '#10b981',
+                  background: '#10B981',
                 },
               },
-              // Error options
               error: {
                 duration: 4000,
                 style: {
-                  background: '#ef4444',
-                  color: '#fff',
-                },
-                iconTheme: {
-                  primary: '#fff',
-                  secondary: '#ef4444',
+                  background: '#EF4444',
                 },
               },
             }}

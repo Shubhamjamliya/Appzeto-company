@@ -492,6 +492,8 @@ const Home = () => {
                   rating: card.rating || "4.8",
                   reviews: card.reviews || "10k+",
                   price: card.price,
+                  originalPrice: card.originalPrice,
+                  discount: card.discount,
                   image: processedImage,
                   targetCategoryId: card.targetCategoryId
                 };

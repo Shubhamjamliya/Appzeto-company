@@ -1,16 +1,33 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiCheck, FiClock, FiUser, FiMapPin, FiTool, FiDollarSign, FiFileText, FiCheckCircle } from 'react-icons/fi';
+import { FiCheck, FiClock, FiUser, FiMapPin, FiTool, FiDollarSign, FiFileText, FiCheckCircle, FiX } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
-import { getBookingById, updateBookingStatus } from '../../services/bookingService';
+import { getBookingById, updateBookingStatus, startSelfJob, verifySelfVisit, completeSelfJob, collectSelfCash, payWorker } from '../../services/bookingService';
+import { CashCollectionModal, ConfirmDialog } from '../../components/common';
+import vendorWalletService from '../../../../services/vendorWalletService';
+import { toast } from 'react-hot-toast';
 
 const BookingTimeline = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [currentStage, setCurrentStage] = useState(1);
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isWorkDoneModalOpen, setIsWorkDoneModalOpen] = useState(false);
+  const [otpInput, setOtpInput] = useState(['', '', '', '']);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { }
+  });
+  const [workPhotos, setWorkPhotos] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isWorkApproved, setIsWorkApproved] = useState(false);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -35,10 +52,12 @@ const BookingTimeline = () => {
         const response = await getBookingById(id);
         const apiData = response.data || response;
 
+        const isSelfJob = apiData.assignedAt && !apiData.workerId;
         const mappedBooking = {
           ...apiData,
           id: apiData._id || apiData.id,
-          assignedTo: apiData.workerId ? { name: apiData.workerId.name } : null,
+          isSelfJob,
+          assignedTo: apiData.workerId ? { name: apiData.workerId.name } : (apiData.assignedAt ? { name: 'You (Self)' } : null),
           location: {
             address: apiData.address?.addressLine1 || apiData.location?.address || 'Address not available',
             lat: apiData.address?.lat || apiData.location?.lat,
@@ -57,27 +76,187 @@ const BookingTimeline = () => {
         setBooking(mappedBooking);
 
         // Determine current stage based on status
+        // Determine current stage based on status
         const statusMap = {
           'requested': 1,
           'searching': 1,
           'confirmed': 2,
-          'assigned': 3, // Worker assigned but not visited
-          'visited': 4, // Explicit visited status
-          'in_progress': 4, // Legacy support
-          'work_done': 5,
-          'worker_paid': 6, // Not a status typically, but stage
-          'settlement_pending': 7,
+          'assigned': 3,
+          'journey_started': 4,
+          'visited': 5,
+          'in_progress': 5,
+          'work_done': 7,
           'completed': 8,
         };
-        // Mapping might need adjustment based on validTransitions in backend
-        setCurrentStage(statusMap[apiData.status] || 2);
+
+        const isActuallyPaid = apiData.isWorkerPaid || apiData.workerPaymentStatus === 'PAID' || apiData.workerPaymentStatus === 'SUCCESS';
+        const isSettled = apiData.finalSettlementStatus === 'DONE';
+
+        // Custom logic for later stages
+        let stage = statusMap[apiData.status] || 2;
+        if (apiData.status === 'completed') {
+          if (isSettled) stage = 10; // Booking Complete
+          else if (isActuallyPaid || isSelfJob) stage = 9; // Final Settlement (Skip Pay Worker for self)
+          else stage = 8; // Pay Worker
+        }
+
+        setCurrentStage(stage);
       } catch (error) {
         console.error('Error loading booking:', error);
       }
     };
 
     loadBooking();
-  }, [id]);
+  }, [id, isWorkApproved]);
+
+  /* Handlers */
+  const handleWorkerPayment = async () => {
+    // Determine payment type
+    const confirmMsg = booking?.cashCollected
+      ? `Worker has collected ₹${booking.finalAmount}. Confirm payment of ₹${booking.vendorEarnings} to worker?`
+      : `Confirm payment of ₹${booking.vendorEarnings} to the worker?`;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Pay Worker',
+      message: confirmMsg,
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          setActionLoading(true);
+          await payWorker(id);
+          toast.success('Worker payment processed successfully');
+          window.location.reload();
+        } catch (e) {
+          toast.error(e.response?.data?.message || 'Payment failed');
+        } finally {
+          setActionLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleApproveWork = async () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Approve Work',
+      message: "Approve worker's work and proceed to settlement?",
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          setActionLoading(true);
+          await updateBookingStatus(id, 'completed');
+          toast.success('Work approved successfully');
+          window.location.reload();
+        } catch (e) {
+          toast.error(e.response?.data?.message || 'Approval failed');
+        } finally {
+          setActionLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleFinalSettlement = async () => {
+    if (window.confirm("Confirm final settlement for this booking?")) {
+      try {
+        setActionLoading(true);
+        // Using existing updateBookingStatus to mark settlement
+        await updateBookingStatus(id, booking.status, { finalSettlementStatus: 'DONE' });
+        toast.success('Final settlement completed!');
+        window.location.reload();
+      } catch (e) {
+        toast.error(e.response?.data?.message || 'Final settlement failed');
+      } finally {
+        setActionLoading(false);
+      }
+    }
+  };
+
+
+
+  /* Handlers for Vendor Self-Job */
+  const handleStartSelfJob = async () => {
+    try {
+      setActionLoading(true);
+      await startSelfJob(id);
+      toast.success('Journey Started');
+      navigate(`/vendor/booking/${id}/map`);
+    } catch (error) {
+      toast.error('Failed to start journey');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyVisit = async () => {
+    const otp = otpInput.join('');
+    if (otp.length !== 4) return toast.error('Enter 4-digit OTP');
+
+    setActionLoading(true);
+    // Location check for vendor? Optional or same as worker.
+    if (!navigator.geolocation) return toast.error('Geolocation required');
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+        await verifySelfVisit(id, otp, location);
+        toast.success('Visit Verified');
+        setIsVisitModalOpen(false);
+        window.location.reload();
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Verification failed');
+      } finally {
+        setActionLoading(false);
+      }
+    });
+  };
+
+  const handleCompleteWork = async () => {
+    try {
+      setActionLoading(true);
+      // pass mockup photos or real if implemented
+      await completeSelfJob(id, { workPhotos: ['https://placehold.co/600x400'] });
+      toast.success('Work marked done');
+      setIsWorkDoneModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleInitiateOTP = async (totalAmount, extraItems = []) => {
+    try {
+      setActionLoading(true);
+      const res = await vendorWalletService.initiateCashCollection(id, totalAmount, extraItems);
+      return res;
+    } catch (err) {
+      console.error('Initiate cash error:', err);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCollectCash = async (totalAmount, extraItems, otp) => {
+    try {
+      setActionLoading(true);
+      const res = await vendorWalletService.confirmCashCollection(id, totalAmount, otp, extraItems);
+      if (res.success) {
+        toast.success('Collection successful!');
+        window.location.reload();
+      } else {
+        throw new Error(res.message);
+      }
+    } catch (err) {
+      console.error('Confirm cash error:', err);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const timelineStages = [
     {
@@ -99,44 +278,81 @@ const BookingTimeline = () => {
       title: 'Assigned',
       icon: FiUser,
       action: currentStage === 2 ? () => navigate(`/vendor/booking/${id}/assign-worker`) : null,
-      description: booking?.assignedTo === 'SELF' ? 'Assigned to yourself' : booking?.assignedTo ? `Assigned to ${booking.assignedTo.name}` : 'Assign worker or yourself',
+      description: booking?.assignedTo ? `Assigned to ${booking.assignedTo.name}` : 'Assign worker or start yourself',
     },
     {
       id: 4,
-      title: 'Visited Site',
+      title: 'Journey Started',
       icon: FiMapPin,
-      action: currentStage === 3 ? handleVisitSite : null,
-      description: 'Worker has visited the site',
+      action: (currentStage === 3 && booking?.isSelfJob) ? handleStartSelfJob : null,
+      description: booking?.isSelfJob ? 'You started journey' : (booking?.assignedTo ? 'Worker started journey' : 'Waiting for journey start'),
     },
     {
       id: 5,
-      title: 'Work Done',
-      icon: FiTool,
-      action: currentStage === 4 ? handleWorkDone : null,
-      description: 'Service work completed',
+      title: 'Visited Site',
+      icon: FiMapPin,
+      action: (currentStage === 4 && booking?.isSelfJob) ? () => setIsVisitModalOpen(true) : null,
+      description: 'Arrived at location',
     },
     {
       id: 6,
-      title: 'Worker Payment Done',
-      icon: FiDollarSign,
-      action: currentStage === 5 && booking?.assignedTo && booking.assignedTo !== 'SELF' ? handleWorkerPayment : null,
-      description: booking?.assignedTo === 'SELF' ? 'Not applicable' : 'Worker payment confirmed',
+      title: 'Work Done',
+      icon: FiTool,
+      action: (currentStage === 5 && booking?.isSelfJob) ? () => setIsWorkDoneModalOpen(true) : null,
+      description: 'Service work completed',
     },
     {
       id: 7,
-      title: 'Settlement Pending',
-      icon: FiFileText,
-      action: null,
-      description: 'Waiting for admin settlement',
+      title: booking?.isSelfJob ? 'Collect Payment' : 'Approve Worker Work',
+      icon: FiCheckCircle,
+      action: (() => {
+        if (booking?.status === 'completed' || booking?.status === 'COMPLETED') return null;
+
+        if (booking?.isSelfJob && currentStage === 7) {
+          return () => setIsPaymentModalOpen(true);
+        }
+
+        if (!booking?.isSelfJob && currentStage === 7) {
+          return handleApproveWork;
+        }
+        return null;
+      })(),
+      description: booking?.isSelfJob ? 'Collect cash and complete booking' : 'Review and approve worker work',
     },
     {
       id: 8,
-      title: 'Completed',
+      title: 'Pay Worker',
+      icon: FiDollarSign,
+      action: (currentStage === 8 && !(booking?.isWorkerPaid || booking?.workerPaymentStatus === 'PAID' || booking?.workerPaymentStatus === 'SUCCESS')) ? handleWorkerPayment : null,
+      description: (booking?.isWorkerPaid || booking?.workerPaymentStatus === 'PAID' || booking?.workerPaymentStatus === 'SUCCESS') ? 'Worker Paid' : 'Settle payment with worker',
+    },
+    {
+      id: 9,
+      title: 'Final Settlement',
+      icon: FiFileText,
+      action: (currentStage === 9) ? handleFinalSettlement : null,
+      description: booking?.finalSettlementStatus === 'DONE' ? 'Settlement Done' : 'Complete final settlement',
+    },
+    {
+      id: 10,
+      title: 'Booking Complete',
       icon: FiCheckCircle,
       action: null,
-      description: 'Booking completed and settled',
+      description: 'Booking successfully finalized',
     },
-  ];
+  ].filter(stage => {
+    // Hide worker-specific stages for self jobs
+    if (booking?.isSelfJob && stage.id === 8) return false;
+    return true;
+  });
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return;
+    const newOtp = [...otpInput];
+    newOtp[index] = value;
+    setOtpInput(newOtp);
+    if (value && index < 3) document.getElementById(`otp-${index + 1}`).focus();
+  };
 
   async function handleVisitSite() {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${booking.location?.lat || 22.7196},${booking.location?.lng || 75.8577}`;
@@ -162,15 +378,11 @@ const BookingTimeline = () => {
       window.location.reload();
     } catch (error) {
       console.error('Error updating status to work done:', error);
-      alert('Failed to update status. Please follow valid status flow.');
+      toast.error('Failed to update status. Please follow valid status flow.');
     }
   }
 
-  async function handleWorkerPayment() {
-    // This requires specific API for payments which might be different than status update
-    // For now just alert or log
-    alert('Worker payment integration pending backend support.');
-  }
+
 
   if (!booking) {
     return (
@@ -198,7 +410,7 @@ const BookingTimeline = () => {
               const isCompleted = stage.id < currentStage;
               const isCurrent = stage.id === currentStage;
               const isPending = stage.id > currentStage;
-              const isSkipped = stage.id === 6 && booking?.assignedTo === 'SELF';
+              const isSkipped = false; // We filter stages now, no need to skip visually in the flow unless needed for other reasons
 
               return (
                 <div key={stage.id} className="relative pb-8 last:pb-0">
@@ -260,7 +472,13 @@ const BookingTimeline = () => {
                             boxShadow: `0 2px 8px ${themeColors.button}40`,
                           }}
                         >
-                          {stage.id === 3 ? 'Assign Worker' : stage.id === 4 ? 'Start Journey' : stage.id === 5 ? 'Mark Work Done' : 'Confirm Payment'}
+                          {stage.id === 3 ? 'Assign Worker' :
+                            stage.id === 4 ? 'Start Journey' :
+                              stage.id === 5 ? 'Mark Arrived' :
+                                stage.id === 6 ? 'Mark workdone' :
+                                  stage.id === 7 ? (booking?.assignedTo ? 'Approve Work' : 'Collect Cash') :
+                                    stage.id === 8 ? 'Pay Worker' :
+                                      stage.id === 9 ? 'Final Settlement' : 'Continue'}
                         </button>
                       )}
 
@@ -280,6 +498,56 @@ const BookingTimeline = () => {
       </main>
 
       <BottomNav />
+
+      {/* Visit OTP Modal */}
+      {isVisitModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold">Verify Self Visit</h3>
+              <button onClick={() => setIsVisitModalOpen(false)}><FiX /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Enter user OTP to verify arrival.</p>
+            <div className="flex gap-2 justify-center mb-4">
+              {[0, 1, 2, 3].map((i) => (
+                <input key={i} id={`otp-${i}`} type="number" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
+              ))}
+            </div>
+            <button onClick={handleVerifyVisit} disabled={actionLoading} className="w-full bg-blue-600 text-white py-2 rounded-lg">{actionLoading ? 'Verifying...' : 'Verify'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Work Done Modal */}
+      {isWorkDoneModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6">
+            <h3 className="font-bold mb-4">Complete Work</h3>
+            <p className="text-sm text-gray-500 mb-4">Upload photos and details (Mocked for now). Click to finish.</p>
+            <button onClick={handleCompleteWork} disabled={actionLoading} className="w-full bg-green-600 text-white py-2 rounded-lg">{actionLoading ? 'Updating...' : 'Mark Done'}</button>
+            <button onClick={() => setIsWorkDoneModalOpen(false)} className="w-full mt-2 text-gray-500">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Cash Collection Modal */}
+      <CashCollectionModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        booking={booking}
+        onInitiateOTP={handleInitiateOTP}
+        onConfirm={handleCollectCash}
+        loading={actionLoading}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+      />
     </div>
   );
 };

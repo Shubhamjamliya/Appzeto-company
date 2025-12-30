@@ -118,18 +118,42 @@ export const playSingleBeep = () => {
 };
 
 // Play urgent ring for booking alerts
-export const playAlertRing = () => {
+let currentAudio = null; // Global variable to track current playing audio
+
+export const playAlertRing = (loop = false) => {
   try {
-    initAudio();
-    const now = audioContext.currentTime;
-    // Double pulse ring
-    createNotificationSound('ring');
-    setTimeout(() => {
-      createNotificationSound('ring');
-    }, 300);
+    // If audio is already playing, do nothing if we want to sustain it, or restart ??
+    // Actually, proper behavior: if playing, stop previous and start new to ensure fresh start
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+
+    const audio = new Audio('/booking-alert.mp3');
+    if (loop) audio.loop = true;
+    currentAudio = audio; // Track the new audio instance
+
+    audio.play().catch(e => console.error('Error playing alert file:', e));
+
+    // Cleanup when audio finishes (if not looping)
+    audio.onended = () => {
+      if (currentAudio === audio) {
+        currentAudio = null;
+      }
+    };
+
     return true;
   } catch (error) {
+    console.error('Error in playAlertRing:', error);
     return false;
+  }
+};
+
+export const stopAlertRing = () => {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
   }
 };
 

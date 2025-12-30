@@ -28,6 +28,10 @@ const BookingMap = lazy(() => import('../pages/BookingMap'));
 const Settings = lazy(() => import('../pages/Settings'));
 const AddressManagement = lazy(() => import('../pages/AddressManagement'));
 const Notifications = lazy(() => import('../pages/Notifications'));
+const Scrap = lazy(() => import('../pages/Scrap'));
+const SettlementRequest = lazy(() => import('../pages/Wallet/SettlementRequest'));
+const SettlementHistory = lazy(() => import('../pages/Wallet/SettlementHistory'));
+const MyRatings = lazy(() => import('../pages/MyRatings'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -43,7 +47,11 @@ const VendorRoutes = () => {
   const location = useLocation();
 
   // Check if current route should hide bottom nav (auth routes or map)
-  const shouldHideBottomNav = location.pathname === '/vendor/login' || location.pathname === '/vendor/signup' || location.pathname.endsWith('/map');
+  // Check if current route should hide bottom nav (auth routes or map or booking alert)
+  const shouldHideBottomNav = location.pathname === '/vendor/login' ||
+    location.pathname === '/vendor/signup' ||
+    location.pathname.endsWith('/map') ||
+    location.pathname.includes('/booking-alert/');
 
   return (
     <ErrorBoundary>
@@ -69,12 +77,16 @@ const VendorRoutes = () => {
             <Route path="/earnings" element={<ProtectedRoute userType="vendor"><Earnings /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute userType="vendor"><Wallet /></ProtectedRoute>} />
             <Route path="/wallet/withdraw" element={<ProtectedRoute userType="vendor"><WithdrawalRequest /></ProtectedRoute>} />
+            <Route path="/wallet/settle" element={<ProtectedRoute userType="vendor"><SettlementRequest /></ProtectedRoute>} />
+            <Route path="/wallet/settlements" element={<ProtectedRoute userType="vendor"><SettlementHistory /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute userType="vendor"><Profile /></ProtectedRoute>} />
             <Route path="/profile/details" element={<ProtectedRoute userType="vendor"><ProfileDetails /></ProtectedRoute>} />
             <Route path="/profile/edit" element={<ProtectedRoute userType="vendor"><EditProfile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute userType="vendor"><Settings /></ProtectedRoute>} />
             <Route path="/address-management" element={<ProtectedRoute userType="vendor"><AddressManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute userType="vendor"><Notifications /></ProtectedRoute>} />
+            <Route path="/scrap" element={<ProtectedRoute userType="vendor"><Scrap /></ProtectedRoute>} />
+            <Route path="/my-ratings" element={<ProtectedRoute userType="vendor"><MyRatings /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>
