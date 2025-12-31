@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, PolylineF } from '@react-google-maps/api';
-import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone } from 'react-icons/fi';
+import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiUser, FiStar } from 'react-icons/fi';
 import { bookingService } from '../../../../services/bookingService';
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
 import PaymentVerificationModal from '../../components/booking/PaymentVerificationModal';
+
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  const clean = url.replace('/api/upload', '/upload');
+  if (clean.startsWith('http')) return clean;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
 
 // Zomato-like Premium Map Style (Silver/Clean)
 const mapStyles = [
@@ -320,6 +328,9 @@ const BookingTrack = () => {
 
   if (!isLoaded || loading) return <div className="h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
+  // Determine active provider based on priority: Worker -> Assigned -> Vendor
+  const provider = booking?.workerId || booking?.assignedTo || booking?.vendorId || {};
+
   return (
     <div className="h-screen flex flex-col relative bg-white overflow-hidden">
       {/* Top Floating Header */}
@@ -476,24 +487,46 @@ const BookingTrack = () => {
           </div>
         </div>
 
-        {/* Agent Info (Mock) */}
-        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 mb-4 border border-gray-100">
-          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
-            {/* Ideally fetch worker photo */}
-            <img src="https://ui-avatars.com/api/?name=Service+Agent&background=0d9488&color=fff" alt="Agent" className="w-full h-full" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-900 line-clamp-1">{booking?.assignedTo?.name || 'Service Partner'}</h3>
-            <p className="text-xs text-gray-500">Verified Professional</p>
-          </div>
+        {/* Agent Info */}
+        {(provider?._id || provider?.id) && (
+          <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4 mb-4 border border-gray-100">
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden relative shrink-0">
+              {(provider.profileImage || provider.profilePhoto) ? (
+                <>
+                  <img
+                    src={toAssetUrl(provider.profileImage || provider.profilePhoto)}
+                    alt="Agent"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.querySelector('.fallback-icon').style.display = 'block'; }}
+                  />
+                  <FiUser className="w-7 h-7 text-gray-400 fallback-icon hidden absolute" />
+                </>
+              ) : (
+                <FiUser className="w-7 h-7 text-gray-400" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-gray-900 line-clamp-1 text-lg">
+                {provider.name || 'Service Partner'}
+              </h3>
+              <div className="flex items-center gap-1 text-yellow-500">
+                <FiStar className="w-3.5 h-3.5 fill-current" />
+                <span className="text-sm font-bold text-gray-700">4.8</span>
+                <span className="text-xs text-gray-400">• Verified Professional</span>
+              </div>
+            </div>
 
-          {/* Call Button */}
-          {(booking?.assignedTo?.phone || booking?.vendorPhone) && (
-            <a href={`tel:${booking.assignedTo?.phone || booking.vendorPhone}`} className="w-10 h-10 bg-green-100 text-green-700 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-              <FiPhone className="w-5 h-5" />
-            </a>
-          )}
-        </div>
+            {/* Call Button */}
+            {provider.phone && (
+              <a
+                href={`tel:${provider.phone}`}
+                className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+              >
+                <FiPhone className="w-5 h-5" />
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Payment Verification Modal */}

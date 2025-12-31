@@ -1,17 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSearch, FiFilter, FiCalendar, FiClock, FiMapPin, FiUser, FiMoreVertical, FiEye, FiXCircle, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import {
+  FiSearch, FiCalendar, FiDownload, FiMoreVertical,
+  FiClock, FiCheckCircle, FiBox, FiTruck, FiXCircle, FiRefreshCw, FiShoppingBag
+} from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { adminBookingService } from '../../../../services/adminBookingService';
+import { getDashboardStats } from '../../../../services/adminDashboardService';
+
+const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => (
+  <div className={`p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
+    <div>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${colorClass.replace('text-', 'bg-').replace('600', '100')}`}>
+        <Icon className={`w-5 h-5 ${colorClass}`} />
+      </div>
+      <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
+      <p className="text-2xl font-bold text-gray-800 mt-1">{count}</p>
+    </div>
+    <div className={`w-16 h-16 rounded-full opacity-10 -mr-4 -mb-4 ${colorClass.replace('text-', 'bg-')}`}></div>
+  </div>
+);
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Filters
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalBookings, setTotalBookings] = useState(0);
+
+  // Stats
+  const [stats, setStats] = useState({
+    pending: 0,
+    confirmed: 0,
+    inProgress: 0,
+    completed: 0,
+    cancelled: 0,
+    total: 0
+  });
 
   // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -20,27 +52,46 @@ const Bookings = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const fetchBookings = async () => {
+  // Load Data
+  const fetchData = async () => {
     try {
       setLoading(true);
+
+      // 1. Fetch Bookings
       const params = {
         page,
         limit: 10,
-        search: debouncedSearch
+        search: debouncedSearch,
+        startDate,
+        endDate
       };
-
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
+      if (statusFilter !== 'All Status') {
+        params.status = statusFilter.toUpperCase().replace(' ', '_');
       }
 
-      const response = await adminBookingService.getAllBookings(params);
-      if (response.success) {
-        setBookings(response.data);
-        setTotalPages(response.pagination.pages);
-        setTotalBookings(response.pagination.total);
+      const res = await adminBookingService.getAllBookings(params);
+      if (res.success) {
+        setBookings(res.data);
+        setTotalPages(res.pagination.pages);
+      }
+
+      // 2. Fetch Stats (only if not already fetched or if total is 0)
+      if (stats.total === 0) {
+        const statsRes = await getDashboardStats();
+        if (statsRes.success) {
+          const s = statsRes.data.stats;
+          setStats({
+            pending: s.pendingBookings || 0,
+            confirmed: 0,
+            inProgress: 0,
+            completed: s.completedBookings || 0,
+            cancelled: s.cancelledBookings || 0,
+            total: s.totalBookings || 0
+          });
+        }
       }
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error('Error loading data:', error);
       toast.error('Failed to load bookings');
     } finally {
       setLoading(false);
@@ -48,217 +99,197 @@ const Bookings = () => {
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, [page, debouncedSearch, statusFilter]);
+    fetchData();
+  }, [page, debouncedSearch, statusFilter, startDate, endDate]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const handleExport = () => {
+    const headers = ['Order ID', 'Customer', 'Service', 'Total', 'Status', 'Date'];
+    const rows = bookings.map(b => [
+      b.bookingNumber,
+      b.userId?.name || 'Unknown',
+      b.serviceId?.title || 'Service',
+      b.finalAmount,
+      b.status,
+      new Date(b.createdAt).toLocaleDateString()
+    ]);
 
-  const handleCancelBooking = async (bookingId) => {
-    const reason = window.prompt("Enter cancellation reason:");
-    if (!reason) return;
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
 
-    try {
-      const response = await adminBookingService.cancelBooking(bookingId, reason);
-      if (response.success) {
-        toast.success('Booking cancelled successfully');
-        fetchBookings();
-      }
-    } catch (error) {
-      toast.error(error.message || 'Failed to cancel booking');
-    }
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "bookings.csv");
+    document.body.appendChild(link);
+    link.click();
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Bookings</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Manage all service bookings ({totalBookings} total)
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">All-orders</h1>
+        <p className="text-gray-500 text-sm">Welcome back! Here's your business overview.</p>
       </div>
 
-      {/* Filters & Search */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <BookingStatsCard title="Awaiting" count={stats.pending} icon={FiClock} bgClass="bg-yellow-50" colorClass="text-yellow-600" />
+        <BookingStatsCard title="Confirmed" count={stats.pending} icon={FiCheckCircle} bgClass="bg-blue-50" colorClass="text-blue-600" />
+        <BookingStatsCard title="In Progress" count={stats.inProgress} icon={FiBox} bgClass="bg-purple-50" colorClass="text-purple-600" />
+        <BookingStatsCard title="Completed" count={stats.completed} icon={FiTruck} bgClass="bg-green-50" colorClass="text-green-600" />
+        <BookingStatsCard title="Delivered" count={stats.completed} icon={FiCheckCircle} bgClass="bg-emerald-50" colorClass="text-emerald-600" />
+        <BookingStatsCard title="Cancelled" count={stats.cancelled} icon={FiXCircle} bgClass="bg-red-50" colorClass="text-red-600" />
+        <BookingStatsCard title="Returned" count={0} icon={FiRefreshCw} bgClass="bg-orange-50" colorClass="text-orange-600" />
+        <BookingStatsCard title="Total Orders" count={stats.total} icon={FiShoppingBag} bgClass="bg-gray-50" colorClass="text-gray-600" />
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full lg:w-96">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by ID or service..."
+            placeholder="Search by ID, name, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-sm"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize whitespace-nowrap ${statusFilter === status
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                  }`}
-              >
-                {status.replace('_', ' ')}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:border-green-500 cursor-pointer"
+          >
+            <option>All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <FiCalendar className="text-gray-400" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent text-sm text-gray-600 focus:outline-none w-24"
+            />
+            <span className="text-gray-400">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent text-sm text-gray-600 focus:outline-none w-24"
+            />
           </div>
+
+          <button
+            onClick={handleExport}
+            className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors shadow-sm shadow-green-200"
+          >
+            <FiDownload /> Export CSV
+          </button>
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="bg-white rounded-xl p-12 text-center text-gray-500 shadow-sm border border-gray-100">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-primary-600 rounded-full mb-4"></div>
-            <p>Loading bookings...</p>
-          </div>
-        ) : bookings.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center flex flex-col items-center shadow-sm border border-gray-100">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <FiCalendar className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">No bookings found</h3>
-            <p className="text-gray-500 mt-1">Try adjusting your filters</p>
-          </div>
-        ) : (
-          bookings.map((booking) => (
-            <motion.div
-              key={booking._id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:border-primary-100 transition-colors"
-            >
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* Service Info */}
-                <div className="flex gap-4 min-w-[300px]">
-                  <div className="w-16 h-16 rounded-lg bg-gray-100 shrink-0 overflow-hidden">
-                    {booking.serviceId?.iconUrl ? (
-                      <img
-                        src={booking.serviceId.iconUrl.replace('/api/upload', 'http://localhost:5000/upload')}
-                        alt={booking.serviceId.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl">🔧</div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{booking.serviceId?.title || 'Unknown Service'}</h3>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${getStatusColor(booking.status)}`}>
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total (₹)</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Order Date</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-gray-500">Loading bookings...</td>
+                </tr>
+              ) : bookings.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-gray-500">No bookings found</td>
+                </tr>
+              ) : (
+                bookings.map((booking) => (
+                  <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4">
+                      <span className="font-semibold text-gray-900 text-sm">#{booking.bookingNumber || booking._id.slice(-6).toUpperCase()}</span>
+                    </td>
+                    <td className="p-4">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{booking.userId?.name || 'Unknown Guest'}</p>
+                        <p className="text-xs text-gray-400">{booking.userId?.email || booking.customerPhone || 'No contact'}</p>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1 text-blue-600 text-sm font-medium cursor-pointer">
+                        {booking.items?.length || 1} items
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="font-bold text-gray-900 text-sm">₹{booking.finalAmount?.toLocaleString()}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                            ${booking.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            booking.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
+                              'bg-yellow-100 text-yellow-700'}`}>
                         {booking.status?.replace('_', ' ')}
                       </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-2">#{booking.bookingNumber}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <FiCalendar className="w-3.5 h-3.5" />
-                        {new Date(booking.scheduledDate).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FiClock className="w-3.5 h-3.5" />
-                        {booking.scheduledTime}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* User & Vendor Info */}
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-gray-100 pt-4 lg:pt-0 lg:pl-6">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Customer</p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs">
-                        {booking.userId?.name?.charAt(0) || <FiUser />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{booking.userId?.name || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500">{booking.userId?.phone}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Vendor</p>
-                    {booking.vendorId ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 font-bold text-xs">
-                          {booking.vendorId.businessName?.charAt(0) || <FiUser />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{booking.vendorId.businessName || booking.vendorId.name}</p>
-                          <p className="text-xs text-gray-500">{booking.vendorId.phone}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400 italic">Not assigned</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Amount & Actions */}
-                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center border-t lg:border-t-0 lg:border-l border-gray-100 pt-4 lg:pt-0 lg:pl-6 min-w-[150px]">
-                  <div className="text-left lg:text-right">
-                    <p className="text-lg font-bold text-gray-900">₹{booking.finalAmount}</p>
-                    <p className={`text-xs capitalize ${booking.paymentStatus === 'success' ? 'text-green-600' : 'text-orange-600'}`}>
-                      {booking.paymentStatus} via {booking.paymentMethod}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2 lg:mt-4">
-                    {/* View Details Button - Could open modal or navigate */}
-                    <button className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" title="View Details">
-                      <FiEye className="w-5 h-5" />
-                    </button>
-
-                    {['pending', 'confirmed'].includes(booking.status) && (
-                      <button
-                        onClick={() => handleCancelBooking(booking._id)}
-                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Cancel Booking"
-                      >
-                        <FiXCircle className="w-5 h-5" />
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-gray-600 capitalize">{booking.paymentMethod?.replace('_', ' ')}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-gray-600">
+                        {new Date(booking.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                        <FiMoreVertical />
                       </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Pagination - Matching Users page style */}
+        {/* Pagination Footer */}
         {!loading && bookings.length > 0 && (
-          <div className="flex items-center justify-between border-t border-gray-100 pt-4 px-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">
-              Page {page} of {totalPages}
-            </p>
+          <div className="flex items-center justify-between p-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">Showing {bookings.length} of {stats.total} entries</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 disabled:opacity-50 hover:bg-gray-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 disabled:opacity-50 hover:bg-gray-50"
               >
                 Next
               </button>
@@ -266,9 +297,8 @@ const Bookings = () => {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 export default Bookings;
-

@@ -148,8 +148,9 @@ const acceptBooking = async (req, res) => {
       // Free booking - skip payment, go directly to confirmed
       booking.status = BOOKING_STATUS.CONFIRMED;
     } else {
-      // Regular booking - needs payment
-      booking.status = BOOKING_STATUS.AWAITING_PAYMENT;
+      // Regular booking - payment upon service
+      // Since payment is collected after service, we confirm immediately upon vendor acceptance
+      booking.status = BOOKING_STATUS.CONFIRMED;
     }
 
     await booking.save();
@@ -157,9 +158,7 @@ const acceptBooking = async (req, res) => {
     // Emit real-time socket event to the user
     const io = req.app.get('io');
     if (io) {
-      const message = booking.paymentMethod === 'plan_benefit'
-        ? 'Vendor has accepted your request. Your booking is confirmed!'
-        : 'Vendor has accepted your request. Please complete payment to confirm your booking.';
+      const message = 'Vendor has accepted your request. Your booking is confirmed!';
 
       io.to(`user_${booking.userId}`).emit('booking_accepted', {
         bookingId: booking._id,
@@ -186,14 +185,12 @@ const acceptBooking = async (req, res) => {
     }
 
     // Send notification to user
-    const notificationMessage = booking.paymentMethod === 'plan_benefit'
-      ? `Your booking ${booking.bookingNumber} is confirmed! ${req.user.businessName || req.user.name} will arrive at scheduled time.`
-      : `Vendor ${req.user.businessName || req.user.name} has accepted your request ${booking.bookingNumber}. Please complete payment to book the service.`;
+    const notificationMessage = `Your booking ${booking.bookingNumber} is confirmed! ${req.user.businessName || req.user.name} will arrive at scheduled time.`;
 
     await createNotification({
       userId: booking.userId,
       type: 'booking_accepted',
-      title: booking.paymentMethod === 'plan_benefit' ? 'Booking Confirmed!' : 'Request Accepted by Vendor',
+      title: 'Booking Confirmed!',
       message: notificationMessage,
       relatedId: booking._id,
       relatedType: 'booking'
@@ -377,9 +374,11 @@ const assignWorker = async (req, res) => {
     booking.workerId = workerId;
     booking.assignedAt = new Date();
 
-    if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED) {
-      booking.status = BOOKING_STATUS.ASSIGNED;
-    }
+    // Do not set status to ASSIGNED yet. Wait for worker acceptance.
+    // booking.status = BOOKING_STATUS.ASSIGNED; 
+
+    booking.workerResponse = 'PENDING';
+    booking.workerAcceptedAt = undefined;
 
     await booking.save();
 

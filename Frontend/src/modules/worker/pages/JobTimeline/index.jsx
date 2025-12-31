@@ -32,6 +32,11 @@ const JobTimeline = () => {
 
   useEffect(() => {
     fetchJobDetails();
+
+    const handleUpdate = () => fetchJobDetails();
+    window.addEventListener('workerJobsUpdated', handleUpdate);
+
+    return () => window.removeEventListener('workerJobsUpdated', handleUpdate);
   }, [id]);
 
   const fetchJobDetails = async () => {
@@ -51,21 +56,25 @@ const JobTimeline = () => {
   const determineStage = (status, jobData) => {
     const isPaid = jobData?.isWorkerPaid || jobData?.workerPaymentStatus === 'PAID' || jobData?.workerPaymentStatus === 'SUCCESS';
     const isSettled = jobData?.finalSettlementStatus === 'DONE';
+    const customerPaid = jobData?.cashCollected || jobData?.paymentStatus === 'SUCCESS' || jobData?.paymentStatus === 'success';
 
     switch (status) {
       case 'confirmed':
-      case 'assigned': setCurrentStage(1); break;
+      case 'assigned':
+      case 'accepted':
+        setCurrentStage(1);
+        break;
       case 'journey_started': setCurrentStage(2); break;
       case 'visited':
       case 'in_progress': setCurrentStage(3); break;
       case 'work_done':
-        if (!jobData?.cashCollected && jobData?.paymentMode === 'CASH') setCurrentStage(5);
-        else setCurrentStage(6);
+        if (customerPaid) setCurrentStage(6); // Move to Vendor Approval
+        else setCurrentStage(5); // Go to Customer Payment
         break;
       case 'completed':
         if (isSettled) setCurrentStage(10);
         else if (isPaid) setCurrentStage(9);
-        else setCurrentStage(7);
+        else setCurrentStage(8);
         break;
       default: setCurrentStage(1);
     }
@@ -99,7 +108,6 @@ const JobTimeline = () => {
     if (window.confirm("Confirm that you have received all payments and finalize this job?")) {
       try {
         setActionLoading(true);
-        // Using a generic update if specific settlement endpoint isn't available
         await workerService.updateJobStatus(id, job.status, { finalSettlementStatus: 'DONE' });
         toast.success('Final settlement confirmed');
         fetchJobDetails();
@@ -200,15 +208,19 @@ const JobTimeline = () => {
     if (value && index < 3) document.getElementById(`otp-${index + 1}`).focus();
   };
 
+  const isPending = (job?.status === 'assigned' || job?.status === 'confirmed' || job?.status === 'pending') && job?.workerResponse !== 'ACCEPTED';
+
   const timelineStages = [
     {
       id: 1,
-      title: 'Job Assigned',
-      icon: FiCheck,
-      action: currentStage === 1 ? () => handleAction('start') : null,
-      actionLabel: 'Start Journey',
-      description: 'You have been assigned this job.',
-      timestamp: job?.assignedAt
+      title: isPending ? 'Job Assigned' : 'Job Accepted',
+      icon: isPending ? FiUser : FiCheck,
+      action: isPending
+        ? () => navigate(`/worker/jobs/${id}`)
+        : (currentStage === 1 ? () => handleAction('start') : null),
+      actionLabel: isPending ? 'View & Respond' : 'Start Journey',
+      description: isPending ? 'New job assigned. Waiting for response.' : 'You have accepted the job. Ready to start.',
+      timestamp: job?.workerAcceptedAt || job?.assignedAt
     },
     {
       id: 2,
@@ -230,7 +242,7 @@ const JobTimeline = () => {
     },
     {
       id: 4,
-      title: 'workdone',
+      title: 'Work Done',
       icon: FiTool,
       action: null,
       description: 'Service work marked as completed.',
@@ -247,34 +259,34 @@ const JobTimeline = () => {
     },
     {
       id: 6,
-      title: 'job completed',
+      title: 'Vendor Approval',
+      icon: FiUser,
+      action: null,
+      description: 'Waiting for vendor to review and approve work.',
+      timestamp: null
+    },
+    {
+      id: 7,
+      title: 'Job Completed',
       icon: FiCheckCircle,
       action: null,
       description: 'Job marked as completed.',
       timestamp: job?.completedAt
     },
     {
-      id: 7,
+      id: 8,
       title: 'Worker Payment',
       icon: FiDollarSign,
-      action: (currentStage === 7 && !(job?.isWorkerPaid || job?.workerPaymentStatus === 'PAID' || job?.workerPaymentStatus === 'SUCCESS')) ? handleRequestPayment : null,
+      action: (currentStage === 8 && !(job?.isWorkerPaid || job?.workerPaymentStatus === 'PAID' || job?.workerPaymentStatus === 'SUCCESS')) ? handleRequestPayment : null,
       actionLabel: 'Ask Vendor for Payment',
       description: (job?.isWorkerPaid || job?.workerPaymentStatus === 'PAID' || job?.workerPaymentStatus === 'SUCCESS') ? 'Payment received successfully.' : 'Waiting for vendor to release payment.',
-    },
-    {
-      id: 8,
-      title: 'Payment Verification',
-      icon: FiCheck,
-      action: null,
-      description: (job?.isWorkerPaid || job?.workerPaymentStatus === 'PAID' || job?.workerPaymentStatus === 'SUCCESS') ? 'Payment has been verified.' : 'Verification pending.',
     },
     {
       id: 9,
       title: 'Final Settlement',
       icon: FiCheckCircle,
-      action: currentStage === 9 ? handleConfirmSettlement : null,
-      actionLabel: 'Confirm Settlement',
-      description: job?.finalSettlementStatus === 'DONE' ? 'Settlement confirmed.' : 'Awaiting your final confirmation.',
+      action: null,
+      description: job?.finalSettlementStatus === 'DONE' ? 'Settlement confirmed by vendor.' : 'Waiting for vendor confirmation.',
     },
     {
       id: 10,

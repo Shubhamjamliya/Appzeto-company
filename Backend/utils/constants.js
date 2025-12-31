@@ -7,7 +7,7 @@ const USER_ROLES = {
   USER: 'USER',
   VENDOR: 'VENDOR',
   WORKER: 'WORKER',
-  ADMIN: 'ADMIN'
+  ADMIN: 'admin'
 };
 
 // Token Types
@@ -42,6 +42,7 @@ const BOOKING_STATUS = {
   AWAITING_PAYMENT: 'awaiting_payment', // Accepted by vendor, waiting for user payment
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
+  ACCEPTED: 'accepted',
   ASSIGNED: 'assigned',
   JOURNEY_STARTED: 'journey_started',
   VISITED: 'visited',

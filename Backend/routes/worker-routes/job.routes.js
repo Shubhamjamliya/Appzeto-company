@@ -11,13 +11,18 @@ const {
   completeJob,
   addWorkerNotes,
   verifyVisit,
-  collectCash
+  collectCash,
+  respondToJob
 } = require('../../controllers/bookingControllers/workerBookingController');
 
 // Validation rules
 const updateStatusValidation = [
   body('status').isIn(['in_progress', 'completed'])
     .withMessage('Invalid status')
+];
+
+const respondValidation = [
+  body('status').isIn(['ACCEPTED', 'REJECTED']).withMessage('Invalid status')
 ];
 
 const addNotesValidation = [
@@ -27,6 +32,7 @@ const addNotesValidation = [
 // Routes
 router.get('/jobs', authenticate, isWorker, getAssignedJobs);
 router.get('/jobs/:id', authenticate, isWorker, getJobById);
+router.put('/jobs/:id/respond', authenticate, isWorker, respondValidation, respondToJob);
 router.put('/jobs/:id/status', authenticate, isWorker, updateStatusValidation, updateJobStatus);
 router.post('/jobs/:id/start', authenticate, isWorker, startJob);
 router.post('/jobs/:id/visit/verify', authenticate, isWorker, verifyVisit);

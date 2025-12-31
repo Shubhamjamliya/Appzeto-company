@@ -14,6 +14,10 @@ const CashCollectionModal = ({
   onInitiateOTP,
   loading
 }) => {
+  const [extraItems, setExtraItems] = useState([]);
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [lastInitiatedTotal, setLastInitiatedTotal] = useState(0);
   const [devOTP, setDevOTP] = useState('');
 

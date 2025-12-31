@@ -325,7 +325,7 @@ const AddEditWorker = () => {
   };
 
   // Get selected category object for skills
-  const selectedCategoryObj = categories.find(c => c.title === formData.serviceCategory);
+  const selectedCategoryObj = Array.isArray(categories) ? categories.find(c => c?.title === formData.serviceCategory) : null;
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>

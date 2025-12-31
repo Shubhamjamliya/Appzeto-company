@@ -169,7 +169,7 @@ const createBooking = async (req, res) => {
       basePrice = service.basePrice || 500; // Default minimum ₹500
       discount = service.discountPrice ? (basePrice - service.discountPrice) : 0;
       tax = Math.round(basePrice * 0.18); // 18% GST
-      finalAmount = basePrice - discount + tax + visitationFee;
+      finalAmount = basePrice - discount + tax + visitingCharges;
     }
 
     // Calculate vendor earnings and admin commission
@@ -426,10 +426,10 @@ const getUserBookings = async (req, res) => {
 
     // Get bookings
     const bookings = await Booking.find(query)
-      .populate('vendorId', 'name businessName phone')
+      .populate('vendorId', 'name businessName phone profilePhoto')
       .populate('serviceId', 'title iconUrl')
       .populate('categoryId', 'title slug')
-      .populate('workerId', 'name phone')
+      .populate('workerId', 'name phone profilePhoto')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -467,10 +467,10 @@ const getBookingById = async (req, res) => {
     const booking = await Booking.findOne({ _id: id, userId })
       .select('+visitOtp +paymentOtp') // Include secure OTPs for the user
       .populate('userId', 'name phone email')
-      .populate('vendorId', 'name businessName phone email address')
+      .populate('vendorId', 'name businessName phone email address profilePhoto')
       .populate('serviceId', 'title description iconUrl images')
       .populate('categoryId', 'title slug')
-      .populate('workerId', 'name phone rating totalJobs location');
+      .populate('workerId', 'name phone rating totalJobs location profilePhoto');
 
     if (!booking) {
       return res.status(404).json({

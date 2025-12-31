@@ -5,6 +5,7 @@ import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import { CashCollectionModal } from '../../../../components/common';
 import workerService from '../../../../services/workerService';
+import api from '../../../../services/api';
 import { toast } from 'react-hot-toast';
 
 const JobDetails = () => {
@@ -168,6 +169,28 @@ const JobDetails = () => {
     }
   };
 
+  const handleJobResponse = async (status) => {
+    try {
+      setActionLoading(true);
+      const response = (await api.put(`/workers/jobs/${id}/respond`, { status })).data;
+      if (response.success) {
+        toast.success(status === 'ACCEPTED' ? 'Job Accepted' : 'Job Declined');
+        if (status === 'ACCEPTED') {
+          fetchJobDetails();
+        } else {
+          navigate('/worker/jobs');
+        }
+      } else {
+        toast.error(response.message || 'Failed');
+      }
+    } catch (error) {
+      console.error('Response error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleStatusUpdate = async (type) => {
     if (type === 'visit' && !isVisitModalOpen) {
       setOtpInput(['', '', '', '']);
@@ -295,7 +318,27 @@ const JobDetails = () => {
             View Job Timeline
           </button>
 
-          {(job.status === 'confirmed' || job.status === 'assigned') && (
+          {(!job.workerResponse || job.workerResponse === 'PENDING') && (job.status === 'confirmed' || job.status === 'assigned' || job.status === 'pending') && (
+            <div className="flex gap-3 mb-4 animate-in slide-in-from-top-2">
+              <button
+                onClick={() => handleJobResponse('REJECTED')}
+                disabled={actionLoading}
+                className="flex-1 py-4 rounded-2xl font-bold text-red-500 bg-red-50 border border-red-100 shadow-sm active:scale-95 transition-all"
+              >
+                DECLINE
+              </button>
+              <button
+                onClick={() => handleJobResponse('ACCEPTED')}
+                disabled={actionLoading}
+                className="flex-1 py-4 rounded-2xl font-bold text-white shadow-xl active:scale-95 transition-all"
+                style={{ background: themeColors.button }}
+              >
+                ACCEPT JOB
+              </button>
+            </div>
+          )}
+
+          {job.workerResponse === 'ACCEPTED' && (job.status === 'confirmed' || job.status === 'assigned') && (
             <button
               onClick={() => handleStatusUpdate('start')}
               disabled={actionLoading}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck } from 'react-icons/fi';
+import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck, FiTool, FiXCircle } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -154,8 +154,8 @@ const BookingDetails = () => {
     // If assigned to self, no worker payment needed
     if (booking?.assignedTo?.name === 'You (Self)') return false;
 
-    // Allow payment if work is done or even if marked completed but worker not paid
-    const validStatus = booking?.status === 'work_done' || booking?.status === 'completed';
+    // Allow payment ONLY if booking is completed (Vendor Approved)
+    const validStatus = booking?.status === 'completed';
     return validStatus && booking?.workerPaymentStatus !== 'PAID';
   };
 
@@ -468,6 +468,29 @@ const BookingDetails = () => {
     }
   };
 
+  const handleApproveWork = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Approve Work',
+      message: 'Approve the work done by the worker? This will mark the job as completed and enable payout.',
+      type: 'success',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await updateBookingStatus(id, 'completed');
+          window.dispatchEvent(new Event('vendorJobsUpdated'));
+          toast.success('Work Approved! You can now pay the worker.');
+          window.location.reload();
+        } catch (error) {
+          console.error('Error approving work:', error);
+          toast.error('Failed to approve work');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
       <Header title="Booking Details" />
@@ -764,11 +787,7 @@ const BookingDetails = () => {
                   <FiX className="inline w-4 h-4 mr-1" /> Reject Work
                 </button>
                 <button
-                  onClick={() => {
-                    toast.success('Work Approved!');
-                    const el = document.getElementById('worker-payment-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
+                  onClick={handleApproveWork}
                   className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold text-sm shadow-md shadow-green-200 active:scale-95 transition-transform"
                 >
                   <FiCheckCircle className="inline w-4 h-4 mr-1" /> Approve Work
@@ -778,49 +797,125 @@ const BookingDetails = () => {
           </div>
         )}
 
-        {/* Worker Assignment Status */}
+        {/* Worker & Job Status Card (Enhanced) */}
         {booking.assignedTo && booking.assignedTo?.name !== 'You (Self)' && (
-          <div
-            className="bg-white rounded-xl p-4 mb-4 shadow-md"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <p className="text-sm font-semibold text-gray-700 mb-2">Worker Assignment</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-800">{booking.assignedTo.name}</p>
-                {booking.workerResponse ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold ${booking.workerResponse === 'ACCEPTED'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                        }`}
-                    >
-                      {booking.workerResponse === 'ACCEPTED' ? '✓ Accepted' : '✗ Rejected'}
-                    </span>
-                    {booking.workerResponseAt && (
-                      <span className="text-xs text-gray-500">
-                        {new Date(booking.workerResponseAt).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-yellow-600 mt-1">⏳ Waiting for worker response...</p>
-                )}
+          <div className="bg-white rounded-2xl p-5 mb-5 shadow-lg border border-gray-100">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-sm flex items-center justify-center">
+                  <FiUser className="w-6 h-6 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">{booking.assignedTo.name}</h3>
+                  <p className="text-xs text-gray-500 font-medium">Service Partner</p>
+                </div>
               </div>
-              {booking.workerResponse === 'REJECTED' && (
-                <button
-                  onClick={handleAssignWorker}
-                  className="px-4 py-2 rounded-lg font-semibold text-sm text-white transition-all active:scale-95"
-                  style={{
-                    background: themeColors.button,
-                    boxShadow: `0 2px 8px ${themeColors.button}40`,
-                  }}
-                >
-                  Reassign
-                </button>
+
+              {/* Call Button */}
+              {booking.assignedTo?.phone && (
+                <a href={`tel:${booking.assignedTo.phone}`} className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors">
+                  <FiPhone className="w-5 h-5" />
+                </a>
+              )}
+            </div>
+
+            {/* Status Section */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Current Status</span>
+                {booking.workerAcceptedAt && <span className="text-[10px] text-gray-400 font-medium">{new Date(booking.workerAcceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+              </div>
+
+              {/* Status Display */}
+              {!booking.workerResponse || booking.workerResponse === 'PENDING' ? (
+                <div className="flex items-center gap-3 text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                  <FiClock className="w-5 h-5 animate-pulse" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">Awaiting Acceptance</p>
+                    <p className="text-[10px] opacity-80">Worker has not responded yet</p>
+                  </div>
+                </div>
+              ) : booking.workerResponse === 'ACCEPTED' ? (
+                <div className="space-y-4">
+                  {/* Progress Steps Visual */}
+                  <div className="relative flex justify-between items-center px-2">
+                    {/* Track Line */}
+                    <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 -z-10"></div>
+
+                    {/* Accepted Step */}
+                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
+                      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs shadow-sm ring-2 ring-white">
+                        <FiCheck className="w-3 h-3" />
+                      </div>
+                      <span className="text-[9px] font-bold text-green-700">Accepted</span>
+                    </div>
+
+                    {/* Started Step */}
+                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                        <FiNavigation className="w-3 h-3" />
+                      </div>
+                      <span className={`text-[9px] font-bold ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-blue-700' : 'text-gray-400'}`}>On Way</span>
+                    </div>
+
+                    {/* Working Step */}
+                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                        <FiTool className="w-3 h-3" />
+                      </div>
+                      <span className={`text-[9px] font-bold ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-orange-700' : 'text-gray-400'}`}>Working</span>
+                    </div>
+
+                    {/* Done Step */}
+                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['work_done', 'completed'].includes(booking.status) ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                        <FiCheckCircle className="w-3 h-3" />
+                      </div>
+                      <span className={`text-[9px] font-bold ${['work_done', 'completed'].includes(booking.status) ? 'text-green-700' : 'text-gray-400'}`}>Done</span>
+                    </div>
+                  </div>
+
+                  {/* Clear Text Status */}
+                  <div className="bg-white rounded-lg p-3 border border-gray-100 flex items-center gap-3 shadow-sm">
+                    <div className={`p-2 rounded-lg ${booking.status === 'journey_started' ? 'bg-blue-100 text-blue-600' :
+                      booking.status === 'in_progress' ? 'bg-orange-100 text-orange-600' :
+                        ['work_done', 'completed'].includes(booking.status) ? 'bg-green-100 text-green-600' :
+                          'bg-gray-100 text-gray-600'
+                      }`}>
+                      {booking.status === 'journey_started' ? <FiNavigation className="w-5 h-5" /> :
+                        booking.status === 'in_progress' ? <FiTool className="w-5 h-5 animate-pulse" /> :
+                          ['work_done', 'completed'].includes(booking.status) ? <FiCheckCircle className="w-5 h-5" /> :
+                            <FiCheck className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-gray-800">
+                        {booking.status === 'journey_started' ? 'Marked: On the Way' :
+                          booking.status === 'visited' ? 'Worker Reached' :
+                            booking.status === 'in_progress' ? 'Marked: In Progress' :
+                              ['work_done', 'completed'].includes(booking.status) ? 'Marked: Work Done' :
+                                'Worker Accepted Job'}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {booking.status === 'journey_started' ? 'Worker is traveling to site' :
+                          booking.status === 'visited' ? 'Waiting for start otp verification' :
+                            booking.status === 'in_progress' ? 'Service is being performed' :
+                              ['work_done', 'completed'].includes(booking.status) ? 'Worker waiting for payment' :
+                                'Worker will start journey soon'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                  <FiXCircle className="w-5 h-5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">Request Declined</p>
+                    <p className="text-[10px] opacity-80">Worker is unavailable.</p>
+                  </div>
+                  <button onClick={handleAssignWorker} className="px-3 py-1 bg-white border border-red-200 rounded shadow-sm text-xs font-bold text-red-600 hover:bg-red-50">
+                    Reassign
+                  </button>
+                </div>
               )}
             </div>
           </div>

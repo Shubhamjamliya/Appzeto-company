@@ -57,10 +57,9 @@ const getChildRoute = (parentRoute, childName) => {
       "Worker Payments": "/admin/workers/payments",
     },
     "/admin/bookings": {
-      "All Bookings": "/admin/bookings/all",
-      "Active Bookings": "/admin/bookings/active",
-      "Completed Bookings": "/admin/bookings/completed",
-      "Booking Analytics": "/admin/bookings/analytics",
+      "All Bookings": "/admin/bookings",
+      "Booking Tracking": "/admin/bookings/tracking",
+      "Booking Notifications": "/admin/bookings/notifications",
     },
     "/admin/user-categories": {
       "Home": "/admin/user-categories/home",

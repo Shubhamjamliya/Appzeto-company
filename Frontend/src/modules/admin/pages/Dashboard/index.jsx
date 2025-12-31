@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FiUser, FiBriefcase, FiUsers, FiShoppingBag, FiDollarSign, FiActivity } from 'react-icons/fi';
@@ -9,14 +9,16 @@ import PaymentBreakdownPieChart from '../../components/dashboard/PaymentBreakdow
 import RevenueVsBookingsChart from '../../components/dashboard/RevenueVsBookingsChart';
 import TimePeriodFilter from '../../components/dashboard/TimePeriodFilter';
 import { formatCurrency } from '../../utils/adminHelpers';
-import { filterByDateRange, getDateRange } from '../../utils/adminHelpers';
 import CustomerGrowthAreaChart from '../../components/dashboard/CustomerGrowthAreaChart';
 import TopServices from '../../components/dashboard/TopServices';
 import RecentBookings from '../../components/dashboard/RecentBookings';
+import { getDashboardStats, getRevenueAnalytics } from '../../../../services/adminDashboardService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [period, setPeriod] = useState('month');
+  const [revenueData, setRevenueData] = useState([]);
+  const [recentBookingsList, setRecentBookingsList] = useState([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalVendors: 0,
@@ -28,85 +30,69 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    // Load stats from localStorage
-    const loadStats = () => {
+    const fetchData = async () => {
       try {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const vendors = JSON.parse(localStorage.getItem('vendorWorkers') || '[]');
-        const workers = JSON.parse(localStorage.getItem('workerAssignedJobs') || '[]');
-        const bookings = JSON.parse(localStorage.getItem('vendorAcceptedBookings') || '[]');
-        
-        const activeBookings = bookings.filter(b => 
-          ['ACCEPTED', 'ASSIGNED', 'VISITED', 'WORK_DONE'].includes(b.status)
-        ).length;
-        
-        const completedBookings = bookings.filter(b => b.status === 'COMPLETED').length;
-        
-        // Calculate revenue from completed bookings
-        const totalRevenue = bookings
-          .filter(b => b.status === 'COMPLETED')
-          .reduce((sum, b) => sum + (b.price || 0), 0);
+        // 1. Fetch Stats & Recent Bookings
+        const statsRes = await getDashboardStats();
+        if (statsRes.success) {
+          const s = statsRes.data.stats;
+          setStats({
+            totalUsers: s.totalUsers,
+            totalVendors: s.totalVendors,
+            totalWorkers: s.totalWorkers,
+            activeBookings: s.pendingBookings,
+            completedBookings: s.completedBookings,
+            totalRevenue: s.totalRevenue,
+            todayRevenue: 0,
+          });
+          setRecentBookingsList(statsRes.data.recentBookings || []);
+        }
 
-        setStats({
-          totalUsers: users.length || 0,
-          totalVendors: vendors.length || 0,
-          totalWorkers: workers.length || 0,
-          activeBookings,
-          completedBookings,
-          totalRevenue,
-          todayRevenue: 0, // Can be calculated based on date
+        // 2. Fetch Revenue Analytics based on Period
+        let apiPeriod = 'monthly';
+        let startDate = new Date();
+        const endDate = new Date().toISOString();
+
+        if (period === 'year') {
+          apiPeriod = 'monthly';
+          startDate.setFullYear(startDate.getFullYear() - 1);
+        } else if (period === 'week') {
+          apiPeriod = 'daily';
+          startDate.setDate(startDate.getDate() - 7);
+        } else if (period === 'month') {
+          apiPeriod = 'daily';
+          startDate.setDate(startDate.getDate() - 30);
+        } else {
+          apiPeriod = 'daily';
+          startDate.setDate(startDate.getDate() - 1);
+        }
+
+        const revRes = await getRevenueAnalytics({
+          period: apiPeriod,
+          startDate: startDate.toISOString(),
+          endDate
         });
+
+        if (revRes.success) {
+          const mapped = revRes.data.revenueData.map(item => ({
+            date: item._id,
+            revenue: item.revenue,
+            orders: item.bookings
+          }));
+          mapped.sort((a, b) => new Date(a.date) - new Date(b.date));
+          setRevenueData(mapped);
+        }
       } catch (error) {
-        console.error('Error loading stats:', error);
+        console.error('Error fetching dashboard data:', error);
       }
     };
 
-    loadStats();
-    window.addEventListener('vendorJobsUpdated', loadStats);
-    window.addEventListener('workerJobsUpdated', loadStats);
-    
-    return () => {
-      window.removeEventListener('vendorJobsUpdated', loadStats);
-      window.removeEventListener('workerJobsUpdated', loadStats);
-    };
-  }, []);
-
-  const revenueData = useMemo(() => {
-    // Build last 30 days analytics from vendorAcceptedBookings
-    const bookings = JSON.parse(localStorage.getItem('vendorAcceptedBookings') || '[]');
-    const days = 365; // keep a year so This Year works
-    const map = new Map();
-    for (let i = days - 1; i >= 0; i -= 1) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      map.set(key, { date: key, revenue: 0, orders: 0 });
-    }
-    bookings.forEach((b) => {
-      const createdAt = b.createdAt || b.acceptedAt || b.assignedAt || b.visitedAt || b.work_doneAt || b.completedAt;
-      const key = createdAt ? new Date(createdAt).toISOString().slice(0, 10) : null;
-      if (!key || !map.has(key)) return;
-      const row = map.get(key);
-      row.orders += 1;
-      if (b.status === 'COMPLETED') row.revenue += Number(b.price || 0);
-      map.set(key, row);
-    });
-    return Array.from(map.values());
-  }, []);
-
-  const allBookings = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('vendorAcceptedBookings') || '[]');
-    } catch {
-      return [];
-    }
-  }, []);
+    fetchData();
+  }, [period]);
 
   const handleExportCsv = () => {
     try {
-      const range = getDateRange(period);
-      const filtered = filterByDateRange(revenueData, range.start, range.end);
-      const rows = filtered.map((r) => ({
+      const rows = revenueData.map((r) => ({
         date: r.date,
         bookings: r.orders,
         revenue: r.revenue,
@@ -129,16 +115,19 @@ const AdminDashboard = () => {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('CSV export failed', e);
-      alert('Export failed. Please try again.');
+      alert('Export failed.');
     }
   };
 
-  // Single-vendor style cards (same gradients + layout), but values from our app
+  const onViewBooking = (booking) => {
+    if (booking?._id || booking?.id) navigate(`/admin/bookings/${booking._id || booking.id}`);
+  };
+
   const statsCards = [
     {
       title: 'Total Revenue',
       value: formatCurrency(stats.totalRevenue || 0),
-      change: 18,
+      change: 0,
       icon: FiDollarSign,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-green-500 to-emerald-600',
@@ -146,9 +135,9 @@ const AdminDashboard = () => {
       iconBg: 'bg-white/20',
     },
     {
-      title: 'Active Bookings',
+      title: 'Pending Bookings',
       value: (stats.activeBookings || 0).toLocaleString(),
-      change: 5,
+      change: 0,
       icon: FiShoppingBag,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-blue-500 to-indigo-600',
@@ -158,7 +147,7 @@ const AdminDashboard = () => {
     {
       title: 'Completed Bookings',
       value: (stats.completedBookings || 0).toLocaleString(),
-      change: 20,
+      change: 0,
       icon: FiActivity,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-purple-500 to-violet-600',
@@ -168,7 +157,7 @@ const AdminDashboard = () => {
     {
       title: 'Total Users',
       value: (stats.totalUsers || 0).toLocaleString(),
-      change: 12,
+      change: 0,
       icon: FiUser,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-orange-500 to-amber-600',
@@ -178,7 +167,7 @@ const AdminDashboard = () => {
     {
       title: 'Total Vendors',
       value: (stats.totalVendors || 0).toLocaleString(),
-      change: 8,
+      change: 0,
       icon: FiBriefcase,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-teal-500 to-cyan-600',
@@ -188,7 +177,7 @@ const AdminDashboard = () => {
     {
       title: 'Total Workers',
       value: (stats.totalWorkers || 0).toLocaleString(),
-      change: 15,
+      change: 0,
       icon: FiUsers,
       color: 'text-white',
       bgColor: 'bg-gradient-to-br from-rose-500 to-pink-600',
@@ -197,18 +186,12 @@ const AdminDashboard = () => {
     },
   ];
 
-  const onViewBooking = (booking) => {
-    // keep UX similar to single-vendor "view" action; open vendor booking details
-    if (booking?.id) navigate(`/vendor/booking/${booking.id}`);
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="lg:hidden">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
@@ -223,7 +206,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards (single-vendor style) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statsCards.map((card, index) => {
           const Icon = card.icon;
@@ -237,21 +219,21 @@ const AdminDashboard = () => {
               transition={{ delay: index * 0.08 }}
               className={`${card.cardBg} rounded-xl p-4 sm:p-6 shadow-md border-2 border-transparent hover:shadow-lg transition-all duration-300 relative overflow-hidden`}
             >
-              {/* Decorative gradient overlay */}
               <div className={`absolute top-0 right-0 w-32 h-32 ${card.bgColor} opacity-10 rounded-full -mr-16 -mt-16`} />
 
               <div className="flex items-center justify-between mb-3 sm:mb-4 relative z-10">
                 <div className={`${card.bgColor} ${card.iconBg} p-2 sm:p-3 rounded-lg shadow-md`}>
                   <Icon className={`${card.color} text-lg sm:text-xl`} />
                 </div>
-                <div
-                  className={`text-xs sm:text-sm font-semibold px-2 py-1 rounded-full ${
-                    isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}
-                >
-                  {isPositive ? '+' : ''}
-                  {Math.abs(card.change || 0)}%
-                </div>
+                {card.change !== 0 && (
+                  <div
+                    className={`text-xs sm:text-sm font-semibold px-2 py-1 rounded-full ${isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}
+                  >
+                    {isPositive ? '+' : ''}
+                    {Math.abs(card.change || 0)}%
+                  </div>
+                )}
               </div>
 
               <div className="relative z-10">
@@ -263,33 +245,30 @@ const AdminDashboard = () => {
         })}
       </div>
 
-      {/* Charts Row (like single-vendor) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueLineChart data={revenueData} period={period} />
         <BookingsBarChart data={revenueData} period={period} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BookingStatusPieChart bookings={allBookings} />
-        <PaymentBreakdownPieChart bookings={allBookings} />
+        <BookingStatusPieChart bookings={recentBookingsList} />
+        <PaymentBreakdownPieChart bookings={recentBookingsList} />
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         <RevenueVsBookingsChart data={revenueData} period={period} />
       </div>
 
-      {/* Customer Growth (single-vendor style section) */}
       <div className="grid grid-cols-1 gap-6">
-        <CustomerGrowthAreaChart timelineData={revenueData} bookings={allBookings} period={period} />
+        <CustomerGrowthAreaChart timelineData={revenueData} bookings={recentBookingsList} period={period} />
       </div>
 
-      {/* Bottom row: Top Services + Recent Bookings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TopServices
-          bookings={allBookings}
-          periodLabel="Top Booked Services"
+          bookings={recentBookingsList}
+          periodLabel="Top Booked Services (Recent)"
         />
-        <RecentBookings bookings={allBookings} onViewBooking={onViewBooking} />
+        <RecentBookings bookings={recentBookingsList} onViewBooking={onViewBooking} />
       </div>
     </motion.div>
   );

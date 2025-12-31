@@ -78,6 +78,11 @@ const workerService = {
     return response.data;
   },
 
+  respondToJob: async (id, status) => {
+    const response = await api.put(`/workers/jobs/${id}/respond`, { status });
+    return response.data;
+  },
+
   // Notifications
   getNotifications: async (params) => {
     const response = await api.get('/notifications/worker', { params });

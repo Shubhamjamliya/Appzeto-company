@@ -10,7 +10,8 @@ const WorkersList = () => {
   const navigate = useNavigate();
   const [workers, setWorkers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all'); // all, online, offline
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -40,6 +41,8 @@ const WorkersList = () => {
         setWorkers(mapped || []);
       } catch (error) {
         console.error('Error loading workers:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -127,7 +130,12 @@ const WorkersList = () => {
         </div>
 
         {/* Workers List */}
-        {filteredWorkers.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-12">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-transparent rounded-full animate-spin" style={{ borderTopColor: themeColors.button }}></div>
+            <p className="mt-4 text-gray-500 font-medium">Loading workers...</p>
+          </div>
+        ) : filteredWorkers.length === 0 ? (
           <div
             className="bg-white rounded-xl p-8 text-center shadow-md"
             style={{

@@ -346,10 +346,12 @@ const Checkout = () => {
         setSearchingVendors(false);
         toast.success(`${vendorData.businessName} accepted your booking!`);
 
-        // Close modal after 2 seconds to show "Proceed to Pay" button
+        // Close modal after 2 seconds and navigate to confirmation
         setTimeout(() => {
           setShowVendorModal(false);
-          setCurrentStep('payment');
+          navigate(`/user/booking-confirmation/${bookingRequest._id}`, {
+            replace: true
+          });
         }, 2000);
       }
     });
@@ -442,7 +444,7 @@ const Checkout = () => {
         scheduledTime: getTimeSlots().find(slot => slot.value === selectedTime)?.display || selectedTime,
         timeSlot: timeSlotObj,
         // userNotes: null, // Removed per request
-        paymentMethod: amountToPay === 0 ? 'plan_benefit' : 'online',
+        paymentMethod: 'pay_at_home',
         amount: amountToPay,
 
         // Pass Full Breakdown to Backend
@@ -1124,71 +1126,7 @@ const Checkout = () => {
           </button>
         </div>
 
-        {/* Payment Method Selection - Only show when vendor accepted and amount > 0 */}
-        {currentStep === 'payment' && totalAmount > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-            <h3 className="text-base font-bold text-black mb-4">Select Payment Method</h3>
-            <div className="space-y-3">
-              <label
-                className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer`}
-                style={{
-                  borderColor: paymentMethod === 'online' ? themeColors.button : '#F3F4F6',
-                  backgroundColor: paymentMethod === 'online' ? `${themeColors.brand.teal}0D` : 'transparent'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'online' ? 'text-white' : 'bg-gray-100 text-gray-500'}`}
-                    style={paymentMethod === 'online' ? { backgroundColor: themeColors.button } : {}}
-                  >
-                    <FiShoppingCart className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900">Online Payment</p>
-                    <p className="text-xs text-gray-500">Razorpay, UPI, Cards</p>
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  className="w-5 h-5"
-                  style={{ accentColor: themeColors.button }}
-                  checked={paymentMethod === 'online'}
-                  onChange={() => setPaymentMethod('online')}
-                />
-              </label>
 
-              <label
-                className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer`}
-                style={{
-                  borderColor: paymentMethod === 'pay_at_home' ? themeColors.button : '#F3F4F6',
-                  backgroundColor: paymentMethod === 'pay_at_home' ? `${themeColors.brand.teal}0D` : 'transparent'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === 'pay_at_home' ? 'text-white' : 'bg-gray-100 text-gray-500'}`}
-                    style={paymentMethod === 'pay_at_home' ? { backgroundColor: themeColors.button } : {}}
-                  >
-                    <FiHome className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900">Pay at Home</p>
-                    <p className="text-xs text-gray-500">Cash/UPI after service</p>
-                  </div>
-                </div>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  className="w-5 h-5"
-                  style={{ accentColor: themeColors.button }}
-                  checked={paymentMethod === 'pay_at_home'}
-                  onChange={() => setPaymentMethod('pay_at_home')}
-                />
-              </label>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Bottom Action Button */}

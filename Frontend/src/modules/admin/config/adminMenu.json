@@ -38,9 +38,8 @@
     "route": "/admin/bookings",
     "children": [
       "All Bookings",
-      "Active Bookings",
-      "Completed Bookings",
-      "Booking Analytics"
+      "Booking Tracking",
+      "Booking Notifications"
     ]
   },
   {

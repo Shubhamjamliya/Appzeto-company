@@ -19,8 +19,10 @@ const CashCollectionModal = ({
   const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Fix potential undefined issue
+  const safeExtraItems = Array.isArray(extraItems) ? extraItems : [];
   const baseAmount = booking?.finalAmount || parseFloat(booking?.price) || 0;
-  const totalExtra = extraItems.reduce((sum, item) => sum + (parseFloat(item.price || 0) * (item.qty || 1)), 0);
+  const totalExtra = safeExtraItems.reduce((sum, item) => sum + (parseFloat(item.price || 0) * (item.qty || 1)), 0);
   const finalTotal = baseAmount + totalExtra;
 
   useEffect(() => {

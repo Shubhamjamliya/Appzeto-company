@@ -378,8 +378,39 @@ const getWorkerPerformance = async (req, res) => {
   }
 };
 
+/**
+ * Get single worker by ID
+ */
+const getVendorWorkerById = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+
+    const worker = await Worker.findOne({ _id: id, vendorId });
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker not found or does not belong to your vendor account'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: worker
+    });
+  } catch (error) {
+    console.error('Get worker by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch worker details'
+    });
+  }
+};
+
 module.exports = {
   getVendorWorkers,
+  getVendorWorkerById,
   addWorker,
   linkWorker,
   updateWorker,

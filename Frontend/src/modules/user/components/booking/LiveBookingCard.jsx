@@ -6,9 +6,11 @@ import userBookingService from '../../../../services/bookingService';
 import { userTheme } from '../../../../theme';
 import RatingModal from './RatingModal';
 import { toast } from 'react-hot-toast';
+import { useSocket } from '../../../../context/SocketContext';
 
 const LiveBookingCard = () => {
   const navigate = useNavigate();
+  const socket = useSocket();
   const [activeBooking, setActiveBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -39,10 +41,21 @@ const LiveBookingCard = () => {
   useEffect(() => {
     fetchActiveBooking();
 
+    if (socket) {
+      socket.on('booking_updated', fetchActiveBooking);
+      socket.on('notification', fetchActiveBooking);
+    }
+
     // Poll every 30 seconds for updates
     const interval = setInterval(fetchActiveBooking, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearInterval(interval);
+      if (socket) {
+        socket.off('booking_updated', fetchActiveBooking);
+        socket.off('notification', fetchActiveBooking);
+      }
+    };
+  }, [socket]);
 
   const fetchActiveBooking = async () => {
     try {
@@ -58,6 +71,9 @@ const LiveBookingCard = () => {
         // Find the first booking that is in an active state (checking both cases to be safe)
         const ongoing = res.data.find(b => {
           const s = b.status?.toUpperCase();
+          // Hide LiveBookingCard if status is WORK_DONE and review is already done
+          if (s === 'WORK_DONE' && b.rating) return false;
+
           return ['ASSIGNED', 'STARTED', 'JOURNEY_STARTED', 'VISITED', 'IN_PROGRESS', 'WORK_DONE', 'SEARCHING', 'REQUESTED'].includes(s);
         });
         setActiveBooking(ongoing || null);

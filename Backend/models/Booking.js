@@ -113,6 +113,14 @@ const bookingSchema = new mongoose.Schema({
     default: BOOKING_STATUS.PENDING,
     index: true
   },
+  workerResponse: {
+    type: String,
+    enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
+    default: 'PENDING'
+  },
+  workerAcceptedAt: {
+    type: Date
+  },
   // Pricing Information
   basePrice: {
     type: Number,

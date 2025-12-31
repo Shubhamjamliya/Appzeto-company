@@ -192,7 +192,7 @@ const startJob = async (req, res) => {
       });
     }
 
-    if (booking.status !== BOOKING_STATUS.ASSIGNED && booking.status !== BOOKING_STATUS.CONFIRMED) {
+    if (booking.status !== BOOKING_STATUS.ASSIGNED && booking.status !== BOOKING_STATUS.CONFIRMED && booking.status !== BOOKING_STATUS.ACCEPTED) {
       return res.status(400).json({
         success: false,
         message: `Cannot start journey with status: ${booking.status}`
@@ -597,6 +597,59 @@ const addWorkerNotes = async (req, res) => {
   }
 };
 
+/**
+ * Respond to job (Accept/Reject)
+ */
+const respondToJob = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+    const { status } = req.body; // 'ACCEPTED' or 'REJECTED'
+
+    const booking = await Booking.findOne({ _id: id, workerId });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (status === 'ACCEPTED') {
+      booking.status = BOOKING_STATUS.ASSIGNED;
+      booking.workerAcceptedAt = new Date();
+      booking.workerResponse = 'ACCEPTED';
+
+      const { createNotification } = require('../notificationControllers/notificationController');
+      await createNotification({
+        vendorId: booking.vendorId,
+        type: 'job_accepted',
+        title: 'Worker Accepted Job',
+        message: `Worker has accepted job ${booking.bookingNumber}`,
+        relatedId: booking._id,
+        relatedType: 'booking'
+      });
+    } else if (status === 'REJECTED') {
+      booking.workerId = null;
+      booking.status = BOOKING_STATUS.CONFIRMED; // Revert to unassigned state
+
+      const { createNotification } = require('../notificationControllers/notificationController');
+      await createNotification({
+        vendorId: booking.vendorId,
+        type: 'job_rejected',
+        title: 'Worker Declined Job',
+        message: `Worker declined job ${booking.bookingNumber}`,
+        relatedId: booking._id,
+        relatedType: 'booking'
+      });
+    }
+
+    await booking.save();
+    res.status(200).json({ success: true, message: `Job ${status.toLowerCase()}`, data: booking });
+
+  } catch (error) {
+    console.error('Respond job error:', error);
+    res.status(500).json({ success: false, message: 'Failed to respond to job' });
+  }
+};
+
 module.exports = {
   getAssignedJobs,
   getJobById,
@@ -605,6 +658,7 @@ module.exports = {
   completeJob,
   addWorkerNotes,
   verifyVisit,
-  collectCash
+  collectCash,
+  respondToJob
 };
 

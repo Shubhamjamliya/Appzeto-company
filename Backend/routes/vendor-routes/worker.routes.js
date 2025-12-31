@@ -5,6 +5,7 @@ const { authenticate } = require('../../middleware/authMiddleware');
 const { isVendor } = require('../../middleware/roleMiddleware');
 const {
   getVendorWorkers,
+  getVendorWorkerById,
   addWorker,
   linkWorker,
   updateWorker,
@@ -35,6 +36,7 @@ const updateWorkerValidation = [
 router.get('/', authenticate, isVendor, getVendorWorkers);
 router.post('/link', authenticate, isVendor, linkWorker);
 router.post('/', authenticate, isVendor, addWorkerValidation, addWorker);
+router.get('/:id', authenticate, isVendor, getVendorWorkerById);
 router.put('/:id', authenticate, isVendor, updateWorkerValidation, updateWorker);
 router.delete('/:id', authenticate, isVendor, removeWorker);
 router.get('/:id/performance', authenticate, isVendor, getWorkerPerformance);

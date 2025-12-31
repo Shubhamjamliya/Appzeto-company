@@ -16,10 +16,14 @@ import {
   FiEdit2,
   FiPhone,
   FiMail,
-  FiHome,
   FiKey,
   FiStar,
-  FiAward
+  FiAward,
+  FiX,
+  FiUser,
+  FiChevronRight,
+  FiSearch,
+  FiHome
 } from 'react-icons/fi';
 import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
@@ -27,6 +31,15 @@ import { cartService } from '../../../../services/cartService';
 import RatingModal from '../../components/booking/RatingModal';
 import PaymentVerificationModal from '../../components/booking/PaymentVerificationModal';
 import { ConfirmDialog } from '../../../../components/common';
+import ReviewCard from '../../components/booking/ReviewCard';
+
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  const clean = url.replace('/api/upload', '/upload');
+  if (clean.startsWith('http')) return clean;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
 
 
 const BookingDetails = () => {
@@ -70,9 +83,13 @@ const BookingDetails = () => {
 
   // Auto-show rating modal ONLY when booking is fully completed (after payment)
   useEffect(() => {
-    if (booking && (booking.status === 'completed' || booking.status === 'COMPLETED') && !booking.rating && !showRatingModal) {
-      const dismissed = localStorage.getItem(`rating_dismissed_${id}`);
-      if (!dismissed) {
+    if (booking) {
+      const isCompleted = ['completed', 'work_done'].includes(booking.status?.toLowerCase());
+      const hasPendingPayment = booking.customerConfirmationOTP && !booking.cashCollected;
+      const isRated = !!booking.rating;
+      const isDismissed = localStorage.getItem(`rating_dismissed_${id}`);
+
+      if (isCompleted && !isRated && !isDismissed && !hasPendingPayment) {
         setShowRatingModal(true);
       }
     }
@@ -173,10 +190,19 @@ const BookingDetails = () => {
   // ... (keep handle methods same) ...
 
   const handleCancelBooking = async () => {
+    // Check if journey has started to determine if a fee applies
+    const journeyStarted = ['journey_started', 'visited', 'in_progress'].includes(booking.status?.toLowerCase());
+    const cancellationFee = booking.visitingCharges || 49;
+
+    const modalTitle = journeyStarted ? 'Cancellation Fee Applies' : 'Cancel Booking';
+    const modalMessage = journeyStarted
+      ? `The service agent has already started their journey. Cancelling now will incur a fee of ₹${cancellationFee}, which will be deducted from your wallet or refund amount. Do you want to proceed?`
+      : 'Are you sure you want to cancel this booking? You will receive a full refund if applicable. This action cannot be undone.';
+
     setConfirmDialog({
       isOpen: true,
-      title: 'Cancel Booking',
-      message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
+      title: modalTitle,
+      message: modalMessage,
       type: 'danger',
       onConfirm: async () => {
         try {
@@ -328,62 +354,169 @@ const BookingDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-64">
+    <div className="min-h-screen bg-gray-50/50 pb-32">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center gap-3">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors active:scale-95"
             >
-              <FiArrowLeft className="w-5 h-5 text-black" />
+              <FiArrowLeft className="w-5 h-5 text-gray-800" />
             </button>
-            <h1 className="text-xl font-bold text-black">Booking Details</h1>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-gray-900">Booking Details</h1>
+              <p className="text-xs text-gray-500 font-medium tracking-wide">
+                ID: <span className="font-mono">{booking.bookingNumber || booking._id?.slice(-8).toUpperCase()}</span>
+              </p>
+            </div>
+            <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 ${getStatusColor(booking.status)}`}>
+              {getStatusIcon(booking.status)}
+              <span className="text-xs font-bold uppercase tracking-wide">{getStatusLabel(booking.status)}</span>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Unified Payment Notification Section is now handled by the PaymentVerificationModal */}
-      {/* If modal is closed, show a subtle reminder in the summary card instead of fixed banners */}
+      <main className="max-w-xl mx-auto px-4 py-6 space-y-6">
 
-      <main className="px-4 py-4 space-y-4">
-        {/* Status Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-lg font-bold text-black mb-1">
-                {booking.serviceName || booking.serviceCategory || 'Service'}
-              </h2>
-              <p className="text-xs text-gray-500">Booking ID: {booking.bookingNumber || booking._id || booking.id}</p>
+        {/* Visual Progress Stepper */}
+        {['cancelled', 'rejected'].includes(booking.status?.toLowerCase()) ? (
+          <div className="bg-red-50 rounded-2xl p-4 border border-red-100 flex items-center gap-3 text-red-700">
+            <FiXCircle className="w-5 h-5 shrink-0" />
+            <p className="font-medium text-sm">This booking has been {booking.status.toLowerCase()}.</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100">
+            <div className="flex justify-between relative z-10">
+              {/* Step 1: Booked */}
+              <div className="flex flex-col items-center gap-2 w-1/4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${['pending', 'confirmed', 'assigned', 'journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status?.toLowerCase())
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                  <FiCheckCircle className="w-4 h-4" />
+                </div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-center">Booked</p>
+              </div>
+
+              {/* Step 2: Assigned */}
+              <div className="flex flex-col items-center gap-2 w-1/4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${['assigned', 'journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status?.toLowerCase())
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                  2
+                </div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-center">Assigned</p>
+              </div>
+
+              {/* Step 3: In Progress */}
+              <div className="flex flex-col items-center gap-2 w-1/4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status?.toLowerCase())
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                  3
+                </div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-center">Started</p>
+              </div>
+
+              {/* Step 4: Done */}
+              <div className="flex flex-col items-center gap-2 w-1/4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${['work_done', 'completed'].includes(booking.status?.toLowerCase())
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                  4
+                </div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide text-center">Done</p>
+              </div>
             </div>
-            <div className={`px-3 py-1.5 rounded-full text-sm font-semibold border flex items-center gap-2 ${getStatusColor(booking.status)}`}>
-              {getStatusIcon(booking.status)}
-              {getStatusLabel(booking.status)}
+            {/* Connect lines */}
+            <div className="absolute top-[4.5rem] left-[15%] right-[15%] h-0.5 bg-gray-100 -z-0">
+              <div className="h-full bg-teal-500 transition-all duration-1000" style={{
+                width:
+                  ['work_done', 'completed'].includes(booking.status?.toLowerCase()) ? '100%' :
+                    ['journey_started', 'visited', 'in_progress'].includes(booking.status?.toLowerCase()) ? '66%' :
+                      ['assigned'].includes(booking.status?.toLowerCase()) ? '33%' : '0%'
+              }}></div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Address & Track Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <h3 className="text-base font-bold text-black mb-3">Service Location & Tracking</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiMapPin className="w-4 h-4" style={{ color: themeColors.button }} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-gray-500 mb-1">Address</p>
-                <p className="text-sm text-gray-700">{getAddressString(booking.address)}</p>
-              </div>
+        {/* Service Partner Card */}
+        {(booking.workerId || booking.assignedTo || booking.vendorId) && ['confirmed', 'assigned', 'journey_started', 'visited', 'in_progress', 'work_done'].includes(booking.status?.toLowerCase()) && (
+          <div className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+            <div className="flex justify-between items-start mb-4">
+              {['journey_started', 'visited', 'in_progress'].includes(booking.status?.toLowerCase()) ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                  <p className="text-xs font-bold text-green-600 tracking-wider">LIVE TRACKING ACTIVE</p>
+                </div>
+              ) : (
+                <p className="text-xs font-bold text-gray-400 tracking-wider uppercase">Your Professional</p>
+              )}
+
+              <button
+                onClick={() => navigate(`/user/booking/${booking._id || booking.id}/track`)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+              >
+                Map View <FiChevronRight />
+              </button>
             </div>
 
-            {/* Map Preview Logic - Same as Worker App */}
-            {booking.address && (
-              <div
-                className="w-full h-40 rounded-lg overflow-hidden bg-gray-200 border border-gray-100 relative group cursor-pointer"
-                onClick={() => navigate(`/user/booking/${booking._id || booking.id}/track`)}
-              >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full p-1 bg-gradient-to-tr from-gray-100 to-gray-50 shrink-0">
+                <div className="w-full h-full rounded-full overflow-hidden relative bg-white">
+                  {(booking.workerId?.profileImage || booking.workerId?.profilePhoto || booking.assignedTo?.profileImage || booking.assignedTo?.profilePhoto || booking.vendorId?.profileImage || booking.vendorId?.profilePhoto) ? (
+                    <>
+                      <img
+                        src={toAssetUrl(booking.workerId?.profileImage || booking.workerId?.profilePhoto || booking.assignedTo?.profileImage || booking.assignedTo?.profilePhoto || booking.vendorId?.profileImage || booking.vendorId?.profilePhoto)}
+                        alt="Professional"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.querySelector('.fallback-icon').style.display = 'block'; }}
+                      />
+                      <FiUser className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fallback-icon hidden" />
+                    </>
+                  ) : (
+                    <FiUser className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-gray-900 text-lg truncate">
+                  {booking.workerId?.name || booking.assignedTo?.name || booking.vendorId?.name || 'Service Partner'}
+                </h3>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
+                    <FiStar className="w-3 h-3 text-yellow-500 fill-current" />
+                    <span className="text-xs font-bold text-yellow-700">4.8</span>
+                  </div>
+                  <span className="text-xs text-gray-400 font-medium">• Verified</span>
+                </div>
+              </div>
+
+              {/* Quick Call Action */}
+              {(booking.workerId?.phone || booking.assignedTo?.phone || booking.vendorId?.phone) && (
+                <a
+                  href={`tel:${booking.workerId?.phone || booking.assignedTo?.phone || booking.vendorId?.phone}`}
+                  className="w-10 h-10 bg-green-50 text-green-600 rounded-full flex items-center justify-center hover:bg-green-100 transition-colors active:scale-95 border border-green-100"
+                >
+                  <FiPhone className="w-5 h-5" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Location & Time Section */}
+        <section className="space-y-4">
+          {/* Map Preview - Improved overlay for better usability */}
+          {booking.address && (
+            <>
+              <div className="group relative rounded-3xl overflow-hidden shadow-sm border border-gray-200 bg-gray-100 h-48">
                 {(() => {
                   let mapQuery = '';
                   if (typeof booking.address === 'object' && booking.address.lat && booking.address.lng) {
@@ -394,179 +527,180 @@ const BookingDetails = () => {
                       : `${booking.address?.addressLine1 || ''}, ${booking.address?.city || ''}`;
                     mapQuery = encodeURIComponent(addrStr);
                   }
-
                   return (
-                    <>
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        style={{ border: 0, pointerEvents: 'none' }}
-                        src={`https://maps.google.com/maps?q=${mapQuery}&z=15&output=embed`}
-                        allowFullScreen
-                        tabIndex="-1"
-                        title="Location Map"
-                      ></iframe>
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition-colors flex items-center justify-center">
-                        <span className="bg-white/90 px-3 py-1.5 rounded-full text-xs font-bold text-gray-800 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
-                          <FiMapPin className="w-3 h-3" /> Track Order
-                        </span>
-                      </div>
-                    </>
-                  );
+                    <iframe
+                      className="w-full h-full opacity-80 group-hover:opacity-100 transition-opacity"
+                      frameBorder="0"
+                      style={{ border: 0, pointerEvents: 'none' }}
+                      src={`https://maps.google.com/maps?q=${mapQuery}&z=15&output=embed`}
+                      allowFullScreen
+                      tabIndex="-1"
+                      title="Location"
+                    />
+                  )
                 })()}
+
+                {/* Floating Info */}
+                <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
+                  <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm border border-white/50 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span>
+                    <span className="text-xs font-bold text-gray-700">Destination</span>
+                  </div>
+                </div>
+
+                {/* Track Button Overlay - Always visible but distinct */}
+                <div className="absolute inset-0 flex items-center justify-center bg-transparent pointer-events-none">
+                  <div className="pointer-events-auto bg-white text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all border border-gray-100" onClick={() => navigate(`/user/booking/${booking._id || booking.id}/track`)}>
+                    <FiMapPin className="w-4 h-4 text-red-500" /> View on Map
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Track Button */}
-            <button
-              onClick={() => navigate(`/user/booking/${booking._id || booking.id}/track`)}
-              className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
-              style={{ background: themeColors.button }}
-            >
-              <FiMapPin className="w-4 h-4" />
-              Track Service Agent
-            </button>
+              {/* Dedicated Track Button */}
+              {['confirmed', 'assigned', 'journey_started', 'visited', 'in_progress'].includes(booking.status?.toLowerCase()) && (
+                <button
+                  onClick={() => navigate(`/user/booking/${booking._id || booking.id}/track`)}
+                  className="w-full py-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-2xl font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all flex items-center justify-center gap-3 hover:shadow-xl"
+                >
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <FiMapPin className="w-4 h-4 text-white" />
+                  </div>
+                  Track Service Agent
+                </button>
+              )}
+            </>
+          )}
 
-            <div className="flex items-start gap-3 pt-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiCalendar className="w-4 h-4" style={{ color: themeColors.button }} />
+          <div className="bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0">
+                <FiMapPin className="w-5 h-5 text-teal-600" />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-gray-500 mb-1">Date & Time</p>
-                <p className="text-sm text-gray-700">
-                  {formatDate(booking.scheduledDate)} • {booking.scheduledTime || booking.timeSlot?.start || 'N/A'}
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-1">Service Address</p>
+                <p className="text-sm font-medium text-gray-900 leading-relaxed">{getAddressString(booking.address)}</p>
+              </div>
+            </div>
+            <div className="w-full h-px bg-gray-50 mb-4"></div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
+                <FiCalendar className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-1">Schedule</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {formatDate(booking.scheduledDate)}
                 </p>
+                <p className="text-sm text-gray-500">{booking.scheduledTime || booking.timeSlot?.start || 'N/A'}</p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Service Details Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <h3 className="text-base font-bold text-black mb-3">Service Booked</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 pb-3 border-b border-gray-100">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(0, 166, 166, 0.1)' }}>
-                <FiPackage className="w-5 h-5" style={{ color: themeColors.button }} />
+        {/* Service Details */}
+        <section className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
+            <h3 className="font-bold text-gray-900">Order Summary</h3>
+            <span className="text-xs font-semibold px-2 py-1 bg-white border border-gray-200 rounded text-gray-500">
+              {booking.serviceCategory || 'Service'}
+            </span>
+          </div>
+
+          <div className="p-5">
+            <div className="flex gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                <FiPackage className="w-8 h-8 text-gray-400" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-black">{booking.serviceName || 'Service'}</p>
-                <p className="text-xs text-gray-500">{booking.serviceCategory || 'General'}</p>
-                {booking.description && (
-                  <p className="text-xs text-gray-600 mt-1">{booking.description}</p>
-                )}
+              <div>
+                <h4 className="font-bold text-gray-900">{booking.serviceName || 'Service'}</h4>
+                {booking.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{booking.description}</p>}
               </div>
             </div>
 
-            {/* Booked Items - from bookedItems array (new structure with section + card) */}
+            {/* Items List */}
             {booking.bookedItems && booking.bookedItems.length > 0 ? (
-              <div className="space-y-3">
+              <div className="mt-5 space-y-3">
                 {booking.bookedItems.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-3">
-                    {/* Section Title */}
-                    {item.sectionTitle && (
-                      <p className="text-xs text-gray-500 font-medium mb-2">{item.sectionTitle}</p>
-                    )}
-                    {/* Card Details */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{item.card?.title || item.title}</p>
-                        {(item.card?.subtitle || item.card?.description) && (
-                          <p className="text-xs text-gray-500 mt-0.5">{item.card?.subtitle || item.card?.description}</p>
-                        )}
-                        {item.card?.duration && (
-                          <p className="text-xs text-gray-400 mt-1">⏱ {item.card.duration}</p>
-                        )}
-                        {item.card?.features && item.card.features.length > 0 && (
-                          <div className="mt-2">
-                            {item.card.features.slice(0, 2).map((f, i) => (
-                              <p key={i} className="text-xs text-gray-500">• {f}</p>
-                            ))}
-                          </div>
-                        )}
+                  <div key={idx} className="flex justify-between items-start pt-3 border-t border-dashed border-gray-100">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-400">x{item.quantity}</span>
+                        <span className="text-sm font-medium text-gray-800">{item.card?.title || item.title}</span>
                       </div>
-                      <div className="text-right ml-3">
-                        <p className="text-sm font-bold text-gray-800">₹{(item.card?.price || 0).toLocaleString('en-IN')}</p>
-                        {item.quantity > 1 && (
-                          <p className="text-xs text-gray-500">x{item.quantity}</p>
-                        )}
-                      </div>
+                      {(item.card?.subtitle) && <p className="text-xs text-gray-400 ml-6">{item.card.subtitle}</p>}
                     </div>
+                    <span className="text-sm font-semibold text-gray-900">₹{(item.card?.price || 0).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
             ) : booking.userNotes ? (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Specific Service Requested</p>
-                <p className="text-sm font-medium text-gray-800">
-                  {booking.userNotes.replace('Items: ', '')}
-                </p>
+              <div className="mt-4 p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs font-bold text-gray-500 mb-1">Notes</p>
+                <p className="text-sm text-gray-800">{booking.userNotes.replace('Items: ', '')}</p>
               </div>
             ) : null}
           </div>
-        </div>
+        </section>
 
-        {/* Payment Summary Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <h3 className="text-base font-bold text-black mb-3">Payment Summary</h3>
-
-          {/* Plan Benefit - Free Booking */}
-          {booking.paymentMethod === 'plan_benefit' ? (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                  <FiCheckCircle className="w-5 h-5 text-white" />
+        {/* Payment Summary */}
+        <section className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden">
+          <div className="p-5 space-y-3">
+            {booking.paymentMethod === 'plan_benefit' ? (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-green-200">
+                  <FiCheckCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-green-800">Covered by Your Plan!</p>
-                  <p className="text-xs text-green-600">No payment required</p>
+                  <p className="font-bold text-green-800">Covered by Membership</p>
+                  <p className="text-xs text-green-600">You saved ₹{(booking.basePrice || 0).toLocaleString('en-IN')}</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-green-200">
-                <span className="text-sm text-green-700">Service Value</span>
-                <span className="text-lg font-bold text-green-700">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-              </div>
-              <p className="text-xs text-green-600 mt-2">You saved ₹{(booking.basePrice || 0).toLocaleString('en-IN')} with your subscription!</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Base Price</span>
-                <span className="text-sm font-semibold text-black">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-              </div>
-              {booking.discount > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Discount</span>
-                  <span className="text-sm font-semibold text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
+            ) : (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Base Price</span>
+                  <span className="font-medium text-gray-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
                 </div>
-              )}
-              {booking.tax > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">GST (18%)</span>
-                  <span className="text-sm font-semibold text-black">₹{booking.tax.toLocaleString('en-IN')}</span>
+                {booking.discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">Discount</span>
+                    <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {booking.tax > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">GST (18%)</span>
+                    <span className="font-medium text-gray-900">₹{booking.tax.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {(booking.visitationFee > 0 || booking.visitingCharges > 0) && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Convenience Fee</span>
+                    <span className="font-medium text-gray-900">₹{(booking.visitationFee || booking.visitingCharges).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="pt-3 mt-2 border-t border-gray-100 flex justify-between items-center">
+                  <span className="font-bold text-gray-900 text-lg">Total Amount</span>
+                  <span className="font-black text-gray-900 text-xl">₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
-              )}
-              {(booking.visitationFee > 0 || booking.visitingCharges > 0) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Convenience Fee</span>
-                  <span className="text-sm font-semibold text-black">₹{(booking.visitationFee || booking.visitingCharges).toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-black">Total</span>
-                  <span className="text-lg font-bold text-black">₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+
+          {/* Payment Status Footer */}
+          <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payment Status</span>
+            <span className={`px-2.5 py-1 rounded-md text-xs font-bold capitalize ${booking.paymentStatus === 'success' ? 'bg-green-100 text-green-700' :
+              booking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+              }`}>
+              {booking.paymentStatus === 'success' ? 'Paid' : booking.paymentStatus || 'Pending'}
+            </span>
+          </div>
+        </section>
 
         {/* Action Card for Awaiting Payment */}
         {booking.status === 'awaiting_payment' && (
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 space-y-4">
+          <div className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 p-6 space-y-4">
             <div className="text-center mb-4">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <FiDollarSign className="w-8 h-8 text-orange-600" />
@@ -596,119 +730,36 @@ const BookingDetails = () => {
           </div>
         )}
 
-        {/* Payment Info Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Support */}
+          <button className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95">
+            <FiPhone className="w-6 h-6 text-gray-700" />
+            <span className="text-sm font-bold text-gray-700">Call Support</span>
+          </button>
+          <button className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95">
+            <FiMail className="w-6 h-6 text-gray-700" />
+            <span className="text-sm font-bold text-gray-700">Email Help</span>
+          </button>
 
-          <h3 className="text-base font-bold text-black mb-3">Payment Information</h3>
-          <div className="space-y-2">
-            {booking.paymentId && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Payment ID</span>
-                <span className="text-sm font-semibold text-black">{booking.paymentId}</span>
-              </div>
-            )}
-            {booking.razorpayOrderId && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Order ID</span>
-                <span className="text-sm font-semibold text-black">{booking.razorpayOrderId}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Payment Status</span>
-              <span className={`text-sm font-semibold ${booking.paymentStatus === 'success' ? 'text-green-600' :
-                booking.paymentStatus === 'pending' ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>
-                {booking.paymentStatus === 'success' ? 'Paid' :
-                  booking.paymentStatus === 'pending' ? 'Pending' :
-                    booking.paymentStatus || 'Pending'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Payment Method</span>
-              <span className="text-sm font-semibold text-black capitalize">{booking.paymentMethod || 'N/A'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Booking Date</span>
-              <span className="text-sm font-semibold text-black">{formatDate(booking.createdAt)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Cancel Button - Only show if booking is not cancelled or completed */}
-        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+          {/* Cancel */}
+          {!['cancelled', 'completed', 'work_done'].includes(booking.status?.toLowerCase()) && (
             <button
               onClick={handleCancelBooking}
-              className="w-full py-3.5 rounded-lg text-base font-semibold text-white transition-colors"
-              style={{
-                backgroundColor: '#ef4444',
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+              className="col-span-2 py-4 rounded-2xl text-red-600 font-bold text-sm bg-red-50 border border-red-100 hover:bg-red-100 transition-colors active:scale-95"
             >
               Cancel Booking
             </button>
-          </div>
-        )}
-
-        {/* Rate & Review Card */}
-        {(booking.status === 'work_done' || booking.status === 'completed' || booking.status === 'COMPLETED') && (
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
-            {!booking.rating ? (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FiStar className="w-8 h-8 text-teal-600 animate-bounce transition-all duration-1000" />
-                </div>
-                <h3 className="text-lg font-bold text-black mb-2">How was your service?</h3>
-                <p className="text-sm text-gray-500 mb-6">Your feedback helps us improve our service for everyone.</p>
-                <button
-                  onClick={() => setShowRatingModal(true)}
-                  className="w-full py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform"
-                  style={{
-                    background: `linear-gradient(135deg, ${themeColors.button} 0%, #0d9488 100%)`,
-                    boxShadow: `0 8px 16px ${themeColors.button}40`
-                  }}
-                >
-                  Rate & Review Now
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center shrink-0">
-                  <FiAward className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 capitalize">Your Review</h3>
-                  <p className="text-xs text-gray-500 italic mt-0.5">"{booking.rating?.review || booking.review || 'No comment provided'}"</p>
-                  <div className="flex items-center gap-0.5 mt-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <FiStar
-                        key={star}
-                        className={`w-3.5 h-3.5 ${star <= (booking.rating?.rating || booking.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Support Card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-          <h3 className="text-base font-bold text-black mb-3">Need Help?</h3>
-          <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <FiPhone className="w-5 h-5 text-gray-700" />
-              <span className="text-sm font-semibold text-gray-700">Call Support</span>
-            </button>
-            <button className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <FiMail className="w-5 h-5 text-gray-700" />
-              <span className="text-sm font-semibold text-gray-700">Email Support</span>
-            </button>
-          </div>
+          )}
         </div>
+
+        {/* Rate & Review (Conditional) */}
+        {/* Rate & Review (Conditional) */}
+        <ReviewCard
+          booking={booking}
+          onWriteReview={() => setShowRatingModal(true)}
+        />
+
       </main>
 
       {/* Rating Modal */}
@@ -728,6 +779,7 @@ const BookingDetails = () => {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         booking={booking}
+        onPayOnline={handleOnlinePayment}
       />
 
       <ConfirmDialog

@@ -84,8 +84,8 @@ const UserRoutes = () => {
   const bottomNavPages = ['/user', '/user/', '/user/rewards', '/user/cart', '/user/account'];
   const shouldShowBottomNav = bottomNavPages.includes(location.pathname);
 
-  // Check if we hide the live booking card (e.g. if we are on the specific booking details page)
-  const isBookingDetailsPage = location.pathname.match(/^\/user\/booking\/[a-zA-Z0-9]+$/);
+  // Check if we hide the live booking card (e.g. if we are on the specific booking details or track page)
+  const isBookingDetailsPage = location.pathname.match(/^\/user\/booking\/[a-zA-Z0-9]+(\/track)?$/);
 
   // Check if we are on public pages (login/signup) where we shouldn't fetch bookings
   const isPublicPage = location.pathname.includes('/login') || location.pathname.includes('/signup');

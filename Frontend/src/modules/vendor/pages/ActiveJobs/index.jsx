@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBriefcase, FiMapPin, FiClock, FiUser, FiFilter, FiSearch } from 'react-icons/fi';
+import { FiBriefcase, FiMapPin, FiClock, FiUser, FiFilter, FiSearch, FiLoader } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../../components/common';
 const ActiveJobs = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, assigned, in_progress, completed
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({
@@ -43,6 +44,7 @@ const ActiveJobs = () => {
 
     const loadJobs = async () => {
       try {
+        setLoading(true);
         const response = await getBookings();
         const jobsData = response.data || [];
         // Map API response to Component State structure
@@ -66,6 +68,8 @@ const ActiveJobs = () => {
         setJobs(mappedJobs);
       } catch (error) {
         console.error('Error loading jobs:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -178,7 +182,12 @@ const ActiveJobs = () => {
         </div>
 
         {/* Jobs List */}
-        {filteredJobs.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 min-h-[50vh]">
+            <FiLoader className="w-12 h-12 text-teal-600 animate-spin mb-4" />
+            <p className="text-gray-500 font-medium">Loading jobs...</p>
+          </div>
+        ) : filteredJobs.length === 0 ? (
           <div
             className="bg-white rounded-xl p-8 text-center shadow-md"
             style={{
