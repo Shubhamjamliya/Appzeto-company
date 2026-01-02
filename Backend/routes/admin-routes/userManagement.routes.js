@@ -9,7 +9,8 @@ const {
   toggleUserStatus,
   deleteUser,
   getUserBookings,
-  getUserWalletTransactions
+  getUserWalletTransactions,
+  getAllUserBookings
 } = require('../../controllers/adminControllers/adminUserController');
 
 // Validation rules
@@ -19,6 +20,7 @@ const toggleStatusValidation = [
 
 // Routes
 router.get('/users', authenticate, isAdmin, getAllUsers);
+router.get('/users/bookings', authenticate, isAdmin, getAllUserBookings);
 router.get('/users/:id', authenticate, isAdmin, getUserDetails);
 router.put('/users/:id/status', authenticate, isAdmin, toggleStatusValidation, toggleUserStatus);
 router.delete('/users/:id', authenticate, isAdmin, deleteUser);

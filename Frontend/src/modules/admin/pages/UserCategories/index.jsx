@@ -17,7 +17,7 @@ const UserCategories = () => {
   }, []);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <Routes>
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<HomePage catalog={catalog} setCatalog={setCatalog} />} />

@@ -10,7 +10,9 @@ const {
   rejectVendor,
   suspendVendor,
   getVendorBookings,
-  getVendorEarnings
+  getVendorEarnings,
+  getAllVendorBookings,
+  getVendorPaymentsSummary
 } = require('../../controllers/adminControllers/adminVendorController');
 
 // Validation rules
@@ -20,6 +22,8 @@ const rejectVendorValidation = [
 
 // Routes
 router.get('/vendors', authenticate, isAdmin, getAllVendors);
+router.get('/vendors/bookings', authenticate, isAdmin, getAllVendorBookings);
+router.get('/vendors/payments', authenticate, isAdmin, getVendorPaymentsSummary);
 router.get('/vendors/:id', authenticate, isAdmin, getVendorDetails);
 router.post('/vendors/:id/approve', authenticate, isAdmin, approveVendor);
 router.post('/vendors/:id/reject', authenticate, isAdmin, rejectVendorValidation, rejectVendor);

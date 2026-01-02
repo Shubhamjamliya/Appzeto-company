@@ -23,6 +23,32 @@ const settingsSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // Razorpay Settings
+  razorpayKeyId: {
+    type: String,
+    default: null
+  },
+  razorpayKeySecret: {
+    type: String,
+    default: null
+  },
+  razorpayWebhookSecret: {
+    type: String,
+    default: null
+  },
+  // Cloudinary Settings
+  cloudinaryCloudName: {
+    type: String,
+    default: null
+  },
+  cloudinaryApiKey: {
+    type: String,
+    default: null
+  },
+  cloudinaryApiSecret: {
+    type: String,
+    default: null
+  },
   // Future extensible fields
   currency: {
     type: String,

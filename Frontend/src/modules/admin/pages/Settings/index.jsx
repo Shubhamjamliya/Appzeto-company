@@ -12,7 +12,13 @@ const AdminSettings = () => {
   const [financialSettings, setFinancialSettings] = useState({
     visitedCharges: 0,
     gstPercentage: 18,
-    commissionPercentage: 10
+    commissionPercentage: 10,
+    razorpayKeyId: '',
+    razorpayKeySecret: '',
+    razorpayWebhookSecret: '',
+    cloudinaryCloudName: '',
+    cloudinaryApiKey: '',
+    cloudinaryApiSecret: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -33,14 +39,19 @@ const AdminSettings = () => {
         const res = await getSettings();
         if (res.success && res.settings) {
           setFinancialSettings({
-            visitedCharges: res.settings.visitedCharges,
-            gstPercentage: res.settings.gstPercentage,
-            commissionPercentage: res.settings.commissionPercentage || 10
+            visitedCharges: res.settings.visitedCharges || 0,
+            gstPercentage: res.settings.gstPercentage || 0,
+            commissionPercentage: res.settings.commissionPercentage || 0,
+            razorpayKeyId: res.settings.razorpayKeyId || '',
+            razorpayKeySecret: res.settings.razorpayKeySecret || '',
+            razorpayWebhookSecret: res.settings.razorpayWebhookSecret || '',
+            cloudinaryCloudName: res.settings.cloudinaryCloudName || '',
+            cloudinaryApiKey: res.settings.cloudinaryApiKey || '',
+            cloudinaryApiSecret: res.settings.cloudinaryApiSecret || ''
           });
         }
       } catch (error) {
         console.error('Error loading financial settings:', error);
-        // toast.error('Failed to load financial settings');
       }
     };
 
@@ -59,7 +70,7 @@ const AdminSettings = () => {
     const { name, value } = e.target;
     setFinancialSettings(prev => ({
       ...prev,
-      [name]: Number(value)
+      [name]: name.includes('Percentage') || name === 'visitedCharges' ? Number(value) : value
     }));
   };
 
@@ -88,41 +99,36 @@ const AdminSettings = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-4"
     >
-      <div className="lg:hidden">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Settings</h1>
-        <p className="text-sm sm:text-base text-gray-600">Manage system settings</p>
-      </div>
-
       {/* Financial Configuration */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <div className="flex items-center gap-3 mb-6">
-          <FiDollarSign className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-bold text-gray-800">Financial Configuration</h2>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <FiDollarSign className="w-4 h-4 text-gray-600" />
+          <h2 className="text-base font-bold text-gray-800">Financial Configuration</h2>
         </div>
 
-        <form onSubmit={handleFinancialSave} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleFinancialSave} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Visit Charges (₹)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Visit Charges (₹)</label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                <span className="absolute left-3 top-2 text-sm text-gray-500">₹</span>
                 <input
                   type="number"
                   name="visitedCharges"
                   value={financialSettings.visitedCharges}
                   onChange={handleFinancialChange}
                   min="0"
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
                   placeholder="0"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Standard charge for worker visits</p>
+              <p className="text-[10px] text-gray-500 mt-1">Standard charge for worker visits</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">GST / Tax (%)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">GST / Tax (%)</label>
               <div className="relative">
                 <input
                   type="number"
@@ -132,16 +138,16 @@ const AdminSettings = () => {
                   min="0"
                   max="100"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
                   placeholder="18"
                 />
-                <span className="absolute right-3 top-2.5 text-gray-500">%</span>
+                <span className="absolute right-3 top-2 text-sm text-gray-500">%</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Applicable tax percentage on services</p>
+              <p className="text-[10px] text-gray-500 mt-1">Applicable tax percentage</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Admin Commission (%)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Admin Commission (%)</label>
               <div className="relative">
                 <input
                   type="number"
@@ -151,12 +157,116 @@ const AdminSettings = () => {
                   min="0"
                   max="100"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
                   placeholder="10"
                 />
-                <span className="absolute right-3 top-2.5 text-gray-500">%</span>
+                <span className="absolute right-3 top-2 text-sm text-gray-500">%</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Commission percentage deducted from vendor earnings</p>
+              <p className="text-[10px] text-gray-500 mt-1">Commission from vendor earnings</p>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-gray-50">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-1.5 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 flex items-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed font-medium shadow-sm"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <FiSave className="w-3.5 h-3.5" />
+              )}
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* API Configuration */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <FiSettings className="w-4 h-4 text-gray-600" />
+          <h2 className="text-base font-bold text-gray-800">API Configuration</h2>
+        </div>
+
+        <form onSubmit={handleFinancialSave} className="space-y-4">
+          <div className="space-y-4">
+            {/* Razorpay */}
+            <div>
+              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Razorpay (Payments)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Key ID</label>
+                  <input
+                    type="text"
+                    name="razorpayKeyId"
+                    value={financialSettings.razorpayKeyId}
+                    onChange={handleFinancialChange}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                    placeholder="rzp_test_..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Key Secret</label>
+                  <input
+                    type="password"
+                    name="razorpayKeySecret"
+                    value={financialSettings.razorpayKeySecret}
+                    onChange={handleFinancialChange}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                    placeholder="••••••••••••••••"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Webhook Secret</label>
+                  <input
+                    type="password"
+                    name="razorpayWebhookSecret"
+                    value={financialSettings.razorpayWebhookSecret}
+                    onChange={handleFinancialChange}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                    placeholder="••••••••••••••••"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Cloudinary */}
+            <div className="pt-4 border-t border-gray-50">
+              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Cloudinary (Images)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Cloud Name</label>
+                  <input
+                    type="text"
+                    name="cloudinaryCloudName"
+                    value={financialSettings.cloudinaryCloudName}
+                    onChange={handleFinancialChange}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                  <input
+                    type="text"
+                    name="cloudinaryApiKey"
+                    value={financialSettings.cloudinaryApiKey}
+                    onChange={handleFinancialChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">API Secret</label>
+                  <input
+                    type="password"
+                    name="cloudinaryApiSecret"
+                    value={financialSettings.cloudinaryApiSecret}
+                    onChange={handleFinancialChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

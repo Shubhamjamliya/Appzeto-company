@@ -89,12 +89,6 @@ const Tracking = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Booking-tracking</h1>
-        <p className="text-gray-500 text-sm">Welcome back! Here's your business overview.</p>
-      </div>
-
       {/* Search Bar */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div className="relative w-full">

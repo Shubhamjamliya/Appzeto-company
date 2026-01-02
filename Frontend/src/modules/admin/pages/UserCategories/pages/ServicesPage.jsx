@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FiGrid, FiPlus, FiEdit2, FiTrash2, FiSave, FiImage, FiLayers, FiPackage, FiX, FiStar, FiCreditCard } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import CardShell from "../components/CardShell";
@@ -606,8 +606,8 @@ const ServicesPage = ({ catalog, setCatalog }) => {
 
 
   return (
-    <div className="space-y-8">
-      <CardShell icon={FiGrid} title={`Services (${services.length})`}>
+    <div className="space-y-6">
+      <CardShell icon={FiGrid}>
         {fetching && (
           <div className="text-center py-4 text-gray-500">Loading services...</div>
         )}

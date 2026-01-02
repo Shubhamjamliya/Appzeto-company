@@ -239,69 +239,63 @@ const SettlementManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settlement Management</h1>
-        <p className="text-gray-600 mt-1">Manage vendor cash collections and settlements</p>
-      </div>
-
+    <div className="space-y-4">
       {/* Dashboard Cards */}
       {dashboard && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-red-100">
-                <FiDollarSign className="w-6 h-6 text-red-600" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <FiDollarSign className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Due</p>
-                <p className="text-2xl font-bold text-red-600">₹{dashboard.totalDueToAdmin?.toLocaleString() || 0}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total Due</p>
+                <p className="text-lg font-bold text-red-600">₹{dashboard.totalDueToAdmin?.toLocaleString() || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-orange-100">
-                <FiClock className="w-6 h-6 text-orange-600" />
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
+                <FiClock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Pending Settlements</p>
-                <p className="text-2xl font-bold text-orange-600">{dashboard.pendingSettlements?.count || 0}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Pending</p>
+                <p className="text-lg font-bold text-orange-600">{dashboard.pendingSettlements?.count || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-blue-100">
-                <FiTrendingUp className="w-6 h-6 text-blue-600" />
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <FiTrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Today Cash Collected</p>
-                <p className="text-2xl font-bold text-blue-600">₹{dashboard.todayCashCollected?.amount?.toLocaleString() || 0}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Today Cash</p>
+                <p className="text-lg font-bold text-blue-600">₹{dashboard.todayCashCollected?.amount?.toLocaleString() || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-green-100">
-                <FiCheck className="w-6 h-6 text-green-600" />
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-green-50 text-green-600">
+                <FiCheck className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Weekly Settlements</p>
-                <p className="text-2xl font-bold text-green-600">₹{dashboard.weeklySettlements?.amount?.toLocaleString() || 0}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Weekly</p>
+                <p className="text-lg font-bold text-green-600">₹{dashboard.weeklySettlements?.amount?.toLocaleString() || 0}</p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
-        <div className="flex border-b border-gray-200">
+      {/* Tabs and Content */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
           {[
             { id: 'pending', label: 'Pending', icon: FiClock },
             { id: 'withdrawals', label: 'Withdrawals', icon: FiDollarSign },
@@ -311,78 +305,79 @@ const SettlementManagement = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold border-b-2 transition-colors ${activeTab === tab.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
+                ? 'border-blue-600 text-blue-600 bg-white'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
                 }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="w-3.5 h-3.5" />
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        <div className="p-4">
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex justify-center py-10">
+              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <>
               {/* Pending Settlements */}
               {activeTab === 'pending' && (
                 pendingSettlements.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FiCheck className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-gray-600 font-semibold">No pending settlements</p>
+                  <div className="text-center py-10">
+                    <FiCheck className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+                    <p className="text-gray-500 text-sm font-medium">No pending settlements</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {pendingSettlements.map(settlement => (
-                      <div key={settlement._id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-bold text-gray-900">
-                              {settlement.vendorId?.name || 'Vendor'} - {settlement.vendorId?.businessName}
+                      <div key={settlement._id} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-xs truncate">
+                              {settlement.vendorId?.name || 'Vendor'}
                             </p>
-                            <p className="text-2xl font-bold text-blue-600 my-1">
+                            <p className="text-[10px] text-gray-500 truncate mb-1">{settlement.vendorId?.businessName}</p>
+                            <p className="text-lg font-bold text-blue-600">
                               ₹{settlement.amount?.toLocaleString()}
                             </p>
-                            <p className="text-sm text-gray-600">
-                              Via {settlement.paymentMethod === 'upi' ? 'UPI' : 'Bank Transfer'}
-                              {settlement.paymentReference && ` • Ref: ${settlement.paymentReference}`}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">{formatDate(settlement.createdAt)}</p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="text-[10px] font-bold text-gray-600 bg-gray-200/50 px-1.5 py-0.5 rounded uppercase">
+                                {settlement.paymentMethod}
+                              </span>
+                              {settlement.paymentReference && (
+                                <span className="text-[10px] text-gray-400 truncate">Ref: {settlement.paymentReference}</span>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-1.5">
                             <button
                               onClick={() => openApproveSettlement(settlement)}
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 flex items-center gap-1"
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg font-bold text-[10px] uppercase hover:bg-green-700 flex items-center justify-center gap-1 transition-colors"
                             >
-                              <FiCheck className="w-4 h-4" />
-                              Approve
+                              <FiCheck className="w-3 h-3" /> Approve
                             </button>
                             <button
                               onClick={() => openRejectSettlement(settlement)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 flex items-center gap-1"
+                              className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-bold text-[10px] uppercase hover:bg-red-700 flex items-center justify-center gap-1 transition-colors"
                             >
-                              <FiX className="w-4 h-4" />
-                              Reject
+                              <FiX className="w-3 h-3" /> Reject
                             </button>
                           </div>
                         </div>
 
                         {settlement.paymentProof && (
-                          <div className="mt-3">
+                          <div className="mt-2 pt-2 border-t border-gray-200">
                             <a
                               href={settlement.paymentProof}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:underline"
+                              className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase"
                             >
-                              View Payment Proof
+                              View Proof →
                             </a>
                           </div>
                         )}
@@ -395,78 +390,74 @@ const SettlementManagement = () => {
               {/* Vendors with Due */}
               {activeTab === 'vendors' && (
                 vendors.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FiCheck className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-gray-600 font-semibold">All vendors are settled</p>
+                  <div className="text-center py-10">
+                    <FiCheck className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+                    <p className="text-gray-500 text-sm font-medium">All vendors are settled</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  <div className="overflow-x-auto -mx-4">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
                       <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Vendor</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Phone</th>
-                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Limit Used</th>
-                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Amount Due</th>
-                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                        <tr className="border-b border-gray-100 bg-gray-50/50">
+                          <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Vendor</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Phone</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Limit Status</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Amount Due</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-gray-50">
                         {vendors.map(vendor => (
-                          <tr key={vendor._id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4">
-                              <p className="font-semibold text-gray-900">{vendor.name}</p>
-                              <p className="text-sm text-gray-500">{vendor.businessName}</p>
+                          <tr key={vendor._id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="font-bold text-gray-900 text-xs">{vendor.name}</p>
+                              <p className="text-[10px] text-gray-500 truncate">{vendor.businessName}</p>
                             </td>
-                            <td className="py-3 px-4 text-gray-600">{vendor.phone}</td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="px-4 py-3 text-[11px] text-gray-600">{vendor.phone}</td>
+                            <td className="px-4 py-3 text-right">
                               <div className="flex flex-col items-end">
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-[10px] font-bold text-gray-700">
                                   ₹{Math.abs(vendor.balance).toLocaleString()} / ₹{vendor.cashLimit?.toLocaleString()}
                                 </span>
-                                <div className="w-24 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                <div className="w-20 h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
                                   <div
                                     className={`h-full rounded-full ${vendor.isBlocked ? 'bg-red-500' : 'bg-blue-500'}`}
                                     style={{ width: `${Math.min((vendor.amountDue / vendor.cashLimit) * 100, 100)}%` }}
                                   ></div>
                                 </div>
-                                {vendor.isBlocked && <span className="text-xs text-red-600 font-bold mt-1">AUTO BLOCKED</span>}
+                                {vendor.isBlocked && <span className="text-[8px] text-red-600 font-bold mt-0.5 uppercase">Blocked</span>}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <span className="font-bold text-red-600 text-lg">
+                            <td className="px-4 py-3 text-right">
+                              <span className="font-bold text-red-600 text-sm">
                                 ₹{vendor.amountDue?.toLocaleString() || 0}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex justify-end gap-2">
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-1.5">
                                 <button
                                   onClick={() => navigate(`/admin/settlements/vendor/${vendor._id}`)}
-                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200"
-                                  title="View Ledger"
+                                  className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-100 transition-colors"
                                 >
                                   Ledger
                                 </button>
-
                                 <button
                                   onClick={() => openUpdateLimit(vendor)}
-                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200"
-                                  title="Update Cash Limit"
+                                  className="px-2 py-1 bg-gray-50 text-gray-700 rounded-lg text-[10px] font-bold uppercase hover:bg-gray-100 transition-colors"
                                 >
                                   Limit
                                 </button>
-
                                 {vendor.isBlocked ? (
                                   <button
                                     onClick={() => openUnblockVendor(vendor)}
-                                    className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-semibold hover:bg-orange-200"
+                                    className="px-2 py-1 bg-orange-50 text-orange-700 rounded-lg text-[10px] font-bold uppercase hover:bg-orange-100 transition-colors"
                                   >
                                     Unblock
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => openBlockVendor(vendor)}
-                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"
+                                    className="px-2 py-1 bg-red-50 text-red-700 rounded-lg text-[10px] font-bold uppercase hover:bg-red-100 transition-colors"
                                   >
                                     Block
                                   </button>

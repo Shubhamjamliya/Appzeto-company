@@ -201,8 +201,8 @@ const SectionsPage = ({ catalog, setCatalog }) => {
 
   // Re-implemented Render
   return (
-    <div className="space-y-8">
-      <CardShell icon={FiLayers} title="Service Sections Management">
+    <div className="space-y-6">
+      <CardShell icon={FiLayers}>
         {/* Category Filter */}
         <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
           <label className="block text-sm font-bold text-gray-700 mb-2">Filter by Category</label>
@@ -307,7 +307,7 @@ const SectionsPage = ({ catalog, setCatalog }) => {
           {/* RIGHT: Cards Management */}
           <div className="lg:col-span-2">
             {activeGridItem ? (
-              <CardShell icon={FiPackage} title={`Content: ${activeGridItem.title}`}>
+              <CardShell icon={FiPackage}>
                 <div className="flex justify-between items-center mb-6">
                   <div className="text-sm text-gray-600">
                     Managing cards for section <strong>"{activeGridItem.title}"</strong>.

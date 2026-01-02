@@ -289,12 +289,70 @@ const getUserWalletTransactions = async (req, res) => {
   }
 };
 
+/**
+ * Get all user bookings with filters and pagination
+ */
+const getAllUserBookings = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20, search } = req.query;
+
+    const query = {};
+
+    if (status) {
+      query.status = status;
+    }
+
+    // Search by user name or phone
+    if (search) {
+      const users = await User.find({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      
+      const userIds = users.map(u => u._id);
+      query.userId = { $in: userIds };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const bookings = await Booking.find(query)
+      .populate('userId', 'name phone email')
+      .populate('workerId', 'name phone')
+      .populate('serviceId', 'title')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Booking.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: bookings,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get all user bookings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user bookings'
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserDetails,
   toggleUserStatus,
   deleteUser,
   getUserBookings,
-  getUserWalletTransactions
+  getUserWalletTransactions,
+  getAllUserBookings
 };
 

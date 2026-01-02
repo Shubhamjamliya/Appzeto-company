@@ -64,7 +64,7 @@ const getVendorBalances = async (req, res) => {
       data: vendorData,
       summary: {
         totalDueToAdmin,
-        vendorsWithDue: await Vendor.countDocuments({ 'wallet.balance': { $lt: 0 } })
+        vendorsWithDue: await Vendor.countDocuments({ 'wallet.dues': { $gt: 0 } })
       },
       pagination: {
         page: parseInt(page),
@@ -411,8 +411,6 @@ const getSettlementDashboard = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        totalDueToAdmin,
-        totalDueToAdmin,
         totalDueToAdmin,
         vendorsWithDue: await Vendor.countDocuments({ 'wallet.dues': { $gt: 0 } }),
         pendingSettlements: {

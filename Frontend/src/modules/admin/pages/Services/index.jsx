@@ -13,11 +13,11 @@ const Services = () => {
     // Load service configuration
     const config = JSON.parse(localStorage.getItem('adminServiceConfig') || '{}');
     setServiceMode(config.mode || 'multi');
-    
+
     // Load categories
     const savedCategories = JSON.parse(localStorage.getItem('serviceCategories') || '[]');
     setCategories(savedCategories);
-    
+
     // Load available skills
     const savedSkills = JSON.parse(localStorage.getItem('availableSkills') || '[]');
     setAvailableSkills(savedSkills);
@@ -27,7 +27,7 @@ const Services = () => {
     setServiceMode(mode);
     const config = { mode, updatedAt: new Date().toISOString() };
     localStorage.setItem('adminServiceConfig', JSON.stringify(config));
-    
+
     // If switching to single, keep only first category
     if (mode === 'single' && categories.length > 1) {
       const singleCategory = [categories[0]];
@@ -52,10 +52,10 @@ const Services = () => {
     const updated = [...categories, category];
     setCategories(updated);
     localStorage.setItem('serviceCategories', JSON.stringify(updated));
-    
+
     // Update vendor and worker themes if needed
     window.dispatchEvent(new Event('serviceCategoriesUpdated'));
-    
+
     setNewCategory({ name: '', skills: [] });
   };
 
@@ -78,14 +78,14 @@ const Services = () => {
     setCategories(updated);
     localStorage.setItem('serviceCategories', JSON.stringify(updated));
     window.dispatchEvent(new Event('serviceCategoriesUpdated'));
-    
+
     setEditingCategory(null);
     setNewCategory({ name: '', skills: [] });
   };
 
   const handleDeleteCategory = (id) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
-    
+
     const updated = categories.filter(cat => cat.id !== id);
     setCategories(updated);
     localStorage.setItem('serviceCategories', JSON.stringify(updated));
@@ -94,7 +94,7 @@ const Services = () => {
 
   const handleAddSkill = (skillName) => {
     if (!skillName.trim()) return;
-    
+
     const skill = {
       id: `skill-${Date.now()}`,
       name: skillName,
@@ -124,60 +124,50 @@ const Services = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-4"
     >
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="lg:hidden">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Service Categories</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage service categories and skills</p>
-        </div>
-      </div>
-
       {/* Service Mode Selection */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <div className="flex items-center gap-2 mb-4">
-          <FiSettings className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-bold text-gray-800">Service Mode</h2>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <FiSettings className="w-4 h-4 text-gray-600" />
+          <h2 className="text-base font-bold text-gray-800">Service Mode</h2>
         </div>
         <div className="flex gap-4">
           <button
             onClick={() => handleModeChange('single')}
-            className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-              serviceMode === 'single'
-                ? 'border-primary-600 bg-primary-50 text-primary-700'
-                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-            }`}
+            className={`flex-1 p-3 rounded-lg border-2 transition-all ${serviceMode === 'single'
+              ? 'border-primary-600 bg-primary-50 text-primary-700'
+              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
           >
-            <div className="font-semibold mb-1">Single Service</div>
-            <div className="text-sm opacity-80">One service category only</div>
+            <div className="font-semibold text-sm mb-0.5">Single Service</div>
+            <div className="text-xs opacity-80">One service category only</div>
           </button>
           <button
             onClick={() => handleModeChange('multi')}
-            className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-              serviceMode === 'multi'
-                ? 'border-primary-600 bg-primary-50 text-primary-700'
-                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-            }`}
+            className={`flex-1 p-3 rounded-lg border-2 transition-all ${serviceMode === 'multi'
+              ? 'border-primary-600 bg-primary-50 text-primary-700'
+              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
           >
-            <div className="font-semibold mb-1">Multi Service</div>
-            <div className="text-sm opacity-80">Multiple service categories</div>
+            <div className="font-semibold text-sm mb-0.5">Multi Service</div>
+            <div className="text-xs opacity-80">Multiple service categories</div>
           </button>
         </div>
       </div>
 
       {/* Add/Edit Category Form */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <div className="flex items-center gap-2 mb-4">
-          <FiTag className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-bold text-gray-800">
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <FiTag className="w-4 h-4 text-gray-600" />
+          <h2 className="text-base font-bold text-gray-800">
             {editingCategory ? 'Edit Category' : 'Add New Category'}
           </h2>
         </div>
-        
-        <div className="space-y-4">
+
+        <div className="space-y-3">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               Category Name
             </label>
             <input
@@ -185,12 +175,12 @@ const Services = () => {
               value={newCategory.name}
               onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
               placeholder="e.g., Electrician, Plumber, Salon"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               Skills
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -200,11 +190,10 @@ const Services = () => {
                   <button
                     key={skill.id}
                     onClick={() => handleToggleSkill(skill.name)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      newCategory.skills.includes(skill.name)
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${newCategory.skills.includes(skill.name)
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                   >
                     {skill.name}
                   </button>
@@ -219,15 +208,15 @@ const Services = () => {
                   e.target.value = '';
                 }
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           <button
             onClick={editingCategory ? handleUpdateCategory : handleAddCategory}
-            className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
           >
-            <FiSave className="w-5 h-5" />
+            <FiSave className="w-4 h-4" />
             {editingCategory ? 'Update Category' : 'Add Category'}
           </button>
 
@@ -237,7 +226,7 @@ const Services = () => {
                 setEditingCategory(null);
                 setNewCategory({ name: '', skills: [] });
               }}
-              className="w-full py-2 text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+              className="w-full py-1.5 text-xs text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
             >
               Cancel
             </button>
@@ -246,18 +235,18 @@ const Services = () => {
       </div>
 
       {/* Categories List */}
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <div className="flex items-center gap-2 mb-4">
-          <FiGrid className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-bold text-gray-800">Categories ({categories.length})</h2>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <FiGrid className="w-4 h-4 text-gray-600" />
+          <h2 className="text-base font-bold text-gray-800">Categories ({categories.length})</h2>
         </div>
 
         {categories.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 text-xs text-gray-500">
             No categories added yet. Add your first category above.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {categories.map((category) => (
               <div
                 key={category.id}

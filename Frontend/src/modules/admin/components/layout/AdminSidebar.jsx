@@ -16,6 +16,7 @@ import {
   FiX,
   FiPackage,
   FiTrash2,
+  FiStar,
 } from "react-icons/fi";
 import adminMenu from "../../config/adminMenu.json";
 
@@ -31,6 +32,7 @@ const iconMap = {
   Reports: FiFileText,
   Notifications: FiBell,
   "Scrap Items": FiTrash2,
+  Reviews: FiStar,
   Settlements: FiDollarSign,
   Settings: FiSettings,
   Plans: FiPackage,
@@ -42,13 +44,14 @@ const getChildRoute = (parentRoute, childName) => {
     "/admin/users": {
       "All Users": "/admin/users/all",
       "User Bookings": "/admin/users/bookings",
+      "Transactions": "/admin/users/transactions",
       "User Analytics": "/admin/users/analytics",
     },
     "/admin/vendors": {
       "All Vendors": "/admin/vendors/all",
       "Vendor Bookings": "/admin/vendors/bookings",
       "Vendor Analytics": "/admin/vendors/analytics",
-      "Worker Assignment": "/admin/vendors/worker-assignment",
+      "Vendor Payments": "/admin/vendors/payments",
     },
     "/admin/workers": {
       "All Workers": "/admin/workers/all",

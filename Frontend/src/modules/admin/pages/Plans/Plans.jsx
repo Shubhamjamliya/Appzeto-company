@@ -186,52 +186,48 @@ const Plans = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Subscription Plans</h1>
-          <p className="text-gray-500">Manage your subscription plans</p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-end items-center">
         <button
           onClick={openCreateModal}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 transition-colors"
+          className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 flex items-center gap-2 transition-colors shadow-sm"
         >
-          <FiPlus /> Add New Plan
+          <FiPlus className="w-4 h-4" /> Add New Plan
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center p-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex justify-center p-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {plans.map(plan => {
             const style = getCardStyle(plan.name);
             return (
               <div key={plan._id} className={`rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-all flex flex-col h-full ${style.container}`}>
-                <div className="p-6 flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className={`text-xl font-bold ${style.text}`}>{plan.name}</h3>
-                    <span className={`px-2 py-1 text-xs rounded-full ${plan.isActive ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                <div className="p-4 flex-1">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className={`text-lg font-bold ${style.text}`}>{plan.name}</h3>
+                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-medium ${plan.isActive ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
                       {plan.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <div className={`text-3xl font-bold mb-6 ${style.price}`}>
+                  <div className={`text-2xl font-bold mb-4 ${style.price}`}>
                     ₹{plan.price}
                   </div>
 
-                  <div className="space-y-3 mb-6">
-                    <h4 className={`text-sm font-semibold uppercase tracking-wider ${style.subtext}`}>Includes</h4>
-                    <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
+                    <h4 className={`text-[10px] font-bold uppercase tracking-wider ${style.subtext}`}>Includes</h4>
+                    <div className="space-y-1.5">
                       {/* Display Free Categories First */}
                       {plan.freeCategories && plan.freeCategories.length > 0 && (
-                        <div className={`flex flex-col gap-1 text-sm ${style.text}`}>
+                        <div className={`flex flex-col gap-1 text-xs ${style.text}`}>
                           {plan.freeCategories.map((catId, idx) => {
                             const cat = categories.find(c => (c.id || c._id) === catId || (c.id || c._id) === (catId._id || catId));
                             return cat ? (
                               <div key={`c-${idx}`} className="flex items-center gap-2">
-                                <FiCheck className={`w-4 h-4 ${style.check} rounded-full p-0.5`} />
+                                <FiCheck className={`w-3.5 h-3.5 ${style.check} rounded-full p-0.5`} />
                                 <span>Unlimited {cat.title}</span>
                               </div>
                             ) : null;
@@ -241,12 +237,12 @@ const Plans = () => {
 
                       {/* Display Free Services */}
                       {plan.freeServices && plan.freeServices.length > 0 && (
-                        <div className={`flex flex-col gap-1 text-sm ${style.text}`}>
+                        <div className={`flex flex-col gap-1 text-xs ${style.text}`}>
                           {plan.freeServices.map((svcId, idx) => {
                             const svc = servicesList.find(s => (s.id || s._id) === svcId || (s.id || s._id) === (svcId._id || svcId));
                             return svc ? (
                               <div key={`s-${idx}`} className="flex items-center gap-2">
-                                <FiCheck className={`w-4 h-4 ${style.check} rounded-full p-0.5`} />
+                                <FiCheck className={`w-3.5 h-3.5 ${style.check} rounded-full p-0.5`} />
                                 <span>Free {svc.title}</span>
                               </div>
                             ) : null;
@@ -255,26 +251,26 @@ const Plans = () => {
                       )}
 
                       {(!plan.freeCategories?.length && !plan.freeServices?.length) && (
-                        <span className={`text-sm italic ${style.subtext}`}>No benefits configured</span>
+                        <span className={`text-xs italic ${style.subtext}`}>No benefits configured</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className={`px-6 py-4 flex justify-end gap-3 border-t ${style.footer}`}>
+                <div className={`px-4 py-3 flex justify-end gap-2 border-t ${style.footer}`}>
                   <button
                     onClick={() => handleEdit(plan)}
-                    className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg active:scale-95"
+                    className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full transition-all duration-300"
                     title="Edit"
                   >
-                    <FiEdit2 className="w-4 h-4" />
+                    <FiEdit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(plan._id)}
-                    className="p-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg active:scale-95"
+                    className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-full transition-all duration-300"
                     title="Delete"
                   >
-                    <FiTrash2 className="w-4 h-4" />
+                    <FiTrash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

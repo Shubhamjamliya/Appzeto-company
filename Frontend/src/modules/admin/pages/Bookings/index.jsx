@@ -9,15 +9,15 @@ import { adminBookingService } from '../../../../services/adminBookingService';
 import { getDashboardStats } from '../../../../services/adminDashboardService';
 
 const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => (
-  <div className={`p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
+  <div className={`p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
     <div>
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${colorClass.replace('text-', 'bg-').replace('600', '100')}`}>
-        <Icon className={`w-5 h-5 ${colorClass}`} />
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${colorClass.replace('text-', 'bg-').replace('600', '100')}`}>
+        <Icon className={`w-4 h-4 ${colorClass}`} />
       </div>
-      <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
-      <p className="text-2xl font-bold text-gray-800 mt-1">{count}</p>
+      <h3 className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{title}</h3>
+      <p className="text-xl font-bold text-gray-800 mt-0.5">{count}</p>
     </div>
-    <div className={`w-16 h-16 rounded-full opacity-10 -mr-4 -mb-4 ${colorClass.replace('text-', 'bg-')}`}></div>
+    <div className={`w-12 h-12 rounded-full opacity-10 -mr-3 -mb-3 ${colorClass.replace('text-', 'bg-')}`}></div>
   </div>
 );
 
@@ -126,15 +126,9 @@ const Bookings = () => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">All-orders</h1>
-        <p className="text-gray-500 text-sm">Welcome back! Here's your business overview.</p>
-      </div>
-
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <BookingStatsCard title="Awaiting" count={stats.pending} icon={FiClock} bgClass="bg-yellow-50" colorClass="text-yellow-600" />
         <BookingStatsCard title="Confirmed" count={stats.pending} icon={FiCheckCircle} bgClass="bg-blue-50" colorClass="text-blue-600" />
         <BookingStatsCard title="In Progress" count={stats.inProgress} icon={FiBox} bgClass="bg-purple-50" colorClass="text-purple-600" />
@@ -146,23 +140,23 @@ const Bookings = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full lg:w-96">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-3 justify-between items-center">
+        <div className="relative w-full lg:w-80">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search by ID, name, or email..."
+            placeholder="Search bookings..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-sm"
+            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-xs"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:border-green-500 cursor-pointer"
+            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:border-green-500 cursor-pointer"
           >
             <option>All Status</option>
             <option value="pending">Pending</option>
@@ -172,28 +166,28 @@ const Bookings = () => {
             <option value="cancelled">Cancelled</option>
           </select>
 
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            <FiCalendar className="text-gray-400" />
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
+            <FiCalendar className="text-gray-400 w-3.5 h-3.5" />
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="bg-transparent text-sm text-gray-600 focus:outline-none w-24"
+              className="bg-transparent text-[11px] text-gray-600 focus:outline-none w-20"
             />
-            <span className="text-gray-400">to</span>
+            <span className="text-gray-400 text-[10px]">to</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="bg-transparent text-sm text-gray-600 focus:outline-none w-24"
+              className="bg-transparent text-[11px] text-gray-600 focus:outline-none w-20"
             />
           </div>
 
           <button
             onClick={handleExport}
-            className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors shadow-sm shadow-green-200"
+            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm shadow-green-200"
           >
-            <FiDownload /> Export CSV
+            <FiDownload className="w-4 h-4" /> Export
           </button>
         </div>
       </div>
@@ -203,48 +197,48 @@ const Bookings = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total (₹)</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Payment</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Order Date</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <tr className="border-b border-gray-100 bg-gray-50/50">
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total (₹)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Order Date</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-500">Loading bookings...</td>
+                  <td colSpan="8" className="px-4 py-8 text-center text-xs text-gray-500">Loading bookings...</td>
                 </tr>
               ) : bookings.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-500">No bookings found</td>
+                  <td colSpan="8" className="px-4 py-8 text-center text-xs text-gray-500">No bookings found</td>
                 </tr>
               ) : (
                 bookings.map((booking) => (
                   <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4">
-                      <span className="font-semibold text-gray-900 text-sm">#{booking.bookingNumber || booking._id.slice(-6).toUpperCase()}</span>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-gray-900 text-xs">#{booking.bookingNumber || booking._id.slice(-6).toUpperCase()}</span>
                     </td>
-                    <td className="p-4">
+                    <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{booking.userId?.name || 'Unknown Guest'}</p>
-                        <p className="text-xs text-gray-400">{booking.userId?.email || booking.customerPhone || 'No contact'}</p>
+                        <p className="font-bold text-gray-900 text-xs">{booking.userId?.name || 'Guest'}</p>
+                        <p className="text-[10px] text-gray-400">{booking.userId?.phone || booking.customerPhone}</p>
                       </div>
                     </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1 text-blue-600 text-sm font-medium cursor-pointer">
+                    <td className="px-4 py-3">
+                      <div className="text-blue-600 text-[11px] font-bold">
                         {booking.items?.length || 1} items
                       </div>
                     </td>
-                    <td className="p-4">
-                      <span className="font-bold text-gray-900 text-sm">₹{booking.finalAmount?.toLocaleString()}</span>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-gray-900 text-xs">₹{booking.finalAmount?.toLocaleString()}</span>
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider
                             ${booking.status === 'completed' ? 'bg-green-100 text-green-700' :
                           booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                             booking.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
@@ -252,19 +246,19 @@ const Bookings = () => {
                         {booking.status?.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <span className="text-sm text-gray-600 capitalize">{booking.paymentMethod?.replace('_', ' ')}</span>
+                    <td className="px-4 py-3">
+                      <span className="text-[11px] text-gray-600 capitalize font-medium">{booking.paymentMethod?.replace('_', ' ')}</span>
                     </td>
-                    <td className="p-4">
-                      <span className="text-sm text-gray-600">
+                    <td className="px-4 py-3">
+                      <span className="text-[10px] text-gray-600 font-medium">
                         {new Date(booking.createdAt).toLocaleDateString('en-US', {
                           year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
-                      <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                        <FiMoreVertical />
+                    <td className="px-4 py-3 text-right">
+                      <button className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                        <FiMoreVertical className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -276,20 +270,20 @@ const Bookings = () => {
 
         {/* Pagination Footer */}
         {!loading && bookings.length > 0 && (
-          <div className="flex items-center justify-between p-4 border-t border-gray-100">
-            <p className="text-xs text-gray-500">Showing {bookings.length} of {stats.total} entries</p>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Showing {bookings.length} of {stats.total} entries</p>
+            <div className="flex gap-1.5">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 disabled:opacity-50 hover:bg-gray-50"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
               >
-                Previous
+                Prev
               </button>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 disabled:opacity-50 hover:bg-gray-50"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
               >
                 Next
               </button>

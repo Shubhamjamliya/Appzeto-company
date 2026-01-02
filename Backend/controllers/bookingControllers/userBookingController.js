@@ -5,6 +5,7 @@ const Category = require('../../models/Category');
 const User = require('../../models/User');
 const Vendor = require('../../models/Vendor');
 const Worker = require('../../models/Worker');
+const Review = require('../../models/Review');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');
@@ -173,11 +174,9 @@ const createBooking = async (req, res) => {
     }
 
     // Calculate vendor earnings and admin commission
-    // Calculate total value from booked items or fallback to base
-    // Calculate total value from booked items or fallback to base
-    // Logic moved to top of function to ensure availability for pricing checks
-
-    const commissionRate = 0.10; // 10% admin commission
+    const Settings = require('../../models/Settings');
+    const settings = await Settings.findOne({ type: 'global' });
+    const commissionRate = (settings?.commissionPercentage || 10) / 100;
     let vendorEarnings, adminCommission;
 
     if (paymentMethod === 'plan_benefit') {
@@ -803,6 +802,24 @@ const addReview = async (req, res) => {
     booking.reviewedAt = new Date();
 
     await booking.save();
+
+    // Create a new Review document for the Review model (used by Admin)
+    try {
+      await Review.create({
+        bookingId: booking._id,
+        userId: booking.userId,
+        serviceId: booking.serviceId,
+        vendorId: booking.vendorId,
+        workerId: booking.workerId,
+        rating: rating,
+        review: review || '',
+        images: reviewImages || [],
+        status: 'active'
+      });
+    } catch (reviewErr) {
+      console.error('Error creating separate review document:', reviewErr);
+      // We don't fail the request if the separate review creation fails
+    }
 
     // Helper to update cumulative rating on Model
     const updateCumulativeRating = async (Model, docId, newRating) => {

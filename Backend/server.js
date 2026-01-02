@@ -106,9 +106,12 @@ app.use('/api/admin', require('./routes/admin-routes/serviceManagement.routes'))
 app.use('/api/admin', require('./routes/admin-routes/homePageManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/bookingManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/paymentManagement.routes'));
+app.use('/api/admin', require('./routes/admin-routes/transactionManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/upload.routes'));
 app.use('/api/admin', require('./routes/admin-routes/planManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/settings.routes'));
+app.use('/api/admin', require('./routes/admin-routes/reviewManagement.routes'));
+app.use('/api/admin', require('./routes/admin-routes/reportManagement.routes'));
 app.use('/api/admin/settlements', require('./routes/admin-routes/settlementManagement.routes'));
 app.use('/api/image', require('./routes/admin-routes/image.routes'));
 

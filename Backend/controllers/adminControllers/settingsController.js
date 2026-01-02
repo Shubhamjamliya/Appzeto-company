@@ -26,16 +26,44 @@ exports.getSettings = async (req, res, next) => {
 // Update Global Settings
 exports.updateSettings = async (req, res, next) => {
   try {
-    const { visitedCharges, gstPercentage } = req.body;
+    const { 
+      visitedCharges, 
+      gstPercentage, 
+      commissionPercentage,
+      razorpayKeyId,
+      razorpayKeySecret,
+      razorpayWebhookSecret,
+      cloudinaryCloudName,
+      cloudinaryApiKey,
+      cloudinaryApiSecret
+    } = req.body;
 
     let settings = await Settings.findOne({ type: 'global' });
 
     if (!settings) {
-      settings = await Settings.create({ type: 'global', visitedCharges, gstPercentage });
+      settings = await Settings.create({ 
+        type: 'global', 
+        visitedCharges, 
+        gstPercentage,
+        commissionPercentage,
+        razorpayKeyId,
+        razorpayKeySecret,
+        razorpayWebhookSecret,
+        cloudinaryCloudName,
+        cloudinaryApiKey,
+        cloudinaryApiSecret
+      });
     } else {
       // Update fields if provided
       if (visitedCharges !== undefined) settings.visitedCharges = visitedCharges;
       if (gstPercentage !== undefined) settings.gstPercentage = gstPercentage;
+      if (commissionPercentage !== undefined) settings.commissionPercentage = commissionPercentage;
+      if (razorpayKeyId !== undefined) settings.razorpayKeyId = razorpayKeyId;
+      if (razorpayKeySecret !== undefined) settings.razorpayKeySecret = razorpayKeySecret;
+      if (razorpayWebhookSecret !== undefined) settings.razorpayWebhookSecret = razorpayWebhookSecret;
+      if (cloudinaryCloudName !== undefined) settings.cloudinaryCloudName = cloudinaryCloudName;
+      if (cloudinaryApiKey !== undefined) settings.cloudinaryApiKey = cloudinaryApiKey;
+      if (cloudinaryApiSecret !== undefined) settings.cloudinaryApiSecret = cloudinaryApiSecret;
 
       await settings.save();
     }

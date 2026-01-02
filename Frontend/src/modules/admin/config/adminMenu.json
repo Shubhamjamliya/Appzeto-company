@@ -10,6 +10,7 @@
     "children": [
       "All Users",
       "User Bookings",
+      "Transactions",
       "User Analytics"
     ]
   },
@@ -20,7 +21,7 @@
       "All Vendors",
       "Vendor Bookings",
       "Vendor Analytics",
-      "Worker Assignment"
+      "Vendor Payments"
     ]
   },
   {
@@ -89,6 +90,11 @@
   {
     "title": "Settlements",
     "route": "/admin/settlements",
+    "children": []
+  },
+  {
+    "title": "Reviews",
+    "route": "/admin/reviews",
     "children": []
   },
   {

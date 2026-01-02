@@ -68,14 +68,6 @@ const BookingNotifications = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Booking-notifications</h1>
-          <p className="text-gray-500 text-sm">Welcome back! Here's your business overview.</p>
-        </div>
-      </div>
-
       {/* Controls Bar */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>

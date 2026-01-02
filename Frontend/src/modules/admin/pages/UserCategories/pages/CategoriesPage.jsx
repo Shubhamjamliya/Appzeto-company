@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FiGrid, FiPlus, FiEdit2, FiTrash2, FiSave, FiChevronUp, FiChevronDown, FiMove, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import CardShell from "../components/CardShell";
@@ -367,8 +367,8 @@ const CategoriesPage = ({ catalog, setCatalog }) => {
   };
 
   return (
-    <div className="space-y-8">
-      <CardShell icon={FiGrid} title="Service Catalog">
+    <div className="space-y-6">
+      <CardShell icon={FiGrid}>
         <div className="space-y-4">
           <div>
             <div className="text-lg font-bold text-gray-900 mb-3">App Mode</div>
@@ -385,7 +385,7 @@ const CategoriesPage = ({ catalog, setCatalog }) => {
         </div>
       </CardShell>
 
-      <CardShell icon={FiGrid} title={`Categories (${categories.length})`}>
+      <CardShell icon={FiGrid}>
         {fetching && (
           <div className="text-center py-4 text-gray-500">Loading categories...</div>
         )}
@@ -400,26 +400,26 @@ const CategoriesPage = ({ catalog, setCatalog }) => {
               <FiMove className="w-4 h-4" />
               <span>Reorder</span>
             </button>
-          <button
-            onClick={() => {
-              reset();
-              setIsModalOpen(true);
-            }}
-            className="px-4 py-2 text-white rounded-lg font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg relative z-10"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#2874F0',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
-          >
-            <FiPlus className="w-4 h-4" style={{ display: 'block', color: '#ffffff' }} />
-            <span>Add Category</span>
-          </button>
+            <button
+              onClick={() => {
+                reset();
+                setIsModalOpen(true);
+              }}
+              className="px-4 py-2 text-white rounded-lg font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg relative z-10"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#2874F0',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#1e5fd4'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#2874F0'}
+            >
+              <FiPlus className="w-4 h-4" style={{ display: 'block', color: '#ffffff' }} />
+              <span>Add Category</span>
+            </button>
           </div>
         </div>
         {categories.length === 0 ? (

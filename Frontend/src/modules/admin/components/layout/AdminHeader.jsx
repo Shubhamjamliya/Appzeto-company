@@ -31,36 +31,57 @@ const AdminHeader = ({ onMenuClick }) => {
     setShowNotifications(!showNotifications);
   };
 
-  // Get page name from pathname
-  const getPageName = (pathname) => {
-    if (pathname.startsWith('/admin/user-categories')) return 'Service Catalog';
+  // Get page info from pathname
+  const getPageInfo = (pathname) => {
+    const mappings = [
+      { path: '/admin/dashboard', title: 'Dashboard', description: "Welcome back! Here's your business overview." },
+      { path: '/admin/users/all', title: 'All Users', description: 'Manage platform customers and their activity' },
+      { path: '/admin/users/bookings', title: 'User Bookings', description: 'Track customer booking history' },
+      { path: '/admin/users/analytics', title: 'User Analytics', description: 'Analyze customer behavior and growth' },
+      { path: '/admin/users/transactions', title: 'User Transactions', description: 'Monitor customer financial transactions' },
+      { path: '/admin/users', title: 'Users', description: 'Manage platform customers and their activity' },
+      { path: '/admin/vendors/all', title: 'All Vendors', description: 'Manage platform vendors and their activity' },
+      { path: '/admin/vendors/analytics', title: 'Vendor Analytics', description: 'Analyze vendor performance' },
+      { path: '/admin/vendors', title: 'Vendors', description: 'Manage vendor registrations and performance' },
+      { path: '/admin/workers/all', title: 'All Workers', description: 'Manage platform workers and their activity' },
+      { path: '/admin/workers/analytics', title: 'Worker Analytics', description: 'Analyze worker performance' },
+      { path: '/admin/workers', title: 'Workers', description: 'Monitor and manage platform workers' },
+      { path: '/admin/bookings', title: 'Bookings', description: 'Track and manage service bookings' },
+      { path: '/admin/bookings/notifications', title: 'Order Notifications', description: 'Track booking alerts and updates' },
+      { path: '/admin/user-categories', title: 'Service Catalog', description: 'Manage platform services and categories' },
+      { path: '/admin/payments', title: 'Payments & Settlements', description: 'Monitor transactions and revenue' },
+      { path: '/admin/reports', title: 'Reports', description: 'Analyze platform performance with data insights' },
+      { path: '/admin/notifications', title: 'Notifications', description: 'Stay updated with platform activities' },
+      { path: '/admin/settings', title: 'Settings', description: 'Configure platform preferences' },
+      { path: '/admin/plans', title: 'Subscription Plans', description: 'Manage service subscription plans' },
+      { path: '/admin/services', title: 'Services', description: 'Manage platform service categories' },
+      { path: '/admin/settlements', title: 'Settlements', description: 'Manage financial settlements' },
+      { path: '/admin/reviews', title: 'Reviews', description: 'Manage platform reviews and ratings' },
+      { path: '/admin/scrap', title: 'Scrap Orders', description: 'Manage platform scrap collection orders' },
+    ];
+
+    const match = mappings.find(m => pathname === m.path || pathname.startsWith(m.path + '/'));
+
+    if (match) return match;
+
     const path = pathname.split('/').pop() || 'dashboard';
-    const pageNames = {
-      dashboard: 'Dashboard',
-      users: 'Users',
-      vendors: 'Vendors',
-      workers: 'Workers',
-      bookings: 'Bookings',
-      'user-categories': 'Service Catalog',
-      payments: 'Payments',
-      reports: 'Reports',
-      notifications: 'Notifications',
-      settings: 'Settings',
+    return {
+      title: path.charAt(0).toUpperCase() + path.slice(1),
+      description: `Manage your ${path} here.`
     };
-    return pageNames[path] || path.charAt(0).toUpperCase() + path.slice(1);
   };
 
-  const pageName = getPageName(location.pathname);
+  const { title, description } = getPageInfo(location.pathname);
 
   return (
     <header
-      className="bg-white fixed top-0 left-0 right-0 z-30 transition-all duration-300 lg:left-[278px]"
+      className="bg-white fixed top-0 left-0 right-0 z-30 transition-all duration-300 lg:left-[278px] border-b border-gray-100 shadow-sm"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div className="flex items-center justify-between px-4 lg:px-6 py-4">
-        {/* Left: Menu Button */}
+      <div className="flex items-center justify-between px-4 lg:px-6 py-6">
+        {/* Left: Menu Button & Page Title */}
         <div className="flex items-center gap-4">
           <Button
             onClick={onMenuClick}
@@ -68,11 +89,9 @@ const AdminHeader = ({ onMenuClick }) => {
             className="lg:hidden text-gray-700"
             icon={FiMenu}
           />
-
-          {/* Page Heading - Desktop Only */}
-          <div className="hidden lg:block">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">{pageName}</h1>
-            <p className="text-base text-gray-600">Welcome back! Here's your business overview.</p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">{title}</h1>
+            <p className="text-[10px] sm:text-xs text-gray-500 font-medium">{description}</p>
           </div>
         </div>
 

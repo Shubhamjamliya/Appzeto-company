@@ -11,6 +11,16 @@ export const adminUserService = {
     }
   },
 
+  // Get all user bookings
+  getAllUserBookings: async (params) => {
+    try {
+      const response = await api.get('/admin/users/bookings', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to fetch user bookings' };
+    }
+  },
+
   // Get user details
   getUserDetails: async (id) => {
     try {

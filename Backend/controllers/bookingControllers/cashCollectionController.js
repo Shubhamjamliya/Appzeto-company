@@ -80,6 +80,9 @@ exports.confirmCashCollection = async (req, res) => {
     }
 
     const collectionAmount = amount || booking.finalAmount;
+    const Settings = require('../../models/Settings');
+    const settings = await Settings.findOne({ type: 'global' });
+    const commissionRate = (settings?.commissionPercentage || 10) / 100;
 
     // Optional: Update items if provided again
     if (extraItems && Array.isArray(extraItems)) {
@@ -93,6 +96,10 @@ exports.confirmCashCollection = async (req, res) => {
       };
       booking.finalAmount = collectionAmount;
     }
+
+    // Recalculate earnings and commission if amount changed or just to be safe
+    booking.adminCommission = parseFloat((collectionAmount * commissionRate).toFixed(2));
+    booking.vendorEarnings = parseFloat((collectionAmount - booking.adminCommission).toFixed(2));
 
     // Update Booking
     booking.cashCollected = true;
@@ -115,12 +122,12 @@ exports.confirmCashCollection = async (req, res) => {
     const vendor = await Vendor.findById(vendorId);
 
     if (vendor) {
-      // Decrease balance (negative balance means owes admin)
-      vendor.wallet.balance -= collectionAmount;
-      vendor.wallet.totalCashCollected += collectionAmount;
+      // Increase dues (amount vendor owes to admin)
+      vendor.wallet.dues = (vendor.wallet.dues || 0) + collectionAmount;
+      vendor.wallet.totalCashCollected = (vendor.wallet.totalCashCollected || 0) + collectionAmount;
 
       // Check cash limit
-      if (Math.abs(vendor.wallet.balance) > vendor.wallet.cashLimit) {
+      if (vendor.wallet.dues > (vendor.wallet.cashLimit || 10000)) {
         vendor.wallet.isBlocked = true;
         vendor.wallet.blockedAt = new Date();
         vendor.wallet.blockReason = 'Cash collection limit exceeded. Please settle dues with admin.';
@@ -132,7 +139,7 @@ exports.confirmCashCollection = async (req, res) => {
       await Transaction.create({
         vendorId,
         bookingId: booking._id,
-        amount: -collectionAmount,
+        amount: collectionAmount,
         type: 'cash_collected',
         description: `Cash collected for booking ${booking.bookingNumber}`,
         status: 'completed'
@@ -145,7 +152,7 @@ exports.confirmCashCollection = async (req, res) => {
       data: {
         bookingId: booking._id,
         amount: collectionAmount,
-        walletBalance: vendor?.wallet?.balance
+        walletDues: vendor?.wallet?.dues
       }
     });
   } catch (error) {

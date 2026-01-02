@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { FiGrid, FiPlus, FiTrash2, FiSave, FiEdit2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import CardShell from "../components/CardShell";
@@ -352,22 +352,22 @@ const HomePage = ({ catalog, setCatalog }) => {
   };
 
   return (
-    <div className="space-y-8">
-      <CardShell icon={FiGrid} title="Home Page">
-        <div className="space-y-6">
+    <div className="space-y-4">
+      <CardShell icon={FiGrid}>
+        <div className="space-y-4">
           <div>
-            <div className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-3">
-              <div className="w-1.5 h-8 bg-gradient-to-b from-primary-500 to-primary-600 rounded-full"></div>
+            <div className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-gradient-to-b from-primary-500 to-primary-600 rounded-full"></div>
               <span>Home Banners</span>
             </div>
-            <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center justify-end mb-3">
               <button
                 type="button"
                 onClick={() => {
                   setBannerForm({ imageUrl: "", text: "", targetCategoryId: "", scrollToSection: "" });
                   setIsBannerModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg relative z-10"
+                className="px-4 py-2 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg relative z-10"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -389,38 +389,38 @@ const HomePage = ({ catalog, setCatalog }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-12">#</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-24">Image</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Text</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Redirect</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Scroll To</th>
-                      <th className="text-center py-3 px-4 text-sm font-bold text-gray-700 w-32">Actions</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-12">#</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-24">Image</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Text</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Redirect</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Scroll To</th>
+                      <th className="text-center py-2 px-3 text-sm font-bold text-gray-700 w-32">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(home.banners || []).map((b, idx) => (
                       <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-sm font-semibold text-gray-600">{idx + 1}</td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3 text-sm font-semibold text-gray-600">{idx + 1}</td>
+                        <td className="py-2.5 px-3">
                           {b.imageUrl ? (
-                            <img src={b.imageUrl} alt="Banner" className="h-16 w-16 object-cover rounded-lg border border-gray-200" />
+                            <img src={b.imageUrl} alt="Banner" className="h-14 w-14 object-cover rounded-lg border border-gray-200" />
                           ) : (
-                            <div className="h-16 w-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                              <span className="text-xs text-gray-400">No img</span>
+                            <div className="h-14 w-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                              <span className="text-[10px] text-gray-400">No img</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-900">{b.text || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{b.targetCategoryId ? getCategoryTitle(b.targetCategoryId) : "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{b.scrollToSection || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -428,18 +428,18 @@ const HomePage = ({ catalog, setCatalog }) => {
                                 setBannerForm({ ...b });
                                 setIsBannerModalOpen(true);
                               }}
-                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title="Edit"
                             >
-                              <FiEdit2 className="w-4 h-4" />
+                              <FiEdit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => setHomeBanners((home.banners || []).filter((x) => x.id !== b.id))}
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                               title="Delete"
                             >
-                              <FiTrash2 className="w-4 h-4" />
+                              <FiTrash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -453,13 +453,13 @@ const HomePage = ({ catalog, setCatalog }) => {
         </div>
       </CardShell>
 
-      <CardShell icon={FiGrid} title="Home Content">
-        <div className="space-y-8">
+      <CardShell icon={FiGrid}>
+        <div className="space-y-5">
           {/* Promo Carousel (PromoCarousel) */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-gray-200">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3 pb-2 mb-3 border-b border-gray-200">
               <div>
-                <div className="text-xl font-bold text-gray-900">Home Promo Carousel</div>
+                <div className="text-lg font-bold text-gray-900">Home Promo Carousel</div>
               </div>
               <button
                 type="button"
@@ -467,7 +467,7 @@ const HomePage = ({ catalog, setCatalog }) => {
                   resetPromoForm();
                   setIsPromoModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg"
+                className="px-4 py-2 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -489,42 +489,42 @@ const HomePage = ({ catalog, setCatalog }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-12">#</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-24">Image</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Title</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Subtitle</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Button Text</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Redirect</th>
-                      <th className="text-center py-3 px-4 text-sm font-bold text-gray-700 w-32">Actions</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-12">#</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-24">Image</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Title</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Subtitle</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Button Text</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Redirect</th>
+                      <th className="text-center py-2 px-3 text-sm font-bold text-gray-700 w-32">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(home.promoCarousel || []).map((p, idx) => (
                       <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-sm font-semibold text-gray-600">{idx + 1}</td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3 text-sm font-semibold text-gray-600">{idx + 1}</td>
+                        <td className="py-2.5 px-3">
                           {p.imageUrl ? (
-                            <img src={p.imageUrl} alt="Promo" className="h-16 w-16 object-cover rounded-lg border border-gray-200" />
+                            <img src={p.imageUrl} alt="Promo" className="h-14 w-14 object-cover rounded-lg border border-gray-200" />
                           ) : (
-                            <div className="h-16 w-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                              <span className="text-xs text-gray-400">No img</span>
+                            <div className="h-14 w-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                              <span className="text-[10px] text-gray-400">No img</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm font-semibold text-gray-900">{p.title || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{p.subtitle || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{p.buttonText || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{p.targetCategoryId ? getCategoryTitle(p.targetCategoryId) : "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -532,18 +532,18 @@ const HomePage = ({ catalog, setCatalog }) => {
                                 setPromoForm({ ...p });
                                 setIsPromoModalOpen(true);
                               }}
-                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title="Edit"
                             >
-                              <FiEdit2 className="w-4 h-4" />
+                              <FiEdit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => patchHome({ promoCarousel: (home.promoCarousel || []).filter((x) => x.id !== p.id) })}
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                               title="Delete"
                             >
-                              <FiTrash2 className="w-4 h-4" />
+                              <FiTrash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -556,10 +556,10 @@ const HomePage = ({ catalog, setCatalog }) => {
           </div>
 
           {/* Curated Services */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-gray-200">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3 pb-2 mb-3 border-b border-gray-200">
               <div>
-                <div className="text-xl font-bold text-gray-900">Thoughtful Curations</div>
+                <div className="text-lg font-bold text-gray-900">Thoughtful Curations</div>
               </div>
               <button
                 type="button"
@@ -567,7 +567,7 @@ const HomePage = ({ catalog, setCatalog }) => {
                   resetCuratedForm();
                   setIsCuratedModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg"
+                className="px-4 py-2 rounded-xl text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -588,42 +588,42 @@ const HomePage = ({ catalog, setCatalog }) => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-12">#</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700 w-24">Media</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Title</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">YouTube URL</th>
-                      <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">Redirect</th>
-                      <th className="text-center py-3 px-4 text-sm font-bold text-gray-700 w-32">Actions</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-12">#</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700 w-24">Media</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Title</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">YouTube URL</th>
+                      <th className="text-left py-2 px-3 text-sm font-bold text-gray-700">Redirect</th>
+                      <th className="text-center py-2 px-3 text-sm font-bold text-gray-700 w-32">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(home.curatedServices || []).map((s, idx) => (
                       <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-sm font-semibold text-gray-600">{idx + 1}</td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3 text-sm font-semibold text-gray-600">{idx + 1}</td>
+                        <td className="py-2.5 px-3">
                           {s.gifUrl ? (
                             s.gifUrl.match(/\.(gif|webp)$/i) ? (
-                              <img src={s.gifUrl} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-gray-200" />
+                              <img src={s.gifUrl} alt="Preview" className="h-14 w-14 object-cover rounded-lg border border-gray-200" />
                             ) : (
-                              <video src={s.gifUrl} className="h-16 w-16 object-cover rounded-lg border border-gray-200" controls />
+                              <video src={s.gifUrl} className="h-14 w-14 object-cover rounded-lg border border-gray-200" controls />
                             )
                           ) : (
-                            <div className="h-16 w-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                              <span className="text-xs text-gray-400">No media</span>
+                            <div className="h-14 w-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                              <span className="text-[10px] text-gray-400">No media</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm font-semibold text-gray-900">{s.title || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{s.youtubeUrl || "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-2.5 px-3">
                           <div className="text-sm text-gray-600">{s.targetCategoryId ? getCategoryTitle(s.targetCategoryId) : "—"}</div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
@@ -631,18 +631,18 @@ const HomePage = ({ catalog, setCatalog }) => {
                                 setCuratedForm({ ...s });
                                 setIsCuratedModalOpen(true);
                               }}
-                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title="Edit"
                             >
-                              <FiEdit2 className="w-4 h-4" />
+                              <FiEdit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => patchHome({ curatedServices: (home.curatedServices || []).filter((x) => x.id !== s.id) })}
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                               title="Delete"
                             >
-                              <FiTrash2 className="w-4 h-4" />
+                              <FiTrash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>

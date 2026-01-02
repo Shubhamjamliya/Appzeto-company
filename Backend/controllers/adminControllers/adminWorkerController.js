@@ -352,6 +352,88 @@ const payWorker = async (req, res) => {
   }
 };
 
+/**
+ * Get all worker jobs (global)
+ */
+const getAllWorkerJobs = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20, search } = req.query;
+
+    const query = { workerId: { $exists: true, $ne: null } };
+    if (status) {
+      query.status = status;
+    }
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // If search is provided, we need to find workers by name first
+    if (search) {
+      const workers = await Worker.find({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      
+      const workerIds = workers.map(w => w._id);
+      query.workerId = { $in: workerIds };
+    }
+
+    const jobs = await Booking.find(query)
+      .populate('workerId', 'name phone profileImage')
+      .populate('userId', 'name phone')
+      .populate('serviceId', 'title iconUrl')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Booking.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: jobs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get all worker jobs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch all worker jobs.'
+    });
+  }
+};
+
+/**
+ * Get worker payments summary
+ */
+const getWorkerPaymentsSummary = async (req, res) => {
+  try {
+    // For now, return workers with non-zero balances or recent job activity
+    const workers = await Worker.find({ 
+      'wallet.balance': { $exists: true } 
+    })
+    .select('name phone wallet email serviceCategory approvalStatus')
+    .sort({ 'wallet.balance': -1 });
+
+    res.status(200).json({
+      success: true,
+      data: workers
+    });
+  } catch (error) {
+    console.error('Get worker payments summary error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch worker payments summary.'
+    });
+  }
+};
+
 module.exports = {
   getAllWorkers,
   getWorkerDetails,
@@ -360,5 +442,7 @@ module.exports = {
   suspendWorker,
   getWorkerJobs,
   getWorkerEarnings,
-  payWorker
+  payWorker,
+  getAllWorkerJobs,
+  getWorkerPaymentsSummary
 };
