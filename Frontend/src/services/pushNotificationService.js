@@ -85,27 +85,32 @@ async function getFCMToken() {
  */
 async function registerFCMToken(userType = 'user', forceUpdate = false) {
   try {
+    console.log(`[FCM] Starting registration for ${userType}, forceUpdate: ${forceUpdate}`);
+
     // Check if already registered
     const storageKey = `fcm_token_${userType}_web`;
     const savedToken = localStorage.getItem(storageKey);
     if (savedToken && !forceUpdate) {
-      console.log('FCM token already registered');
+      console.log('[FCM] Token already registered in localStorage');
       return savedToken;
     }
 
     // Request permission
+    console.log('[FCM] Requesting notification permission...');
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.log('Notification permission not granted, skipping FCM registration');
+      console.log('[FCM] ❌ Notification permission not granted, skipping FCM registration');
       return null;
     }
 
     // Get token
+    console.log('[FCM] Getting FCM token from Firebase...');
     const token = await getFCMToken();
     if (!token) {
-      console.log('Failed to get FCM token');
+      console.log('[FCM] ❌ Failed to get FCM token from Firebase');
       return null;
     }
+    console.log('[FCM] ✅ Got FCM token:', token.substring(0, 30) + '...');
 
     // Determine API endpoint based on user type
     let endpoint;
@@ -126,13 +131,16 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
 
     // Get auth token
     const authToken = localStorage.getItem(authTokenKey);
+    console.log(`[FCM] Auth token key: ${authTokenKey}, exists: ${!!authToken}`);
     if (!authToken) {
-      console.log('No auth token found, skipping FCM registration');
+      console.log('[FCM] ❌ No auth token found, skipping FCM registration');
       return null;
     }
 
     // Save to backend
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    console.log(`[FCM] Saving to backend: ${baseUrl}${endpoint}`);
+
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
       headers: {
@@ -145,17 +153,19 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
       })
     });
 
+    console.log(`[FCM] Backend response status: ${response.status}`);
+
     if (response.ok) {
       localStorage.setItem(storageKey, token);
-      console.log('✅ FCM token registered with backend');
+      console.log('[FCM] ✅ FCM token registered with backend successfully!');
       return token;
     } else {
       const error = await response.json();
-      console.error('Failed to register token with backend:', error);
+      console.error('[FCM] ❌ Failed to register token with backend:', error);
       return null;
     }
   } catch (error) {
-    console.error('❌ Error registering FCM token:', error);
+    console.error('[FCM] ❌ Error registering FCM token:', error);
     return null;
   }
 }
@@ -228,13 +238,32 @@ function setupForegroundNotificationHandler(handler) {
   onMessage(messaging, (payload) => {
     console.log('📬 Foreground message received:', payload);
 
+    const data = payload.data || {};
+    const notification = payload.notification || {};
+
+    // Use notification fields first, then data fields as fallback (for data-only messages)
+    const title = notification.title || data.title || 'New Notification';
+    const body = notification.body || data.body || '';
+    const icon = notification.icon || data.icon || '/Homster-logo.png';
+
     // Show notification
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(payload.notification?.title || 'New Notification', {
-        body: payload.notification?.body || '',
-        icon: payload.notification?.icon || '/Appzeto-logo.png',
-        data: payload.data
+      const notif = new Notification(title, {
+        body: body,
+        icon: icon,
+        data: data,
+        tag: data.bookingId || `notification-${Date.now()}`,
+        requireInteraction: data.type === 'new_booking' || data.type === 'job_assigned'
       });
+
+      // Handle notification click
+      notif.onclick = () => {
+        window.focus();
+        if (data.link) {
+          window.location.href = data.link;
+        }
+        notif.close();
+      };
     }
 
     // Call custom handler

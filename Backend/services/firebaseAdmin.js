@@ -61,7 +61,11 @@ async function sendPushNotification(tokens, payload) {
     }
 
     // Ensure data values are strings (FCM requirement)
-    const stringData = {};
+    const stringData = {
+      // Always include title and body in data for data-only notifications and Service Worker access
+      title: payload.title || 'New Notification',
+      body: payload.body || ''
+    };
     if (payload.data) {
       Object.keys(payload.data).forEach(key => {
         stringData[key] = String(payload.data[key]);

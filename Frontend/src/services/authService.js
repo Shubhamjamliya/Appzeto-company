@@ -98,8 +98,18 @@ export const vendorAuthService = {
       localStorage.setItem('vendorAccessToken', response.data.accessToken);
       localStorage.setItem('vendorRefreshToken', response.data.refreshToken);
       localStorage.setItem('vendorData', JSON.stringify(response.data.vendor));
-      // Register FCM token after successful login
-      registerFCMToken('vendor', true).catch(console.error);
+      // Register FCM token after successful login (await to ensure it completes)
+      console.log('[AUTH] Vendor login successful, registering FCM token...');
+      try {
+        const fcmToken = await registerFCMToken('vendor', true);
+        if (fcmToken) {
+          console.log('[AUTH] ✅ Vendor FCM token registered successfully');
+        } else {
+          console.log('[AUTH] ⚠️ Vendor FCM token registration returned null');
+        }
+      } catch (err) {
+        console.error('[AUTH] ❌ Vendor FCM token registration failed:', err);
+      }
     }
     return response.data;
   },
