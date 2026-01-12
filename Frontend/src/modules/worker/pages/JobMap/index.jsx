@@ -239,7 +239,7 @@ const JobMap = () => {
         {/* Icon Container - No background/border */}
         <div
           className="relative z-20 w-16 h-16 transition-transform duration-500 ease-in-out"
-          style={{ transform: `rotate(${heading}deg)` }}
+          style={{ transform: `rotate(${heading - 180}deg)` }}
         >
           <img
             src="/rider-3D.png"
@@ -316,32 +316,7 @@ const JobMap = () => {
 
         {/* Recenter Button */}
         {/* Recenter / Start Navigation Button */}
-        {/* 3D / Rotate Button */}
-        <button
-          onClick={() => {
-            if (map) {
-              const currentTilt = map.getTilt();
-              if (currentTilt > 0 || isNavigationMode) {
-                // Switch to 2D / Exit Nav
-                map.setTilt(0);
-                map.setHeading(0);
-                map.setZoom(14);
-                setIsNavigationMode(false);
-                toast("Switched to 2D Mode");
-              } else {
-                // Switch to 3D / Start Nav
-                map.setTilt(45);
-                setIsNavigationMode(true);
-                setIsAutoCenter(true);
-                toast.success("Switched to 3D Mode");
-              }
-            }
-          }}
-          className="absolute top-24 right-4 p-4 rounded-full shadow-2xl bg-white text-gray-700 z-50 active:scale-90 transition-all font-bold w-14 h-14 flex items-center justify-center border-2 border-gray-100"
-          style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
-        >
-          <span className="text-sm font-black text-gray-800">{isNavigationMode ? '2D' : '3D'}</span>
-        </button>
+
 
         {/* Recenter Button */}
         <button
