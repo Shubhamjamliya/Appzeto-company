@@ -15,10 +15,10 @@ async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      console.log('✅ Service Worker registered:', registration.scope);
+      // console.log('✅ Service Worker registered:', registration.scope);
       return registration;
     } catch (error) {
-      console.error('❌ Service Worker registration failed:', error);
+      // console.error('❌ Service Worker registration failed:', error);
       throw error;
     }
   } else {
@@ -34,14 +34,14 @@ async function requestNotificationPermission() {
   if ('Notification' in window) {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      console.log('✅ Notification permission granted');
+      // console.log('✅ Notification permission granted');
       return true;
     } else {
-      console.log('❌ Notification permission denied');
+      // console.log('❌ Notification permission denied');
       return false;
     }
   }
-  console.log('❌ Notifications not supported');
+  // console.log('❌ Notifications not supported');
   return false;
 }
 
@@ -52,7 +52,7 @@ async function requestNotificationPermission() {
 async function getFCMToken() {
   try {
     if (!messaging) {
-      console.error('Firebase messaging not initialized');
+      // console.error('Firebase messaging not initialized');
       return null;
     }
 
@@ -65,14 +65,14 @@ async function getFCMToken() {
     });
 
     if (token) {
-      console.log('✅ FCM Token obtained:', token.substring(0, 20) + '...');
+      // console.log('✅ FCM Token obtained:', token.substring(0, 20) + '...');
       return token;
     } else {
-      console.log('❌ No FCM token available');
+      // console.log('❌ No FCM token available');
       return null;
     }
   } catch (error) {
-    console.error('❌ Error getting FCM token:', error);
+    // console.error('❌ Error getting FCM token:', error);
     throw error;
   }
 }
@@ -85,32 +85,32 @@ async function getFCMToken() {
  */
 async function registerFCMToken(userType = 'user', forceUpdate = false) {
   try {
-    console.log(`[FCM] Starting registration for ${userType}, forceUpdate: ${forceUpdate}`);
+    // console.log(`[FCM] Starting registration for ${userType}, forceUpdate: ${forceUpdate}`);
 
     // Check if already registered
     const storageKey = `fcm_token_${userType}_web`;
     const savedToken = localStorage.getItem(storageKey);
     if (savedToken && !forceUpdate) {
-      console.log('[FCM] Token already registered in localStorage');
+      // console.log('[FCM] Token already registered in localStorage');
       return savedToken;
     }
 
     // Request permission
-    console.log('[FCM] Requesting notification permission...');
+    // console.log('[FCM] Requesting notification permission...');
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.log('[FCM] ❌ Notification permission not granted, skipping FCM registration');
+      // console.log('[FCM] ❌ Notification permission not granted, skipping FCM registration');
       return null;
     }
 
     // Get token
-    console.log('[FCM] Getting FCM token from Firebase...');
+    // console.log('[FCM] Getting FCM token from Firebase...');
     const token = await getFCMToken();
     if (!token) {
-      console.log('[FCM] ❌ Failed to get FCM token from Firebase');
+      // console.log('[FCM] ❌ Failed to get FCM token from Firebase');
       return null;
     }
-    console.log('[FCM] ✅ Got FCM token:', token.substring(0, 30) + '...');
+    // console.log('[FCM] ✅ Got FCM token:', token.substring(0, 30) + '...');
 
     // Determine API endpoint based on user type
     let endpoint;
@@ -129,7 +129,7 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
         authTokenKey = 'accessToken';
         break;
       default:
-        console.warn(`[FCM] Unknown userType: ${userType}, defaulting to user`);
+        // console.warn(`[FCM] Unknown userType: ${userType}, defaulting to user`);
         endpoint = '/users/fcm-tokens/save';
         authTokenKey = 'accessToken';
     }
@@ -137,13 +137,13 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
     // Get auth token
     const authToken = localStorage.getItem(authTokenKey);
     if (!authToken) {
-      console.log(`[FCM] ❌ No auth token found for ${userType} (${authTokenKey}), skipping registration`);
+      // console.log(`[FCM] ❌ No auth token found for ${userType} (${authTokenKey}), skipping registration`);
       return null;
     }
 
     // Save to backend
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    console.log(`[FCM] Saving to backend: ${baseUrl}${endpoint}`);
+    // console.log(`[FCM] Saving to backend: ${baseUrl}${endpoint}`);
 
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
@@ -157,19 +157,19 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
       })
     });
 
-    console.log(`[FCM] Backend response status: ${response.status}`);
+    // console.log(`[FCM] Backend response status: ${response.status}`);
 
     if (response.ok) {
       localStorage.setItem(storageKey, token);
-      console.log('[FCM] ✅ FCM token registered with backend successfully!');
+      // console.log('[FCM] ✅ FCM token registered with backend successfully!');
       return token;
     } else {
       const error = await response.json();
-      console.error('[FCM] ❌ Failed to register token with backend:', error);
+      // console.error('[FCM] ❌ Failed to register token with backend:', error);
       return null;
     }
   } catch (error) {
-    console.error('[FCM] ❌ Error registering FCM token:', error);
+    // console.error('[FCM] ❌ Error registering FCM token:', error);
     return null;
   }
 }
@@ -223,9 +223,9 @@ async function removeFCMToken(userType = 'user') {
     });
 
     localStorage.removeItem(storageKey);
-    console.log('✅ FCM token removed');
+    // console.log('✅ FCM token removed');
   } catch (error) {
-    console.error('Error removing FCM token:', error);
+    // console.error('Error removing FCM token:', error);
   }
 }
 
@@ -235,12 +235,12 @@ async function removeFCMToken(userType = 'user') {
  */
 function setupForegroundNotificationHandler(handler) {
   if (!messaging) {
-    console.error('Firebase messaging not initialized');
+    // console.error('Firebase messaging not initialized');
     return;
   }
 
   onMessage(messaging, (payload) => {
-    console.log('📬 Foreground message received:', payload);
+    // console.log('📬 Foreground message received:', payload);
 
     const data = payload.data || {};
     const notification = payload.notification || {};
@@ -252,6 +252,8 @@ function setupForegroundNotificationHandler(handler) {
     const type = data.type || data.notificationType || 'default';
 
     // Play Sound for foreground notifications
+    // DISABLED: We already play a notification sound via SocketContext for foreground events.
+    /*
     const audioMap = {
       new_booking: '/booking-alert.mp3',
       booking_accepted: '/success.mp3',
@@ -265,13 +267,18 @@ function setupForegroundNotificationHandler(handler) {
     try {
       const audioUrl = audioMap[type] || audioMap['default'];
       const audio = new Audio(audioUrl);
-      audio.play().catch(e => console.log('Audio autoplay blocked:', e));
+      audio.play().catch(e => {
+        // console.log('Audio autoplay blocked:', e)
+      });
     } catch (err) {
-      console.log('Audio playback error:', err);
+      // console.log('Audio playback error:', err);
     }
+    */
 
     // Show native system notification if supported (even in foreground)
-    // This makes it appear in the OS notification center / bar
+    // DISABLED: We already show a custom Toast via SocketContext for foreground notifications.
+    // Showing both creates a redundant "double notification" experience.
+    /*
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
         const notif = new Notification(title, {
@@ -292,9 +299,10 @@ function setupForegroundNotificationHandler(handler) {
           notif.close();
         };
       } catch (e) {
-        console.error('Error showing native notification:', e);
+        // console.error('Error showing native notification:', e);
       }
     }
+    */
 
     // Call custom handler (e.g. for toast)
     if (handler) {
@@ -310,19 +318,19 @@ function setupForegroundNotificationHandler(handler) {
 async function initializePushNotifications() {
   try {
     if (!('serviceWorker' in navigator)) {
-      console.log('Service workers not supported');
+      // console.log('Service workers not supported');
       return;
     }
 
     if (!('Notification' in window)) {
-      console.log('Notifications not supported');
+      // console.log('Notifications not supported');
       return;
     }
 
     await registerServiceWorker();
-    console.log('✅ Push notifications initialized');
+    // console.log('✅ Push notifications initialized');
   } catch (error) {
-    console.error('Error initializing push notifications:', error);
+    // console.error('Error initializing push notifications:', error);
   }
 }
 

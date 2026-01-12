@@ -6,10 +6,14 @@ let io = null;
 
 const initializeSocket = (server) => {
   io = new Server(server, {
+    pingTimeout: 60000,
+    pingInterval: 25000,
     cors: {
       origin: [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean),
-      credentials: true
-    }
+      credentials: true,
+      methods: ["GET", "POST"]
+    },
+    transports: ['polling', 'websocket']
   });
 
   // Authentication middleware for Socket.io
@@ -47,6 +51,29 @@ const initializeSocket = (server) => {
     } else if (socket.userRole === 'ADMIN') {
       socket.join(`admin_${socket.userId}`);
     }
+
+    // Explicit Room Join Events (Fallback/Frontend Initiated)
+    socket.on('join_vendor_room', (vendorId) => {
+      // Security check: ensure the socket user actually IS this vendor
+      if (socket.userRole === 'VENDOR' && socket.userId === vendorId) {
+        socket.join(`vendor_${vendorId}`);
+        console.log(`Socket ${socket.id} explicitly joined room vendor_${vendorId}`);
+      }
+    });
+
+    socket.on('join_user_room', (userId) => {
+      if (socket.userRole === 'USER' && socket.userId === userId) {
+        socket.join(`user_${userId}`);
+        console.log(`Socket ${socket.id} explicitly joined room user_${userId}`);
+      }
+    });
+
+    socket.on('join_worker_room', (workerId) => {
+      if (socket.userRole === 'WORKER' && socket.userId === workerId) {
+        socket.join(`worker_${workerId}`);
+        console.log(`Socket ${socket.id} explicitly joined room worker_${workerId}`);
+      }
+    });
 
     // Live Tracking Events
     socket.on('join_tracking', (bookingId) => {

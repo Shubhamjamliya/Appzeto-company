@@ -3,10 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { acceptBooking, rejectBooking } from '../../services/bookingService';
 import BookingAlertModal from '../../components/bookings/BookingAlertModal';
 import { toast } from 'react-hot-toast';
+import { useSocket } from '../../../../context/SocketContext'; // Import socket context
 
 const BookingAlert = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const socket = useSocket(); // Use shared socket
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +49,24 @@ const BookingAlert = () => {
 
     loadBooking();
   }, [id]);
+
+  // Listen for booking_taken event specifically for this booking
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBookingTaken = (data) => {
+      if (String(data.bookingId) === String(id)) {
+        toast.error('This booking was just accepted by another vendor.', { icon: '⚡' });
+        navigate('/vendor/dashboard'); // Close modal immediately
+      }
+    };
+
+    socket.on('booking_taken', handleBookingTaken);
+
+    return () => {
+      socket.off('booking_taken', handleBookingTaken);
+    };
+  }, [socket, id, navigate]);
 
   const handleAccept = async () => {
     try {

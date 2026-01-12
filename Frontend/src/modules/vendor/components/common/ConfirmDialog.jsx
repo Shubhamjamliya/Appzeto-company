@@ -1,5 +1,6 @@
 import React from 'react';
-import { FiAlertCircle, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiX, FiCheck, FiInfo } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { vendorTheme as themeColors } from '../../../../theme';
 
 const ConfirmDialog = ({
@@ -10,33 +11,32 @@ const ConfirmDialog = ({
   message = 'Are you sure you want to proceed?',
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  type = 'warning', // warning, danger, info
+  type = 'warning', // warning, danger, info, success
 }) => {
-  if (!isOpen) return null;
-
   const typeConfig = {
     warning: {
-      iconColor: '#F59E0B',
-      iconBg: '#FEF3C7',
+      icon: <FiAlertCircle className="w-8 h-8" />,
+      color: '#F59E0B',
+      bg: '#FEF3C7',
     },
     danger: {
-      iconColor: '#EF4444',
-      iconBg: '#FEE2E2',
+      icon: <FiAlertCircle className="w-8 h-8" />,
+      color: '#EF4444',
+      bg: '#FEE2E2',
     },
     info: {
-      iconColor: themeColors.button,
-      iconBg: `${themeColors.button}25`,
+      icon: <FiInfo className="w-8 h-8" />,
+      color: themeColors.button,
+      bg: `${themeColors.button}15`,
+    },
+    success: {
+      icon: <FiCheck className="w-8 h-8" />,
+      color: '#10B981',
+      bg: '#D1FAE5',
     },
   };
 
   const config = typeConfig[type] || typeConfig.warning;
-
-  const hexToRgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
 
   const handleConfirm = () => {
     if (onConfirm) onConfirm();
@@ -44,51 +44,81 @@ const ConfirmDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <FiX className="w-5 h-5 text-gray-500" />
-        </button>
-
-        {/* Icon */}
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{
-            background: config.iconBg,
-          }}
-        >
-          <FiAlertCircle className="w-8 h-8" style={{ color: config.iconColor }} />
-        </div>
-
-        {/* Content */}
-        <h3 className="text-xl font-bold text-gray-900 text-center mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 text-center mb-6">{message}</p>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Backdrop with Blur */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl font-semibold border-2 border-gray-200 text-gray-700 transition-all active:scale-95"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Modal Container */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="bg-white rounded-[24px] shadow-2xl max-w-sm w-full p-8 relative z-10 overflow-hidden"
           >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 py-3 rounded-xl font-semibold text-white transition-all active:scale-95"
-            style={{
-              background: type === 'danger' ? '#EF4444' : themeColors.button,
-              boxShadow: `0 4px 12px ${hexToRgba(type === 'danger' ? '#EF4444' : themeColors.button, 0.4)}`,
-            }}
-          >
-            {confirmLabel}
-          </button>
+            {/* Top Shine Effect */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-30" />
+
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            {/* Icon Container */}
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3"
+              style={{
+                background: config.bg,
+                color: config.color,
+                boxShadow: `0 8px 16px ${config.color}20`
+              }}
+            >
+              {config.icon}
+            </div>
+
+            {/* Content */}
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed font-medium">
+                {message}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleConfirm}
+                className="w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all active:scale-[0.98]"
+                style={{
+                  background: type === 'danger' ? 'linear-gradient(135deg, #EF4444, #DC2626)' : `linear-gradient(135deg, ${themeColors.button}, ${themeColors.button}dd)`,
+                  boxShadow: `0 10px 20px ${type === 'danger' ? '#EF444430' : themeColors.button + '30'}`
+                }}
+              >
+                {confirmLabel}
+              </button>
+
+              <button
+                onClick={onClose}
+                className="w-full py-4 rounded-2xl font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all active:scale-[0.98]"
+              >
+                {cancelLabel}
+              </button>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 };
 

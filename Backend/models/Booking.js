@@ -26,6 +26,11 @@ const bookingSchema = new mongoose.Schema({
     required: false, // Optional initially, assigned when vendor accepts
     index: true
   },
+  // Track vendors notified about this booking
+  notifiedVendors: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  }],
   // Worker Information (optional - assigned later)
   workerId: {
     type: mongoose.Schema.Types.ObjectId,

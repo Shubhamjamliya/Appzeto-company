@@ -102,12 +102,22 @@ const BookingDetails = () => {
   // Track if we've shown the payment modal this session to prevent re-opening on data refresh
   const hasShownPaymentModal = React.useRef(false);
 
-  // Handle Payment Modal Visibility - Only auto-open ONCE per session
+  // Handle Payment Modal Visibility - Only auto-open ONCE per session AND if payment is PENDING
   useEffect(() => {
-    if (booking && booking.customerConfirmationOTP && !booking.cashCollected && !hasShownPaymentModal.current) {
+    // Check if payment is already done (success or collected)
+    const isPaymentDone = booking?.paymentStatus === 'success' || booking?.cashCollected === true;
+
+    // Open logic: 
+    // 1. Has verification OTP (Work is done)
+    // 2. Payment is NOT done (Pending)
+    // 3. Haven't shown modal automatically in this session yet
+    if (booking && booking.customerConfirmationOTP && !isPaymentDone && !hasShownPaymentModal.current) {
       setShowPaymentModal(true);
       hasShownPaymentModal.current = true;
-    } else if (!booking?.customerConfirmationOTP || booking?.cashCollected) {
+    }
+    // Close logic:
+    // If payment becomes done or OTP missing, close it.
+    else if (!booking?.customerConfirmationOTP || isPaymentDone) {
       setShowPaymentModal(false);
     }
   }, [booking]);
@@ -153,6 +163,8 @@ const BookingDetails = () => {
       case 'in_progress':
       case 'journey_started':
         return <FiLoader className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'visited':
+        return <FiMapPin className="w-5 h-5 text-teal-600" />;
       case 'completed':
         return <FiCheckCircle className="w-5 h-5 text-green-600" />;
       case 'cancelled':
@@ -172,6 +184,8 @@ const BookingDetails = () => {
       case 'in_progress':
       case 'journey_started':
         return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'visited':
+        return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'completed':
         return 'bg-gray-50 text-gray-700 border-gray-200';
       case 'cancelled':
@@ -633,7 +647,7 @@ const BookingDetails = () => {
         )}
 
         {/* Waiting for Vendor to initiate Payment */}
-        {!(booking.customerConfirmationOTP || booking.paymentOtp) && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
+        {!booking.customerConfirmationOTP && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
           <div className="bg-white rounded-3xl p-6 shadow-lg border border-teal-100 mb-6 flex items-center gap-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -translate-y-12 translate-x-12 blur-2xl"></div>
             <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 border border-teal-100">
@@ -647,7 +661,7 @@ const BookingDetails = () => {
         )}
 
         {/* Payment Card - Show when work is done AND bill is finalized (OTP exists) or paid */}
-        {(booking.customerConfirmationOTP || booking.paymentOtp || booking.paymentStatus === 'success') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
+        {(booking.customerConfirmationOTP || booking.paymentStatus === 'success') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
           <div
             onClick={() => setShowPaymentModal(true)}
             className={`relative overflow-hidden rounded-3xl shadow-lg border cursor-pointer active:scale-[0.98] transition-all ${booking.paymentStatus === 'success' ? 'border-green-100' : 'border-orange-100'

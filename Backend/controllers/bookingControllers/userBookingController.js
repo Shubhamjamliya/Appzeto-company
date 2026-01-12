@@ -105,6 +105,28 @@ const createBooking = async (req, res) => {
     const categoryId = service.categoryId || service.categoryIds?.[0];
     const category = categoryId ? await Category.findById(categoryId) : null;
 
+    // --- MOVE VENDOR SEARCH UP HERE ---
+    // Find nearby vendors using location service
+    const { findNearbyVendors, geocodeAddress } = require('../../services/locationService');
+
+    // Determine booking location (prioritize frontend coordinates)
+    let bookingLocation;
+    if (address.lat && address.lng) {
+      bookingLocation = { lat: address.lat, lng: address.lng };
+      console.log('Using provided coordinates for vendor search:', bookingLocation);
+    } else {
+      bookingLocation = await geocodeAddress(
+        `${address.addressLine1}, ${address.city}, ${address.state} ${address.pincode}`
+      );
+      console.log('Geocoded address for vendor search:', bookingLocation);
+    }
+
+    // Find vendors within 10km radius who offer this service category
+    const vendorFilters = category ? { service: category.title } : {};
+    const nearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+    console.log(`[CreateBooking] Found ${nearbyVendors.length} nearby vendors for booking`);
+    // --- END VENDOR SEARCH BLOCK ---
+
     // Calculate pricing - use amount from frontend if provided, otherwise calculate
     let basePrice, discount, tax, finalAmount;
     let bookingStatus = BOOKING_STATUS.SEARCHING;
@@ -268,7 +290,8 @@ const createBooking = async (req, res) => {
       // isPlusAdded: isPlusAdded || false, // Removed
       paymentMethod: paymentMethod || null,
       status: bookingStatus,
-      paymentStatus: bookingPaymentStatus
+      paymentStatus: bookingPaymentStatus,
+      notifiedVendors: nearbyVendors.map(v => v._id) // Store notified vendors for later cleanup
     });
 
     // If Plus membership was added, update user status
@@ -285,25 +308,7 @@ const createBooking = async (req, res) => {
       console.log(`User ${userId} upgraded to Plus Membership until ${expiryDate}`);
     }
 
-    // Find nearby vendors using location service
-    const { findNearbyVendors, geocodeAddress } = require('../../services/locationService');
-
-    // Determine booking location (prioritize frontend coordinates)
-    let bookingLocation;
-    if (address.lat && address.lng) {
-      bookingLocation = { lat: address.lat, lng: address.lng };
-      console.log('Using provided coordinates for vendor search:', bookingLocation);
-    } else {
-      bookingLocation = await geocodeAddress(
-        `${address.addressLine1}, ${address.city}, ${address.state} ${address.pincode}`
-      );
-      console.log('Geocoded address for vendor search:', bookingLocation);
-    }
-
-    // Find vendors within 10km radius who offer this service category
-    const vendorFilters = category ? { service: category.title } : {};
-    const nearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
-    console.log(`[CreateBooking] Found ${nearbyVendors.length} nearby vendors for booking ${booking._id}`);
+    // Nearby vendors already found above
     if (nearbyVendors.length > 0) {
       console.log(`[CreateBooking] Target Vendor IDs:`, nearbyVendors.map(v => v._id));
     } else {
@@ -371,16 +376,21 @@ const createBooking = async (req, res) => {
       .populate('categoryId', 'title slug');
 
     // NOTIFICATION SUPPRESSED: Don't notify user until booking is confirmed/paid
-    /*
+
+    // Send notification to user
     await createNotification({
       userId,
       type: 'booking_requested',
       title: 'Booking Created',
       message: `Your booking ${booking.bookingNumber} has been created successfully.`,
       relatedId: booking._id,
-      relatedType: 'booking'
+      relatedType: 'booking',
+      pushData: {
+        type: 'booking_requested',
+        bookingId: booking._id.toString(),
+        link: `/user/booking/${booking._id}`
+      }
     });
-    */
 
     // Send notification to vendor only if assigned (Direct Booking)
     if (vendorId) {

@@ -13,20 +13,26 @@ function App() {
 
     // Setup foreground notification handler
     setupForegroundNotificationHandler((payload) => {
-      console.log('📬 Notification received:', payload);
+      // console.log('📬 Notification received:', payload);
 
-      // Dispatch update events for listening components
+      // Dispatch update events for listening components to refresh UI
       window.dispatchEvent(new Event('vendorJobsUpdated'));
       window.dispatchEvent(new Event('vendorStatsUpdated'));
+      window.dispatchEvent(new Event('workerJobsUpdated'));
+      window.dispatchEvent(new Event('userBookingsUpdated'));
 
       // Also dispatch generic one if needed
       window.dispatchEvent(new Event('appNotificationReceived'));
 
-      // Show toast notification
+      // REDUNDANT: We now have a rich SwipeableNotification in SocketContext.jsx 
+      // which handles all internal socket notifications (emitted by Backend along with Push).
+      // Showing a toast here results in "double alerts" for the user.
+      /*
       toast(payload.notification?.body || 'New notification', {
         icon: '🔔',
         duration: 2000,
       });
+      */
     });
   }, []);
 

@@ -44,9 +44,20 @@ messaging.onBackgroundMessage((payload) => {
   const notificationType = data.type || 'default';
 
   // Determine notification style based on type
-  // Prioritize data.title as we are using data-only notifications now
-  let notificationTitle = data.title || notification.title || 'App Notification';
-  let notificationBody = data.body || notification.body || '';
+  // Prioritize data properties for data-only notifications
+  let notificationTitle = data.title || notification.title;
+  let notificationBody = data.body || notification.body;
+
+  // If absolutely no content, do not show notification (prevent empty bubbles)
+  if (!notificationTitle && !notificationBody) {
+    console.log('[SW] 🚫 Skipping empty notification');
+    return;
+  }
+
+  // Default fallbacks if one is missing
+  notificationTitle = notificationTitle || 'App Notification';
+  notificationBody = notificationBody || 'You have a new update.';
+
   let icon = data.icon || notification.icon || '/Homster-logo.png';
   let badge = '/Homster-logo.png';
   let tag = data.bookingId || `notification-${Date.now()}`;
@@ -56,6 +67,15 @@ messaging.onBackgroundMessage((payload) => {
 
   // Enhanced styling for different notification types
   switch (notificationType) {
+    case 'booking_requested':
+      notificationTitle = notificationTitle || '📅 Booking Created!';
+      notificationBody = notificationBody || 'Your service request has been received.';
+      vibrate = [200, 100];
+      actions = [
+        { action: 'view', title: '👁️ View Status' }
+      ];
+      break;
+
     case 'new_booking':
       // High priority booking alert - like Ola/Uber
       notificationTitle = data.title || notification.title || '🔔 New Booking Request!';
@@ -95,6 +115,28 @@ messaging.onBackgroundMessage((payload) => {
       vibrate = [200, 100, 200];
       actions = [
         { action: 'track', title: '📍 Track Worker' }
+      ];
+      break;
+
+    case 'journey_started':
+    case 'worker_started':
+      notificationTitle = data.title || notification.title || '📍 Professional is on the way!';
+      notificationBody = data.body || notification.body || 'Your service provider has started their journey.';
+      requireInteraction = true;
+      vibrate = [500, 200, 500];
+      actions = [
+        { action: 'track', title: '📍 Track Arrival', icon: '/icons/track.png' }
+      ];
+      break;
+
+    case 'work_done':
+    case 'worker_completed':
+      notificationTitle = data.title || notification.title || '✅ Work Finished!';
+      notificationBody = data.body || notification.body || 'Professional has finished the work and is preparing the bill.';
+      requireInteraction = true;
+      vibrate = [200, 100, 200, 100, 200];
+      actions = [
+        { action: 'view', title: '👁️ View Summary' }
       ];
       break;
 

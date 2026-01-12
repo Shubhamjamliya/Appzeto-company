@@ -228,6 +228,7 @@ const startJob = async (req, res) => {
       message: `Worker is on the way! specific OTP for site visit verification is: ${otp}. Please share this with worker upon arrival.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high',
       pushData: {
         type: 'journey_started',
         bookingId: booking._id.toString(),
@@ -319,6 +320,22 @@ const verifyVisit = async (req, res) => {
 
     await booking.save();
 
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'visit_verified',
+      title: 'Visit Verified',
+      message: `The professional has arrived and verified the visit. Service is now in progress.`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      pushData: {
+        type: 'visit_verified',
+        bookingId: booking._id.toString(),
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
     // Emit socket event for real-time update
     const io = req.app.get('io');
     if (io) {
@@ -326,6 +343,11 @@ const verifyVisit = async (req, res) => {
         bookingId: booking._id,
         status: booking.status,
         message: 'Visit verified successful'
+      });
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Visit Verified',
+        message: 'The professional has arrived at your location.',
+        relatedId: booking._id
       });
     }
 
@@ -371,6 +393,10 @@ const completeJob = async (req, res) => {
     // Update booking
     booking.status = BOOKING_STATUS.WORK_DONE;
 
+    // Generate Payment OTP
+    const payOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    booking.paymentOtp = payOtp;
+
     if (workPhotos && Array.isArray(workPhotos)) {
       booking.workPhotos = workPhotos;
     }
@@ -386,12 +412,14 @@ const completeJob = async (req, res) => {
       userId: booking.userId,
       type: 'work_done',
       title: 'Work Completed',
-      message: `Worker has completed the work. Professional is finalizing the bill. Amount: ₹${booking.finalAmount}.`,
+      message: `Worker has completed the work. Your verification OTP is ${payOtp}. Please verify bill and share OTP.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high',
       pushData: {
         type: 'work_done',
         bookingId: booking._id.toString(),
+        paymentOtp: payOtp,
         link: `/user/booking/${booking._id}`
       }
     });
@@ -421,7 +449,7 @@ const completeJob = async (req, res) => {
 
       io.to(`user_${booking.userId}`).emit('notification', {
         title: 'Work Completed',
-        message: `Worker has completed the work. Professional is finalizing the bill.`,
+        message: `Work completed. Your verification OTP is ${payOtp}.`,
         relatedId: booking._id
       });
     }

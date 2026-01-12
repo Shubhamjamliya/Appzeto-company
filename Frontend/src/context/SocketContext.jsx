@@ -138,28 +138,34 @@ export const SocketProvider = ({ children }) => {
       auth: {
         token: token
       },
-      transports: ['websocket', 'polling'],
-      path: '/socket.io/', // Ensure standard path
-      secure: true, // Required for HTTPS
-      rejectUnauthorized: false
+      transports: ['polling', 'websocket'], // Try polling first for reliability
+      path: '/socket.io/',
+      secure: true,
+      rejectUnauthorized: false,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true
     });
 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log(`✅ ${userType.toUpperCase()} App Socket connected`);
+      // console.log(`✅ ${userType.toUpperCase()} App Socket connected`);
 
       // Register FCM token for push notifications (on page load/refresh)
       if (userType && token) {
-        console.log(`[SocketContext] Registering FCM token for ${userType}...`);
+        // console.log(`[SocketContext] Registering FCM token for ${userType}...`);
         registerFCMToken(userType, true).then((fcmToken) => {
           if (fcmToken) {
-            console.log(`[SocketContext] ✅ FCM token registered for ${userType}`);
+            // console.log(`[SocketContext] ✅ FCM token registered for ${userType}`);
           } else {
-            console.log(`[SocketContext] ⚠️ FCM token registration returned null for ${userType}`);
+            // console.log(`[SocketContext] ⚠️ FCM token registration returned null for ${userType}`);
           }
         }).catch((err) => {
-          console.error(`[SocketContext] ❌ FCM token registration failed for ${userType}:`, err);
+          // console.error(`[SocketContext] ❌ FCM token registration failed for ${userType}:`, err);
         });
       }
 
@@ -174,16 +180,17 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on('disconnect', () => {
-      console.log(`❌ ${userType.toUpperCase()} App Socket disconnected`);
+      // console.log(`❌ ${userType.toUpperCase()} App Socket disconnected`);
     });
 
     newSocket.on('connect_error', (err) => {
-      console.error(`Socket connection error (${userType}):`, err);
+      // Silently handle typical connection errors to avoid spam, or log only critical ones
+      // console.error(`Socket connection error (${userType}):`, err);
     });
 
     // Listen for generic notifications
     newSocket.on('notification', (data) => {
-      console.log('🔔 App Notification received:', data);
+      // console.log('🔔 App Notification received:', data);
 
       if (isSoundEnabled(userType)) {
         playNotificationSound();
@@ -217,12 +224,23 @@ export const SocketProvider = ({ children }) => {
         window.dispatchEvent(new Event('vendorNotificationsUpdated'));
         window.dispatchEvent(new Event('vendorStatsUpdated'));
       }
+      if (userType === 'user') {
+        window.dispatchEvent(new Event('userBookingsUpdated'));
+      }
+    });
+
+    // Listen for real-time booking updates
+    newSocket.on('booking_updated', (data) => {
+      // console.log('Booking Updated:', data);
+      if (userType === 'user') window.dispatchEvent(new Event('userBookingsUpdated'));
+      if (userType === 'vendor') window.dispatchEvent(new Event('vendorJobsUpdated'));
+      if (userType === 'worker') window.dispatchEvent(new Event('workerJobsUpdated'));
     });
 
     // Listen for special Vendor Booking Requests
     if (userType === 'vendor') {
       newSocket.on('new_booking_request', (data) => {
-        console.log('🚨 New Booking Request Alert:', data);
+        // console.log('🚨 New Booking Request Alert:', data);
 
         // Play urgent alert ring
         playAlertRing();
@@ -265,6 +283,34 @@ export const SocketProvider = ({ children }) => {
 
         // Navigate to Alert Page
         navigate(`/vendor/booking-alert/${data.bookingId}`);
+      });
+
+      // Listen for booking_taken - when another vendor accepts a job
+      newSocket.on('booking_taken', (data) => {
+        // console.log('⚡ Booking taken by another vendor:', data);
+        const takenBookingId = String(data.bookingId);
+
+        // Remove from localStorage
+        const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+        const updatedPending = pendingJobs.filter(job => {
+          const jobId = String(job.id || job._id);
+          return jobId !== takenBookingId;
+        });
+        localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
+
+        // Update stats
+        const stats = JSON.parse(localStorage.getItem('vendorStats') || '{}');
+        if (stats.pendingAlerts > 0) {
+          stats.pendingAlerts = Math.max(0, (stats.pendingAlerts || 0) - 1);
+          localStorage.setItem('vendorStats', JSON.stringify(stats));
+        }
+
+        // Show toast notification
+        toast.error(data.message || 'Job taken by another vendor', { icon: '⚡' });
+
+        // Notify app components to refresh
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        window.dispatchEvent(new Event('vendorStatsUpdated'));
       });
     }
 

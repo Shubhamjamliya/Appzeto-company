@@ -74,7 +74,7 @@ async function sendPushNotification(tokens, payload) {
     // Ensure data values are strings (FCM requirement)
     const stringData = {
       // Always include title and body in data for data-only notifications and Service Worker access
-      title: payload.title || 'New Notification',
+      title: payload.title || (payload.body ? 'New Update' : 'App Notification'),
       body: payload.body || ''
     };
     if (payload.data) {
@@ -250,9 +250,10 @@ async function sendNotificationToUser(userId, payload, includeMobile = true) {
     // Add priority and sound for user notifications too
     const finalPayload = {
       ...payload,
-      title: `👤 [User] ${payload.title}`, // Add identification
-      // For important updates (confirmed, accepted), use high priority
-      highPriority: payload.priority === 'high' || payload.type === 'booking_accepted',
+      title: payload.title, // Clean title
+      // For important updates (confirmed, accepted, started, completed), use high priority
+      highPriority: payload.priority === 'high' ||
+        ['booking_accepted', 'worker_started', 'journey_started', 'work_done', 'booking_completed'].includes(payload.type),
       dataOnly: true // Prevent duplicate notifications
     };
 

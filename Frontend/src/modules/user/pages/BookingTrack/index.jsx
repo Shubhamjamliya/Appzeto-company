@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, PolylineF } from '@react-google-maps/api';
-import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiUser, FiStar, FiShield, FiKey } from 'react-icons/fi';
+import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiUser, FiStar, FiShield, FiKey, FiCheckCircle, FiLoader, FiDollarSign } from 'react-icons/fi';
 import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
 import { toast } from 'react-hot-toast';
@@ -180,14 +180,70 @@ const BookingTrack = () => {
     }
   };
 
-  const socket = useAppNotifications('user'); // Get socket
+  // Main function to fetch booking data - accessible to all effects
+  const refreshBooking = React.useCallback(async (isFirstLoad = false) => {
+    try {
+      const response = await bookingService.getById(id);
+      if (response.success) {
+        setBooking(response.data);
 
-  // ... existing state ... 
+        // Geocoding and Initial Location Logic
+        // Only run this complex logic on first load or if coords/location are missing
+        if (isFirstLoad || !coords) {
+          const geocoder = new window.google.maps.Geocoder();
+          const bAddr = response.data.address || {};
 
-  // Listen for Live Location Updates via Socket.IO
+          // 1. Destination
+          if (bAddr.lat && bAddr.lng) {
+            setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
+          } else {
+            const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
+            if (addressStr && addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
+              geocoder.geocode({ address: addressStr }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  setCoords(results[0].geometry.location.toJSON());
+                }
+              });
+            }
+          }
+
+          // 2. Source (Provider Location)
+          const provider = response.data.workerId || response.data.assignedTo || response.data.vendorId || {};
+          if (provider.location && provider.location.lat && provider.location.lng) {
+            setCurrentLocation({ lat: parseFloat(provider.location.lat), lng: parseFloat(provider.location.lng) });
+          } else if (response.data.vendorId && provider.address && provider.address.lat && provider.address.lng) {
+            // Fallback to vendor address
+            setCurrentLocation({ lat: parseFloat(provider.address.lat), lng: parseFloat(provider.address.lng) });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+    } finally {
+      if (isFirstLoad) setLoading(false);
+    }
+  }, [id, coords]);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: apiKey,
+    libraries
+  });
+
+  // Initial Load and Polling
+  useEffect(() => {
+    if (isLoaded) {
+      refreshBooking(true);
+      const intervalId = setInterval(() => refreshBooking(false), 10000); // Poll every 10s
+      return () => clearInterval(intervalId);
+    }
+  }, [isLoaded, refreshBooking]);
+
+  const socket = useAppNotifications('user');
+
+  // Socket Listener
   useEffect(() => {
     if (socket && id) {
-      // Join the specific booking room for tracking
       socket.emit('join_tracking', id);
 
       const handleLocationUpdate = (data) => {
@@ -196,25 +252,18 @@ const BookingTrack = () => {
         }
       };
 
-      socket.on('live_location_update', handleLocationUpdate);
-
-      // Listen for booking status/data updates
       const handleBookingUpdate = (data) => {
         if (data.bookingId === id || data.relatedId === id || data.data?.bookingId === id) {
-          console.log('Real-time booking update received:', data);
-
-          // Instant state update for OTPs and Status
+          console.log('Real-time update:', data);
           setBooking(prev => {
             if (!prev) return prev;
-            // Handle both flat data and nested data structures from different emitters
-            const updateData = data.data || data;
-            return { ...prev, ...updateData };
+            return { ...prev, ...(data.data || data) };
           });
-
-          fetchBooking(false); // Refresh data without full loading state
+          refreshBooking(false); // Now this function exists!
         }
       };
 
+      socket.on('live_location_update', handleLocationUpdate);
       socket.on('booking_updated', handleBookingUpdate);
       socket.on('notification', handleBookingUpdate);
 
@@ -224,85 +273,7 @@ const BookingTrack = () => {
         socket.off('notification', handleBookingUpdate);
       };
     }
-  }, [socket, id]);
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-    libraries
-  });
-
-  // Load Booking Data & Poll for Location (Fallback & Status Check)
-  useEffect(() => {
-    let intervalId;
-
-    const fetchBooking = async (isFirstLoad = false) => {
-      try {
-        const response = await bookingService.getById(id);
-        if (response.success) {
-          setBooking(response.data);
-
-          if (isFirstLoad) {
-            const geocoder = new window.google.maps.Geocoder();
-
-            // 1. Destination: Fixed Booking Address from DB
-            const bAddr = response.data.address || {};
-            if (bAddr.lat && bAddr.lng) {
-              setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
-            } else {
-              const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
-              if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
-                geocoder.geocode({ address: addressStr }, (results, status) => {
-                  if (status === 'OK' && results[0]) {
-                    setCoords(results[0].geometry.location.toJSON());
-                  }
-                });
-              }
-            }
-
-            // 2. Source: Live Provider Location (Initial set)
-            const provider = response.data.workerId || response.data.vendorId || response.data.assignedTo || {};
-
-            // Prioritize live location field
-            if (provider.location && provider.location.lat && provider.location.lng) {
-              const startLoc = { lat: parseFloat(provider.location.lat), lng: parseFloat(provider.location.lng) };
-              setCurrentLocation(startLoc);
-            }
-            // Only fallback to address for VENDORS (who have a fixed shop/store with lat/lng)
-            // WORKERS' address field usually doesn't have coordinates
-            else if (response.data.vendorId && provider.address && provider.address.lat && provider.address.lng) {
-              const addrLoc = { lat: parseFloat(provider.address.lat), lng: parseFloat(provider.address.lng) };
-
-              // Check if the vendor's address is within a reasonable distance (e.g., 100km)
-              // to avoid showing a provider far away if live location isn't available yet.
-              if (coords && window.google.maps.geometry) {
-                const distanceToDestination = window.google.maps.geometry.spherical.computeDistanceBetween(
-                  new window.google.maps.LatLng(addrLoc),
-                  new window.google.maps.LatLng(coords)
-                );
-                if (distanceToDestination < 100000) { // 100,000 meters = 100 km
-                  setCurrentLocation(addrLoc);
-                } else {
-                  console.warn("Vendor's address is too far from destination, waiting for live location.");
-                }
-              }
-              // Removed the unsafe else that bypassed the distance check
-            }
-          }
-        }
-      } catch (error) {
-      } finally {
-        if (isFirstLoad) setLoading(false);
-      }
-    };
-
-    if (isLoaded) {
-      fetchBooking(true);
-      intervalId = setInterval(() => fetchBooking(false), 10000);
-    }
-
-    return () => clearInterval(intervalId);
-  }, [id, isLoaded]);
+  }, [socket, id, refreshBooking]);
 
   // Handle Payment Modal Visibility
   useEffect(() => {
@@ -675,7 +646,7 @@ const BookingTrack = () => {
         )}
 
         {/* Waiting for Vendor to initiate Payment */}
-        {!(booking.customerConfirmationOTP || booking.paymentOtp) && booking?.status?.toLowerCase() === 'work_done' && !booking.cashCollected && (
+        {!booking.customerConfirmationOTP && booking?.status?.toLowerCase() === 'work_done' && !booking.cashCollected && (
           <div className="bg-white rounded-2xl p-4 shadow-lg border border-teal-100 mb-4 flex items-center gap-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-20 h-20 bg-teal-50 rounded-full -translate-y-10 translate-x-10 blur-2xl"></div>
             <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center shrink-0 border border-teal-100">
@@ -689,7 +660,7 @@ const BookingTrack = () => {
         )}
 
         {/* Final Payment Card - Show when work is done AND bill is finalized (OTP exists) */}
-        {(booking.customerConfirmationOTP || booking.paymentOtp || booking.paymentStatus === 'success') && booking?.status?.toLowerCase() === 'work_done' && !booking?.cashCollected && (
+        {(booking.customerConfirmationOTP || booking.paymentStatus === 'success') && booking?.status?.toLowerCase() === 'work_done' && !booking?.cashCollected && (
           <div
             onClick={() => setShowPaymentModal(true)}
             className={`mb-4 relative overflow-hidden rounded-2xl p-5 shadow-lg cursor-pointer active:scale-[0.98] transition-all ${booking.paymentStatus === 'success'

@@ -36,17 +36,29 @@ const MyBookings = () => {
     };
 
     loadBookings();
+
+    // Listen for real-time updates
+    window.addEventListener('userBookingsUpdated', loadBookings);
+
+    return () => {
+      window.removeEventListener('userBookingsUpdated', loadBookings);
+    };
   }, [filter]);
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'confirmed':
         return <FiCheckCircle className="w-3.5 h-3.5" />;
+      case 'in_progress':
       case 'in-progress':
         return <FiLoader className="w-3.5 h-3.5 animate-spin" />;
+      case 'journey_started':
+      case 'visited':
+        return <FiMapPin className="w-3.5 h-3.5 text-blue-500" />;
       case 'completed':
         return <FiCheckCircle className="w-3.5 h-3.5" />;
       case 'cancelled':
+      case 'rejected':
         return <FiXCircle className="w-3.5 h-3.5" />;
       case 'awaiting_payment':
       default:
@@ -57,7 +69,11 @@ const MyBookings = () => {
   const getStatusBorderColor = (status) => {
     switch (status) {
       case 'confirmed': return '!border-l-emerald-500';
-      case 'in-progress': return '!border-l-blue-500';
+      case 'in_progress':
+      case 'in-progress':
+      case 'journey_started':
+      case 'visited':
+        return '!border-l-blue-500';
       case 'completed': return '!border-l-violet-500';
       case 'cancelled':
       case 'rejected': return '!border-l-rose-500';
@@ -70,7 +86,10 @@ const MyBookings = () => {
     switch (status) {
       case 'confirmed':
         return 'bg-emerald-500 text-white border-emerald-600 ring-emerald-500';
+      case 'in_progress':
       case 'in-progress':
+      case 'journey_started':
+      case 'visited':
         return 'bg-blue-500 text-white border-blue-600 ring-blue-500';
       case 'completed':
         return 'bg-violet-500 text-white border-violet-600 ring-violet-500';
@@ -87,9 +106,14 @@ const MyBookings = () => {
   const getStatusLabel = (status) => {
     if (!status) return 'Unknown';
     switch (status) {
-      case 'in-progress': return 'In Progress';
-      case 'awaiting_payment': return 'Payment Pending';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
+      case 'in_progress':
+      case 'in-progress':
+        return 'In Progress';
+      case 'journey_started': return 'On The Way';
+      case 'visited': return 'Arrived';
+      case 'awaiting_payment': return 'Request Accepted';
+      case 'work_done': return 'Work Completed';
+      default: return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
     }
   };
 

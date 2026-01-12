@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck, FiTool, FiXCircle } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -328,7 +329,7 @@ const BookingDetails = () => {
   };
 
   const canCollectCash = (booking) => {
-    // Hide if already collected or paid
+    // Hide if already collected or paid online
     if (booking?.cashCollected || booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.paymentStatus === 'collected_by_vendor') {
       return false;
     }
@@ -339,6 +340,9 @@ const BookingDetails = () => {
       ? (booking?.status === 'work_done' || booking?.status === 'completed')
       : booking?.status === 'completed';
 
+    // IMPORTANT: Only for Cash/Pay at Home methods. If method is 'online' but status is pending, we still might wait.
+    // However, if the user switches to cash, the method usually updates.
+    // For now, assume simple logic.
     return validStatus &&
       (booking?.paymentMethod === 'cash' || booking?.paymentMethod === 'pay_at_home');
   };
@@ -1199,158 +1203,229 @@ const BookingDetails = () => {
       />
 
       {/* Pay Worker Modal */}
-      {isPayWorkerModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Worker Payout</h3>
-                <button onClick={() => setIsPayWorkerModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+      <AnimatePresence>
+        {isPayWorkerModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPayWorkerModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[24px] overflow-hidden shadow-2xl relative z-10"
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Worker Payout</h3>
+                  <button onClick={() => setIsPayWorkerModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                    <FiX className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="bg-green-50 rounded-2xl p-5 mb-8 border border-green-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-green-100">
+                      <FiUser className="w-7 h-7 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-green-600 font-bold uppercase tracking-wider mb-1">Paying to</p>
+                      <p className="text-xl font-bold text-gray-900">{booking.assignedTo?.name || 'Worker'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Payout Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-400">₹</span>
+                      <input
+                        type="number"
+                        value={payWorkerAmount}
+                        onChange={(e) => setPayWorkerAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-10 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all font-bold text-2xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Notes (Optional)</label>
+                    <textarea
+                      value={payWorkerNotes}
+                      onChange={(e) => setPayWorkerNotes(e.target.value)}
+                      placeholder="Add a remark about this payment..."
+                      rows="2"
+                      className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all font-medium text-gray-700"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={handlePayWorkerSubmit}
+                      disabled={paySubmitting || !payWorkerAmount}
+                      className="w-full py-5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg"
+                      style={{
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)',
+                      }}
+                    >
+                      {paySubmitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <span>Pay ₹{payWorkerAmount || '0'} & Complete</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Visit OTP Modal */}
+      <AnimatePresence>
+        {isVisitModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsVisitModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[24px] p-8 shadow-2xl relative z-10"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 leading-tight">Verify Arrival</h3>
+                  <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mt-1">Check-in Verification</p>
+                </div>
+                <button
+                  onClick={() => setIsVisitModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
+                >
                   <FiX className="w-6 h-6" />
                 </button>
               </div>
+              <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+                Please enter the <span className="text-gray-900 font-bold">4-digit OTP</span> from the customer to verify your arrival at the location.
+              </p>
 
-              <div className="bg-green-50 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                    <FiUser className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Paying to</p>
-                    <p className="text-lg font-bold text-gray-900">{booking.assignedTo?.name || 'Worker'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Payout Amount (₹)</label>
+              <div className="flex gap-3 justify-center mb-10">
+                {[0, 1, 2, 3].map((i) => (
                   <input
-                    type="number"
-                    value={payWorkerAmount}
-                    onChange={(e) => setPayWorkerAmount(e.target.value)}
-                    placeholder="Enter amount to pay"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all font-bold text-lg"
+                    key={i}
+                    id={`otp-input-${i}`}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={otpInput[i]}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    className="w-14 h-16 border-2 border-gray-100 rounded-2xl text-center text-3xl font-bold focus:border-blue-500 focus:outline-none bg-gray-50 transition-all font-mono shadow-sm"
+                    maxLength={1}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notes (Optional)</label>
-                  <textarea
-                    value={payWorkerNotes}
-                    onChange={(e) => setPayWorkerNotes(e.target.value)}
-                    placeholder="e.g. Full payment for job"
-                    rows="2"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={handlePayWorkerSubmit}
-                    disabled={paySubmitting || !payWorkerAmount}
-                    className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                    style={{
-                      background: '#10B981',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-                    }}
-                  >
-                    {paySubmitting ? 'Processing...' : `Pay ₹${payWorkerAmount || '0'} & Complete Job`}
-                  </button>
-                </div>
+                ))}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Visit OTP Modal */}
-      {isVisitModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Verify Arrival</h3>
               <button
-                onClick={() => setIsVisitModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={handleVerifyVisit}
+                disabled={actionLoading}
+                className="w-full py-5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                  boxShadow: '0 10px 20px rgba(59, 130, 246, 0.3)',
+                }}
               >
-                <FiX className="w-6 h-6 text-gray-400" />
+                {actionLoading ? 'Verifying...' : 'Verify & Arrive'}
               </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Please enter the 4-digit OTP from the customer to verify your arrival at the location.</p>
-
-            <div className="flex gap-3 justify-center mb-8">
-              {[0, 1, 2, 3].map((i) => (
-                <input
-                  key={i}
-                  id={`otp-input-${i}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={otpInput[i]}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className="w-12 h-14 border-2 border-gray-100 rounded-xl text-center text-2xl font-bold focus:border-blue-500 focus:outline-none bg-gray-50 transition-all font-mono"
-                  maxLength={1}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={handleVerifyVisit}
-              disabled={actionLoading}
-              className="w-full py-4 rounded-xl font-bold text-white transition-all active:scale-95 disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-              }}
-            >
-              {actionLoading ? 'Verifying...' : 'Verify & Arrive'}
-            </button>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Work Done Modal */}
-      {isWorkDoneModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Complete Work</h3>
-              <button
-                onClick={() => setIsWorkDoneModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <FiX className="w-6 h-6 text-gray-400" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Are you sure you have completed all the tasks for this service? Clicking "Confirm" will notify the customer for payment.</p>
-
-            <div className="bg-gray-50 p-4 rounded-xl mb-6">
-              <div className="flex items-center gap-3 text-green-600 mb-2">
-                <FiCheckCircle className="w-5 h-5" />
-                <span className="font-semibold">Quality Checklist</span>
-              </div>
-              <ul className="text-xs text-gray-600 space-y-1 ml-8 list-disc">
-                <li>Double check the service result</li>
-                <li>Clean up the work area</li>
-                <li>Ask if customer is satisfied</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={handleCompleteWork}
-              disabled={actionLoading}
-              className="w-full py-4 rounded-xl font-bold text-white transition-all active:scale-95 disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, #10B981, #059669)',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-              }}
+      <AnimatePresence>
+        {isWorkDoneModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsWorkDoneModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[24px] p-8 shadow-2xl relative z-10"
             >
-              {actionLoading ? 'Updating...' : 'Confirm Work Completed'}
-            </button>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 leading-tight">Complete Work</h3>
+                  <p className="text-xs text-green-500 font-bold uppercase tracking-wider mt-1">Final Step</p>
+                </div>
+                <button
+                  onClick={() => setIsWorkDoneModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
+                Are you sure you have completed all the tasks for this service? Clicking "Confirm" will notify the customer for payment.
+              </p>
+
+              <div className="bg-emerald-50/50 p-6 rounded-2xl mb-8 border border-emerald-100">
+                <div className="flex items-center gap-3 text-emerald-600 mb-3">
+                  <FiCheckCircle className="w-6 h-6" />
+                  <span className="font-bold">Quality Checklist</span>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-2 list-none font-medium">
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-500 mt-1">•</span>
+                    <span>Double check the results</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-500 mt-1">•</span>
+                    <span>Clean up the work area</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-500 mt-1">•</span>
+                    <span>Customer satisfaction check</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={handleCompleteWork}
+                disabled={actionLoading}
+                className="w-full py-5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                {actionLoading ? 'Updating...' : 'Confirm Work Completed'}
+              </button>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

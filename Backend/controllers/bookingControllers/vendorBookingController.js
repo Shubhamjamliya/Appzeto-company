@@ -121,50 +121,69 @@ const acceptBooking = async (req, res) => {
     const vendorId = req.user.id;
     const { id } = req.params;
 
-    // Find booking by ID (don't filter by vendorId since it's not assigned yet)
-    const booking = await Booking.findById(id);
+    // ATOMIC UPDATE: Check status and vendorId in query to prevent race conditions
+    // Only accept if status is REQUESTED/SEARCHING and NO vendor is assigned yet
+    const updatedBooking = await Booking.findOneAndUpdate(
+      {
+        _id: id,
+        status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING] },
+        vendorId: null // Crucial: Ensures another request didn't just take it
+      },
+      {
+        $set: {
+          vendorId: vendorId,
+          acceptedAt: new Date(),
+          // Check payment method for optimized status update logic
+          status: BOOKING_STATUS.CONFIRMED // Default to confirmed
+        }
+      },
+      { new: true } // Return updated doc
+    );
 
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-    }
-
-    // Check if booking is in REQUESTED or SEARCHING status
-    if (booking.status !== BOOKING_STATUS.REQUESTED && booking.status !== BOOKING_STATUS.SEARCHING) {
+    if (!updatedBooking) {
+      // If update failed, check why (likely already taken)
+      const existing = await Booking.findById(id);
+      if (existing && existing.vendorId) {
+        return res.status(409).json({ // 409 Conflict
+          success: false,
+          message: 'Sorry, this job has already been accepted by another vendor.'
+        });
+      }
       return res.status(400).json({
         success: false,
-        message: `Cannot accept booking with status: ${booking.status}`
+        message: 'Booking is no longer available.'
       });
     }
 
-    // Check if another vendor already accepted this booking
-    if (booking.vendorId && booking.vendorId.toString() !== vendorId.toString()) {
-      return res.status(400).json({
-        success: false,
-        message: 'This booking has already been accepted by another vendor'
-      });
-    }
+    // Booking successfully accepted by THIS vendor
+    const booking = updatedBooking;
 
-    // Assign vendor and update booking status
-    booking.vendorId = vendorId;
-    booking.acceptedAt = new Date();
-
-    // Check if booking is already paid (via plan benefit)
+    // Check payment status correction (if needed, though we set CONFIRMED above)
     if (booking.paymentMethod === 'plan_benefit' && booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
-      // Free booking - skip payment, go directly to confirmed
-      booking.status = BOOKING_STATUS.CONFIRMED;
-    } else {
-      // Regular booking - payment upon service
-      // Since payment is collected after service, we confirm immediately upon vendor acceptance
-      booking.status = BOOKING_STATUS.CONFIRMED;
+      // already good
     }
 
-    await booking.save();
-
-    // Emit real-time socket event to the user
+    // NOTIFY OTHER VENDORS to remove this job
+    // Use the stored notifiedVendors list
     const io = req.app.get('io');
+    if (io && booking.notifiedVendors && booking.notifiedVendors.length > 0) {
+      console.log(`[AcceptBooking] Notifying ${booking.notifiedVendors.length} other vendors that job ${booking._id} was taken`);
+      booking.notifiedVendors.forEach(otherVendorId => {
+        // Skip the current vendor
+        if (otherVendorId.toString() !== vendorId.toString()) {
+          const room = `vendor_${otherVendorId.toString()}`;
+          console.log(`[AcceptBooking] Emitting booking_taken to room: ${room}`);
+          io.to(room).emit('booking_taken', {
+            bookingId: booking._id.toString(), // Ensure string for frontend comparison
+            message: 'This job has been accepted by someone else.'
+          });
+        }
+      });
+    } else {
+      console.log('[AcceptBooking] No other vendors to notify or io not available');
+    }
+
+    // Emit real-time updates to USER
     if (io) {
       const message = 'Vendor has accepted your request. Your booking is confirmed!';
 
@@ -184,7 +203,6 @@ const acceptBooking = async (req, res) => {
         status: booking.status,
         message: 'Vendor has accepted your request'
       });
-
     }
 
     // Send notification to user
@@ -204,9 +222,7 @@ const acceptBooking = async (req, res) => {
       }
     });
 
-    // Send FCM push notification to user
-    // Manual push removed - auto handled by createNotification
-    // sendNotificationToUser(booking.userId, { ... });
+    // Send Push Notification to user (handled by createNotification)
 
     res.status(200).json({
       success: true,
@@ -672,6 +688,7 @@ const startSelfJob = async (req, res) => {
       message: `Vendor is on the way! OTP for verification: ${otp}.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high',
       pushData: {
         type: 'journey_started',
         bookingId: booking._id.toString(),
@@ -729,6 +746,37 @@ const verifySelfVisit = async (req, res) => {
     }
 
     await booking.save();
+
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'visit_verified',
+      title: 'Visit Verified',
+      message: `The professional has arrived and verified the visit. Service is now in progress.`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      pushData: {
+        type: 'visit_verified',
+        bookingId: booking._id.toString(),
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: BOOKING_STATUS.VISITED,
+        message: 'Visit verified successful'
+      });
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Visit Verified',
+        message: 'The professional has arrived at your location.',
+        relatedId: booking._id
+      });
+    }
+
     res.status(200).json({ success: true, message: 'Visit verified', data: booking });
   } catch (error) {
     console.error('Verify self visit error:', error);
@@ -755,6 +803,11 @@ const completeSelfJob = async (req, res) => {
     }
 
     booking.status = BOOKING_STATUS.WORK_DONE;
+
+    // Generate Payment OTP
+    const payOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    booking.paymentOtp = payOtp;
+
     if (workPhotos) booking.workPhotos = workPhotos;
     if (workDoneDetails) booking.workDoneDetails = workDoneDetails;
 
@@ -765,12 +818,14 @@ const completeSelfJob = async (req, res) => {
       userId: booking.userId,
       type: 'work_done',
       title: 'Work Completed',
-      message: `Work done by vendor personally. Professional is finalizing the bill. Amount: ₹${booking.finalAmount}`,
+      message: `Work finished! Your verification OTP is ${payOtp}. Please verify amount ₹${booking.finalAmount} and share OTP to complete payment.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high',
       pushData: {
         type: 'work_done',
         bookingId: booking._id.toString(),
+        paymentOtp: payOtp,
         link: `/user/booking/${booking._id}`
       }
     });
@@ -787,7 +842,7 @@ const completeSelfJob = async (req, res) => {
       });
       io.to(`user_${booking.userId}`).emit('notification', {
         title: 'Work Completed',
-        message: `Work done. Professional is finalizing the bill.`,
+        message: `Work finished! Your verification OTP is ${payOtp}.`,
         relatedId: booking._id
       });
     }

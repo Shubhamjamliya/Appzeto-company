@@ -6,6 +6,7 @@ import Header from '../../components/layout/Header';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { vendorDashboardService } from '../../services/dashboardService';
 import { acceptBooking, rejectBooking, getBookings } from '../../services/bookingService';
+import { useSocket } from '../../../../context/SocketContext';
 
 // Timer Component
 const CountdownTimer = ({ durationSeconds, onExpire }) => {
@@ -44,6 +45,7 @@ const CountdownTimer = ({ durationSeconds, onExpire }) => {
 
 const BookingAlerts = () => {
   const navigate = useNavigate();
+  const socket = useSocket(); // Use shared socket from SocketContext
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,23 +54,19 @@ const BookingAlerts = () => {
     const fetchAlerts = async () => {
       try {
         setLoading(true);
-        // Fetch all relevant bookings (backend default query handles unassigned searching/requested)
         const response = await getBookings();
 
         if (response.success && response.data) {
-          // Get API pending bookings - SOURCE OF TRUTH
-          // Filter for SEARCHING and REQUESTED that are not assigned to others
           let bookings = [];
           const rawData = Array.isArray(response.data) ? response.data : (response.data.bookings || []);
 
           bookings = rawData.filter(b =>
             (b.status === 'searching' || b.status === 'requested') &&
-            (!b.vendorId || b.vendorId === localStorage.getItem('vendorId')) // Should already be handled by backend
+            (!b.vendorId || b.vendorId === localStorage.getItem('vendorId'))
           );
 
           const apiIds = new Set(bookings.map(b => String(b._id || b.id)));
 
-          // Cleanup localStorage: Remove items that are not in API response
           const localPending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
           const validLocalPending = localPending.filter(localB => {
             const id = String(localB.id || localB._id);
@@ -76,7 +74,6 @@ const BookingAlerts = () => {
           });
           localStorage.setItem('vendorPendingJobs', JSON.stringify(validLocalPending));
 
-          // Set alerts from API only
           setAlerts(bookings);
         }
       } catch (error) {
@@ -89,11 +86,55 @@ const BookingAlerts = () => {
 
     fetchAlerts();
 
-    // Listen for realtime updates
     const handleUpdate = () => fetchAlerts();
     window.addEventListener('vendorJobsUpdated', handleUpdate);
-    return () => window.removeEventListener('vendorJobsUpdated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('vendorJobsUpdated', handleUpdate);
+    };
   }, []);
+
+  // Socket listener for booking_taken (using shared socket from context)
+  useEffect(() => {
+    if (!socket) {
+      console.log('[BookingAlerts] Socket not available yet');
+      return;
+    }
+
+    console.log('[BookingAlerts] Setting up booking_taken listener on socket:', socket.id);
+
+    const handleBookingTaken = (data) => {
+      console.log('[BookingAlerts] booking_taken event received:', data);
+      const takenBookingId = String(data.bookingId);
+
+      // Remove from state immediately
+      setAlerts(prev => prev.filter(a => {
+        const alertId = String(a._id || a.id);
+        return alertId !== takenBookingId;
+      }));
+
+      // Remove from localStorage
+      const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+      const updatedPending = pendingJobs.filter(job => {
+        const jobId = String(job.id || job._id);
+        return jobId !== takenBookingId;
+      });
+      localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
+
+      // Show toast
+      toast.error(data.message || 'This job was accepted by another vendor.', { icon: '⚡' });
+
+      // Trigger global update
+      window.dispatchEvent(new Event('vendorStatsUpdated'));
+      window.dispatchEvent(new Event('vendorJobsUpdated'));
+    };
+
+    socket.on('booking_taken', handleBookingTaken);
+
+    return () => {
+      socket.off('booking_taken', handleBookingTaken);
+    };
+  }, [socket]);
 
   const handleAccept = async (bookingId) => {
     try {
