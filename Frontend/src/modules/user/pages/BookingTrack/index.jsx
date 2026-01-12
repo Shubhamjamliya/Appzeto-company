@@ -580,28 +580,24 @@ const BookingTrack = () => {
 
         {/* Arrival OTP - New Premium Display */}
         {(booking.visitOtp || booking.arrivalOTP) && ['confirmed', 'assigned', 'journey_started'].includes(booking?.status?.toLowerCase()) && (
-          <div className="mb-4 relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 shadow-lg">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="flex items-center gap-3 w-full mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+          <div className="mb-3 relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-3 shadow-lg">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10 blur-xl"></div>
+            <div className="relative z-10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
                   <FiKey className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Verification OTP</p>
-                  <p className="text-white text-xs font-medium">Share when professional reaches</p>
+                  <p className="text-[10px] font-bold text-blue-100 uppercase tracking-wider">Start Code</p>
+                  <p className="text-2xl font-black text-white tracking-[0.2em] leading-none mt-0.5">
+                    {booking.visitOtp || booking.arrivalOTP}
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-2 justify-center mb-4">
-                {(booking.visitOtp || booking.arrivalOTP).toString().split('').map((digit, i) => (
-                  <div key={i} className="w-10 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30 shadow-md">
-                    <span className="text-xl font-black text-white">{digit}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="w-full py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 flex items-center justify-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
-                <p className="text-[10px] text-blue-50 font-medium">Waiting for professional to reach</p>
+
+              <div className="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex flex-col items-center justify-center min-w-[100px]">
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)] mb-1"></div>
+                <p className="text-[9px] text-blue-50 font-medium text-center leading-tight">Waiting for<br />arrival</p>
               </div>
             </div>
           </div>
