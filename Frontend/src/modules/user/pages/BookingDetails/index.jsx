@@ -100,7 +100,7 @@ const BookingDetails = () => {
   }, [booking, id]);
 
   // Track if we've shown the payment modal this session to prevent re-opening on data refresh
-  const hasShownPaymentModal = React.useRef(false);
+
 
   // Handle Payment Modal Visibility - Only auto-open ONCE per session AND if payment is PENDING
   useEffect(() => {
@@ -111,9 +111,12 @@ const BookingDetails = () => {
     // 1. Has verification OTP (Work is done)
     // 2. Payment is NOT done (Pending)
     // 3. Haven't shown modal automatically in this session yet
-    if (booking && booking.customerConfirmationOTP && !isPaymentDone && !hasShownPaymentModal.current) {
+    // Check session storage to see if we already showed it this session
+    const hasShown = booking ? sessionStorage.getItem(`payment_modal_shown_${booking._id}`) : false;
+
+    if (booking && booking.customerConfirmationOTP && !isPaymentDone && !hasShown) {
       setShowPaymentModal(true);
-      hasShownPaymentModal.current = true;
+      sessionStorage.setItem(`payment_modal_shown_${booking._id}`, 'true');
     }
     // Close logic:
     // If payment becomes done or OTP missing, close it.

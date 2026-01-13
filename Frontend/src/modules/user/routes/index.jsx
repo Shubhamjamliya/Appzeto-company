@@ -81,7 +81,7 @@ const UserRoutes = () => {
   // useAppNotifications('user');
 
   // Pages where BottomNav should be shown
-  const bottomNavPages = ['/user', '/user/', '/user/rewards', '/user/cart', '/user/account'];
+  const bottomNavPages = ['/user', '/user/', '/user/my-bookings', '/user/scrap', '/user/cart', '/user/account'];
   const shouldShowBottomNav = bottomNavPages.includes(location.pathname);
 
   // Check if we hide the live booking card (e.g. if we are on the specific booking details or track page)

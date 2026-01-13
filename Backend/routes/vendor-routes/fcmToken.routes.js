@@ -27,34 +27,45 @@ router.post('/save', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Token is required' });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    // Use atomic updates to prevent VersionError (Race Conditions)
+
+    // 1. Remove token if it exists (to avoid duplicates)
+    const pullQuery = platform === 'mobile'
+      ? { $pull: { fcmTokenMobile: token } }
+      : { $pull: { fcmTokens: token } };
+
+    await Vendor.findByIdAndUpdate(vendorId, pullQuery);
+
+    // 2. Add token to front with limit
+    const pushQuery = platform === 'mobile'
+      ? {
+        $push: {
+          fcmTokenMobile: {
+            $each: [token],
+            $position: 0,
+            $slice: MAX_TOKENS
+          }
+        }
+      }
+      : {
+        $push: {
+          fcmTokens: {
+            $each: [token],
+            $position: 0,
+            $slice: MAX_TOKENS
+          }
+        }
+      };
+
+    const vendor = await Vendor.findByIdAndUpdate(vendorId, pushQuery, { new: true });
+
     if (!vendor) {
       return res.status(404).json({ success: false, error: 'Vendor not found' });
     }
 
-    // Add token based on platform
-    if (platform === 'web') {
-      if (!vendor.fcmTokens) vendor.fcmTokens = [];
-      if (!vendor.fcmTokens.includes(token)) {
-        vendor.fcmTokens.push(token);
-        // Limit to MAX_TOKENS
-        if (vendor.fcmTokens.length > MAX_TOKENS) {
-          vendor.fcmTokens = vendor.fcmTokens.slice(-MAX_TOKENS);
-        }
-      }
-    } else if (platform === 'mobile') {
-      if (!vendor.fcmTokenMobile) vendor.fcmTokenMobile = [];
-      if (!vendor.fcmTokenMobile.includes(token)) {
-        vendor.fcmTokenMobile.push(token);
-        if (vendor.fcmTokenMobile.length > MAX_TOKENS) {
-          vendor.fcmTokenMobile = vendor.fcmTokenMobile.slice(-MAX_TOKENS);
-        }
-      }
-    }
-
-    await vendor.save();
-
     // Remove this token from User and Worker collections to prevent cross-account notifications
+    // COMMENTED OUT to allow testing on same device
+    /*
     try {
       await User.updateMany(
         { $or: [{ fcmTokens: token }, { fcmTokenMobile: token }] },
@@ -68,6 +79,7 @@ router.post('/save', authenticate, async (req, res) => {
     } catch (cleanupError) {
       console.error('Error removing token from other collections:', cleanupError);
     }
+    */
 
     res.json({ success: true, message: 'FCM token saved successfully' });
   } catch (error) {

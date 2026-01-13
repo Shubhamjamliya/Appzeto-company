@@ -39,6 +39,13 @@ const CashCollectionModal = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Safety check: close if already paid
+      const pStatus = booking?.paymentStatus?.toLowerCase() || '';
+      if (pStatus === 'success' || pStatus === 'paid') {
+        onClose();
+        return;
+      }
+
       // Check if OTP was already initiated for this booking
       const hasOTP = booking?.customerConfirmationOTP || booking?.paymentOtp;
 
@@ -56,7 +63,7 @@ const CashCollectionModal = ({
       }
       setSubmitting(false);
     }
-  }, [isOpen, booking?.id, booking?.customerConfirmationOTP, booking?.paymentOtp]);
+  }, [isOpen, booking?.id, booking?.customerConfirmationOTP, booking?.paymentOtp, booking?.paymentStatus]);
 
   const handleAddItem = () => {
     setExtraItems([...extraItems, { title: '', price: '', qty: 1 }]);

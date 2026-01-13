@@ -78,6 +78,16 @@ const Login = () => {
       });
       if (response.success) {
         setIsLoading(false);
+        // Register FCM Token for push notifications immediately after login
+        try {
+          // Import dynamic to avoid top-level await issues if any
+          const { registerFCMToken } = await import('../../../services/pushNotificationService');
+          await registerFCMToken('user', true);
+          // console.log('FCM Token registered on login');
+        } catch (fcmError) {
+          console.error('FCM Registration failed on login:', fcmError);
+        }
+
         toast.success('Login successful!');
         navigate('/user');
       } else {

@@ -17,6 +17,7 @@ const WithdrawalRequest = () => {
     accountHolderName: '',
     bankName: '',
     accountNumber: '',
+    confirmAccountNumber: '',
     ifscCode: '',
     upiId: ''
   });
@@ -56,7 +57,7 @@ const WithdrawalRequest = () => {
 
       const savedBank = JSON.parse(localStorage.getItem('vendorBankAccount') || 'null');
       if (savedBank) {
-        setBankAccount(savedBank);
+        setBankAccount({ ...savedBank, confirmAccountNumber: savedBank.accountNumber });
         setIsBankSaved(true);
       }
     } catch (error) {
@@ -84,6 +85,14 @@ const WithdrawalRequest = () => {
 
   const handleBankInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Validate number-only fields
+    if (name === 'accountNumber' || name === 'confirmAccountNumber') {
+      const numValue = value.replace(/[^0-9]/g, '');
+      setBankAccount(prev => ({ ...prev, [name]: numValue }));
+      return;
+    }
+
     setBankAccount(prev => ({ ...prev, [name]: value }));
   };
 
@@ -92,6 +101,12 @@ const WithdrawalRequest = () => {
       toast.error('Please fill all mandatory bank details');
       return;
     }
+
+    if (bankAccount.accountNumber !== bankAccount.confirmAccountNumber) {
+      toast.error('Account numbers do not match');
+      return;
+    }
+
     localStorage.setItem('vendorBankAccount', JSON.stringify(bankAccount));
     setIsBankSaved(true);
     setShowBankForm(false);
@@ -132,20 +147,25 @@ const WithdrawalRequest = () => {
 
       <main className="px-4 py-6 max-w-lg mx-auto">
         {/* Modern Balance Header */}
-        <div className="relative mb-8 pt-4">
-          <div className="flex flex-col items-center">
-            <span className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Total Redeemable</span>
+        {/* Modern Balance Header - Matched with Wallet Earnings Card */}
+        <div className="rounded-2xl p-6 shadow-xl relative overflow-hidden mb-8 bg-gradient-to-br from-green-600 to-green-800">
+          <div className="relative z-10 text-white flex flex-col items-center">
+            <span className="text-white/80 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">Total Redeemable</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-gray-400">₹</span>
-              <span className="text-5xl font-black text-gray-900 tracking-tight">
+              <span className="text-2xl font-black text-white/90">₹</span>
+              <span className="text-5xl font-black text-white tracking-tight">
                 {wallet.available.toLocaleString()}
               </span>
             </div>
             <div className="mt-4 flex gap-2">
-              <div className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-bold border border-green-100 flex items-center gap-1">
+              <div className="px-3 py-1 bg-white/20 text-white rounded-full text-[10px] font-bold border border-white/30 flex items-center gap-1 backdrop-blur-sm">
                 <FiCheckCircle className="w-3 h-3" /> Verified Balance
               </div>
             </div>
+          </div>
+          {/* Decorative Icon Background */}
+          <div className="absolute -bottom-6 -right-6 text-white/10 transform rotate-12">
+            <FiDollarSign className="w-40 h-40" />
           </div>
         </div>
 
@@ -167,14 +187,16 @@ const WithdrawalRequest = () => {
             </button>
           </div>
 
-          <div className="relative mb-4">
+          <div className="relative mb-4 group-focus-within:scale-[1.02] transition-transform duration-300">
+            <div className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400 font-bold text-3xl">₹</div>
             <input
               type="text"
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder="0.00"
-              className={`w-full px-4 py-5 bg-gray-50 rounded-2xl border-2 text-3xl font-black text-center focus:outline-none transition-all ${error ? 'border-red-100 text-red-500' : 'border-transparent focus:bg-white focus:border-emerald-100 text-gray-900'
-                }`}
+              placeholder="0"
+              autoFocus
+              className={`w-full pl-10 pr-4 py-5 bg-white rounded-2xl border-2 border-dashed ${error ? 'border-red-300 bg-red-50 text-red-500' : 'border-emerald-300 focus:border-emerald-500'
+                } text-4xl font-black text-center focus:outline-none transition-all shadow-sm focus:shadow-emerald-100/50 focus:shadow-lg text-gray-900 caret-emerald-500 placeholder:text-gray-200`}
             />
           </div>
 
@@ -199,69 +221,172 @@ const WithdrawalRequest = () => {
         </div>
 
         {/* Bank Detail Card - Pro Style */}
-        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-50 mb-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                <FiCreditCard className="w-4 h-4" />
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-gray-50 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03]">
+            <FiCreditCard className="w-32 h-32" />
+          </div>
+
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                <FiCreditCard className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-gray-800">Payout Destination</h3>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Payout Destination</h3>
+                <p className="text-[10px] text-gray-500 font-medium">Where should we send money?</p>
+              </div>
             </div>
             {isBankSaved && !showBankForm && (
               <button
                 onClick={() => setShowBankForm(true)}
-                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-gray-100"
+                className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all border border-gray-200 active:scale-95"
               >
-                <FiEdit2 className="w-3.5 h-3.5" />
+                <FiEdit2 className="w-4 h-4" />
               </button>
             )}
           </div>
 
           {!isBankSaved || showBankForm ? (
-            <div className="space-y-3">
-              {[
-                { label: 'Holder Name', name: 'accountHolderName' },
-                { label: 'Bank Name', name: 'bankName' },
-                { label: 'Account Number', name: 'accountNumber' },
-                { label: 'IFSC Code', name: 'ifscCode' },
-                { label: 'UPI ID (Optional)', name: 'upiId' }
-              ].map((f) => (
-                <div key={f.name}>
-                  <input
-                    type="text"
-                    name={f.name}
-                    value={bankAccount[f.name]}
-                    onChange={handleBankInputChange}
-                    className="w-full px-4 py-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-blue-100 focus:bg-white outline-none text-sm font-bold placeholder:font-medium transition-all"
-                    placeholder={f.label}
-                  />
-                </div>
-              ))}
-              <button
-                onClick={saveBankDetails}
-                className="w-full py-4 bg-gray-900 text-white rounded-[1.2rem] font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all mt-2"
-              >
-                Confirm Account
-              </button>
+            <div className="space-y-4 relative z-10">
+              {/* Account Holder Name */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Account Holder</label>
+                <input
+                  type="text"
+                  name="accountHolderName"
+                  value={bankAccount.accountHolderName}
+                  onChange={handleBankInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-bold text-gray-800 placeholder:font-medium transition-all"
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+
+              {/* Bank Name */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Bank Name</label>
+                <input
+                  type="text"
+                  name="bankName"
+                  value={bankAccount.bankName}
+                  onChange={handleBankInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-bold text-gray-800 placeholder:font-medium transition-all"
+                  placeholder="e.g. HDFC Bank"
+                />
+              </div>
+
+              {/* Account Number */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Account Number</label>
+                <input
+                  type="tel"
+                  name="accountNumber"
+                  value={bankAccount.accountNumber}
+                  onChange={handleBankInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-xl font-bold text-gray-900 tracking-wide placeholder:font-medium transition-all"
+                  placeholder="0000000000"
+                  inputMode="numeric"
+                />
+                <p className="text-[10px] text-gray-400 pl-1">Only numbers allowed</p>
+              </div>
+
+              {/* Confirm Account Number */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Confirm Account Number</label>
+                <input
+                  type="tel"
+                  name="confirmAccountNumber"
+                  value={bankAccount.confirmAccountNumber || ''}
+                  onChange={handleBankInputChange}
+                  className={`w-full px-4 py-3 bg-gray-50 rounded-xl border focus:bg-white focus:ring-4 outline-none text-xl font-bold text-gray-900 tracking-wide placeholder:font-medium transition-all ${bankAccount.confirmAccountNumber && bankAccount.accountNumber !== bankAccount.confirmAccountNumber
+                    ? 'border-red-200 focus:border-red-500 focus:ring-red-500/10'
+                    : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/10'
+                    }`}
+                  placeholder="0000000000"
+                  inputMode="numeric"
+                  onPaste={(e) => e.preventDefault()}
+                />
+                {bankAccount.confirmAccountNumber && bankAccount.accountNumber !== bankAccount.confirmAccountNumber && (
+                  <p className="text-[10px] text-red-500 font-bold pl-1 flex items-center gap-1">
+                    <FiAlertCircle className="w-3 h-3" /> Account numbers do not match
+                  </p>
+                )}
+              </div>
+
+              {/* IFSC Code */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">IFSC Code</label>
+                <input
+                  type="text"
+                  name="ifscCode"
+                  value={bankAccount.ifscCode}
+                  onChange={handleBankInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-bold text-gray-800 placeholder:font-medium transition-all uppercase"
+                  placeholder="HDFC0000123"
+                  maxLength={11}
+                />
+              </div>
+
+              {/* UPI ID */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">UPI ID (Optional)</label>
+                <input
+                  type="text"
+                  name="upiId"
+                  value={bankAccount.upiId}
+                  onChange={handleBankInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-bold text-gray-800 placeholder:font-medium transition-all"
+                  placeholder="username@okaxis"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={saveBankDetails}
+                  disabled={!bankAccount.accountNumber || bankAccount.accountNumber !== bankAccount.confirmAccountNumber}
+                  className="w-full py-4 bg-gray-900 text-white rounded-[1.2rem] font-bold text-xs uppercase tracking-[0.1em] shadow-xl hover:shadow-2xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                >
+                  Save & Confirm Account
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-blue-50 flex items-center gap-4 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-2 opacity-5 scale-150">
-                <FiCreditCard className="w-20 h-20 text-blue-900" />
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-blue-600 border border-blue-50">
-                <FiPlusCircle className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <p className="font-black text-gray-800 text-sm">{bankAccount.accountHolderName}</p>
-                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-tight">
-                  {bankAccount.bankName} • {bankAccount.accountNumber.slice(-4).padStart(12, '•')}
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <span className="text-[9px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase">{bankAccount.ifscCode}</span>
-                  {bankAccount.upiId && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase">UPI Enabled</span>}
+            <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 shadow-sm relative group cursor-pointer hover:border-blue-200 transition-all" onClick={() => setShowBankForm(true)}>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Account Holder</p>
+                    <p className="font-bold text-gray-900 text-sm">{bankAccount.accountHolderName}</p>
+                  </div>
+                  <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
+                    <FiCreditCard className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Bank Name</p>
+                    <p className="font-bold text-gray-800 text-sm">{bankAccount.bankName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">IFSC Code</p>
+                    <p className="font-bold text-gray-800 text-sm uppercase">{bankAccount.ifscCode}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Account Number</p>
+                  <p className="font-mono font-bold text-gray-900 text-lg tracking-wider">
+                    {bankAccount.accountNumber?.replace(/(.{4})/g, '$1 ').trim()}
+                  </p>
                 </div>
               </div>
+
+              <div className="absolute top-4 right-12">
+                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center gap-1">
+                  <FiCheckCircle className="w-3 h-3" /> Verified
+                </span>
+              </div>
+              <FiEdit2 className="w-4 h-4 text-gray-300 absolute top-5 right-5" />
             </div>
           )}
         </div>
@@ -275,10 +400,17 @@ const WithdrawalRequest = () => {
             </div>
             <div className="space-y-3">
               {history.slice(0, 3).map((item) => (
-                <div key={item._id} className="bg-white rounded-[1.2rem] p-4 flex justify-between items-center shadow-sm border border-gray-50 hover:border-gray-100 transition-all">
+                <div
+                  key={item._id}
+                  className={`rounded-[1.2rem] p-4 flex justify-between items-center shadow-sm border transition-all ${item.status === 'approved' ? 'bg-emerald-50/50 border-emerald-100 hover:border-emerald-200' :
+                      item.status === 'rejected' ? 'bg-red-50/50 border-red-100 hover:border-red-200' :
+                        'bg-amber-50/50 border-amber-100 hover:border-amber-200'
+                    }`}
+                >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-500' :
-                        item.status === 'rejected' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
+                        item.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                          'bg-amber-100 text-amber-600'
                       }`}>
                       <FiClock className="w-4 h-4" />
                     </div>
@@ -289,8 +421,9 @@ const WithdrawalRequest = () => {
                       </p>
                     </div>
                   </div>
-                  <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-700' :
-                      item.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                  <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${item.status === 'approved' ? 'bg-white/60 text-emerald-700 border border-emerald-100' :
+                      item.status === 'rejected' ? 'bg-white/60 text-red-700 border border-red-100' :
+                        'bg-white/60 text-amber-700 border border-amber-100'
                     }`}>
                     {item.status}
                   </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import BottomNav from '../../components/layout/BottomNav';
+
 import { FiCopy, FiArrowLeft, FiGift, FiBell } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebookMessenger } from 'react-icons/fa';
 import { themeColors } from '../../../../theme';
@@ -28,7 +28,7 @@ const Rewards = () => {
   };
   return (
     <div
-      className="min-h-screen pb-20"
+      className="min-h-screen bg-white"
       style={{ background: themeColors.backgroundGradient }}
     >
       {/* Header */}
@@ -190,7 +190,7 @@ const Rewards = () => {
         </div>
       </main>
 
-      <BottomNav />
+
     </div>
   );
 };

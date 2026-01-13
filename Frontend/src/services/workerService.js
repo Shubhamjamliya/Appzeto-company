@@ -46,6 +46,11 @@ const workerService = {
     return response.data;
   },
 
+  workerReached: async (id) => {
+    const response = await api.post(`/workers/jobs/${id}/reached`);
+    return response.data;
+  },
+
   completeJob: async (id, data = {}) => {
     const response = await api.post(`/workers/jobs/${id}/complete`, data);
     return response.data;

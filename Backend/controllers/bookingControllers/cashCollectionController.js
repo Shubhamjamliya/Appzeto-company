@@ -57,6 +57,24 @@ exports.initiateCashCollection = async (req, res) => {
       });
     }
 
+    // Send Push Notification with OTP
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'work_done',
+      title: 'Payment Request & Bill Ready',
+      message: `Bill: ₹${booking.finalAmount}. OTP: ${otp}. Please verify bill and share OTP to complete payment.`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      priority: 'high',
+      pushData: {
+        type: 'work_done',
+        bookingId: booking._id.toString(),
+        paymentOtp: otp,
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
     res.status(200).json({
       success: true,
       message: 'Bill finalized',
@@ -168,6 +186,18 @@ exports.confirmCashCollection = async (req, res) => {
         message: 'Payment recorded and booking completed!'
       });
     }
+
+    // Send Push Notification for Cash Confirmation
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'payment_received',
+      title: 'Payment Received (Cash)',
+      message: `Payment of ₹${collectionAmount} received in cash. Job Completed. Thanks!`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      priority: 'high'
+    });
 
     res.status(200).json({
       success: true,

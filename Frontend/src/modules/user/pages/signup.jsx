@@ -95,6 +95,14 @@ const Signup = () => {
       });
       if (response.success) {
         setIsLoading(false);
+        // Register FCM Token for push notifications immediately after signup
+        try {
+          const { registerFCMToken } = await import('../../../services/pushNotificationService');
+          await registerFCMToken('user', true);
+        } catch (fcmError) {
+          console.error('FCM Registration failed on signup:', fcmError);
+        }
+
         toast.success('Account created successfully!');
         navigate('/user');
       } else {

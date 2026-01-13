@@ -139,10 +139,23 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-100 z-0"></div>
                   </div>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center relative overflow-hidden">
                     <p className="text-sm font-black text-slate-800 mb-1 tracking-tight">Cash Payment</p>
-                    <p className="text-[10px] text-slate-500 mb-0 opacity-80 leading-relaxed">
-                      You can pay the professional in cash. They will mark the booking as completed once the payment is received.
+                    <p className="text-[10px] text-slate-500 mb-3 opacity-80 leading-relaxed">
+                      Pay cash to the professional. Share this code to complete validation:
+                    </p>
+
+                    {(booking.customerConfirmationOTP || booking.paymentOtp) && (
+                      <div className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-3 mb-2 flex flex-col items-center justify-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Verification Code</span>
+                        <span className="text-3xl font-mono font-black text-slate-800 tracking-widest">
+                          {booking.customerConfirmationOTP || booking.paymentOtp}
+                        </span>
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-slate-400 italic">
+                      Only pay after work satisfaction.
                     </p>
                   </div>
                 </>

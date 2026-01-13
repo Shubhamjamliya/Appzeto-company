@@ -10,6 +10,7 @@ import {
   updateBookingStatus,
   assignWorker as assignWorkerApi,
   startSelfJob,
+  vendorReached,
   verifySelfVisit,
   completeSelfJob
 } from '../../services/bookingService';
@@ -161,6 +162,52 @@ export default function BookingDetails() {
     }
   }, [socket, id, booking?.status]);
 
+  // Listen for Real-Time Booking Updates (e.g. Online Payment)
+  useEffect(() => {
+    if (socket && id) {
+      const handleBookingUpdate = (data) => {
+        // Check if update is for this booking
+        if (data.bookingId === id || data.relatedId === id || data._id === id) {
+          console.log('socket: Booking Updated:', data);
+
+          // Update local state to trigger effects immediately
+          setBooking(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              ...data, // Merge updates
+              status: data.status || prev.status,
+              paymentStatus: data.paymentStatus || prev.paymentStatus
+            };
+          });
+
+          // Also trigger a full reload to be safe/sync
+          window.dispatchEvent(new Event('vendorJobsUpdated'));
+
+          // Check if this update is a payment success, if so, trigger reload for fresh state
+          const isPaymentSuccess =
+            data.paymentStatus === 'SUCCESS' ||
+            data.paymentStatus === 'paid' ||
+            data.type === 'payment_success';
+
+          if (isPaymentSuccess) {
+            setIsCashModalOpen(false);
+            toast.success('Online Payment Received!');
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        }
+      };
+
+      socket.on('booking_updated', handleBookingUpdate);
+      socket.on('payment_success', handleBookingUpdate);
+
+      return () => {
+        socket.off('booking_updated', handleBookingUpdate);
+        socket.off('payment_success', handleBookingUpdate);
+      };
+    }
+  }, [socket, id]);
+
   const handleVerifyVisit = async () => {
     const otp = otpInput.join('');
     if (otp.length !== 4) return toast.error('Enter 4-digit OTP');
@@ -238,19 +285,16 @@ export default function BookingDetails() {
 
   const canDoFinalSettlement = (booking) => {
     // Check if payment is already done (Online SUCCESS or Cash COLLECTED)
-    const isPaid = booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected;
-    const isWorkDone = booking?.status === 'work_done' || booking?.status === 'completed' || booking?.status === 'WORKER_PAID';
+    // Robust check for various status strings (case-insensitive)
+    const pStatus = booking?.paymentStatus?.toLowerCase() || '';
+    const isPaid = pStatus === 'success' || pStatus === 'paid' || booking?.cashCollected;
 
-    // For self-jobs, final settlement can be done after work is done AND payment is done
-    if (booking?.assignedTo?.name === 'You (Self)') {
-      return isWorkDone && isPaid && booking?.finalSettlementStatus !== 'DONE';
-    }
+    const status = booking?.status?.toLowerCase() || '';
+    const isWorkDone = status === 'work_done' || status === 'completed' || status === 'worker_paid';
 
-    // For worker jobs, requires work done, worker paid, and customer payment done
-    return isWorkDone &&
-      (booking?.workerPaymentStatus === 'PAID' || booking?.workerPaymentStatus === 'SUCCESS') &&
-      isPaid &&
-      booking?.finalSettlementStatus !== 'DONE';
+    // Simplified logic: Show button if work is done & customer paid, 
+    // regardless of whether worker is marked as paid yet.
+    return isWorkDone && isPaid && booking?.finalSettlementStatus !== 'DONE';
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -414,6 +458,8 @@ export default function BookingDetails() {
     return validStatus &&
       (booking?.paymentMethod === 'cash' || booking?.paymentMethod === 'pay_at_home');
   };
+
+
 
   if (!booking) {
     return (
@@ -1029,12 +1075,12 @@ export default function BookingDetails() {
                 disabled={loading}
                 className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 hover:brightness-105"
                 style={{
-                  background: 'linear-gradient(135deg, #F97316, #EA580C)',
-                  boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)',
+                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  boxShadow: '0 8px 16px -4px rgba(16, 185, 129, 0.4)',
                 }}
               >
-                <FiCreditCard className="w-5 h-5" />
-                Collect Cash Now
+                <FiDollarSign className="w-5 h-5" />
+                Prepare Final Payment
               </button>
             </div>
           </div>
@@ -1200,7 +1246,14 @@ export default function BookingDetails() {
 
               {booking.status === 'journey_started' && (
                 <button
-                  onClick={() => setIsVisitModalOpen(true)}
+                  onClick={async () => {
+                    try {
+                      setIsVisitModalOpen(true);
+                      await vendorReached(id);
+                    } catch (err) {
+                      console.error('Failed to notify reached:', err);
+                    }
+                  }}
                   className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg"
                   style={{
                     background: 'linear-gradient(135deg, #3B82F6, #2563EB)',

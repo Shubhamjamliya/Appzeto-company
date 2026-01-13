@@ -283,6 +283,53 @@ const startJob = async (req, res) => {
 };
 
 /**
+ * Worker Reached Location
+ * Notify user to share OTP
+ */
+const workerReachedLocation = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+
+    // Need visitOtp to resend it
+    const booking = await Booking.findOne({ _id: id, workerId }).select('+visitOtp');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (booking.status !== BOOKING_STATUS.JOURNEY_STARTED) {
+      return res.status(400).json({ success: false, message: 'Journey not started yet' });
+    }
+
+    const otp = booking.visitOtp;
+
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'vendor_reached',
+      title: 'Professional has Reached!',
+      message: `Professional has reached your location. Please share this OTP: ${otp}`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      priority: 'high',
+      pushData: {
+        type: 'vendor_reached',
+        bookingId: booking._id.toString(),
+        visitOtp: otp,
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
+    res.status(200).json({ success: true, message: 'User notified that professional reached' });
+  } catch (error) {
+    console.error('Worker reached location error:', error);
+    res.status(500).json({ success: false, message: 'Failed to notify user' });
+  }
+};
+
+/**
  * Verify Site Visit with OTP
  */
 const verifyVisit = async (req, res) => {
@@ -321,6 +368,7 @@ const verifyVisit = async (req, res) => {
     await booking.save();
 
     // Notify user
+    // Notify user
     const { createNotification } = require('../notificationControllers/notificationController');
     await createNotification({
       userId: booking.userId,
@@ -329,6 +377,7 @@ const verifyVisit = async (req, res) => {
       message: `The professional has arrived and verified the visit. Service is now in progress.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high', // Ensure high priority
       pushData: {
         type: 'visit_verified',
         bookingId: booking._id.toString(),
@@ -408,11 +457,29 @@ const completeJob = async (req, res) => {
 
     // Notify user
     const { createNotification } = require('../notificationControllers/notificationController');
+
+    // 1. Notify user that work is completed and billing is being prepared
+    await createNotification({
+      userId: booking.userId,
+      type: 'work_completed',
+      title: 'Work Completed',
+      message: `Work finished! Your professional is preparing the final bill.`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      priority: 'high',
+      pushData: {
+        type: 'work_completed',
+        bookingId: booking._id.toString(),
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
+    // 2. Notify user with Final Bill and OTP
     await createNotification({
       userId: booking.userId,
       type: 'work_done',
-      title: 'Work Completed',
-      message: `Worker has completed the work. Your verification OTP is ${payOtp}. Please verify bill and share OTP.`,
+      title: 'Billing Ready',
+      message: `Bill Generated: ₹${booking.finalAmount}. Your verification OTP is ${payOtp}. Please verify and share OTP to complete.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
@@ -597,10 +664,11 @@ const collectCash = async (req, res) => {
     await createNotification({
       userId: booking.userId,
       type: 'payment_received',
-      title: 'Payment Confirmed',
-      message: `Payment of ₹${booking.finalAmount} verified. Job Completed. Thanks!`,
+      title: 'Payment Received (Cash)',
+      message: `Payment of ₹${booking.finalAmount} received in cash for booking ${booking.bookingNumber}. Job Completed. Thanks!`,
       relatedId: booking._id,
-      relatedType: 'booking'
+      relatedType: 'booking',
+      priority: 'high'
     });
 
     res.status(200).json({
@@ -722,6 +790,7 @@ module.exports = {
   completeJob,
   addWorkerNotes,
   verifyVisit,
+  workerReachedLocation,
   collectCash,
   respondToJob
 };

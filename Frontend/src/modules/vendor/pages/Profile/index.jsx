@@ -28,7 +28,7 @@ const Profile = () => {
     { id: 6, label: 'Manage Payment Methods', icon: FiCreditCard, path: '/vendor/manage-payment-methods' },
     { id: 7, label: 'Manage Address', icon: FiMapPin, path: '/vendor/address-management' },
     { id: 8, label: 'Settings', icon: FiSettings, path: '/vendor/settings' },
-    { id: 9, label: 'About Appzeto', icon: null, customIcon: 'A', path: '/vendor/about-appzeto' },
+    { id: 9, label: 'About Homster', icon: null, customIcon: 'H', path: '/vendor/about-homster' },
   ];
 
   const [profile, setProfile] = useState(null);

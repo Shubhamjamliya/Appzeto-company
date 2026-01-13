@@ -113,6 +113,14 @@ export const startSelfJob = async (bookingId) => {
 };
 
 /**
+ * Notify Reached (Vendor)
+ */
+export const vendorReached = async (bookingId) => {
+  const response = await api.post(`/vendors/bookings/${bookingId}/self/reached`);
+  return response.data;
+};
+
+/**
  * Verify Self Visit (Vendor)
  */
 export const verifySelfVisit = async (bookingId, otp, location) => {

@@ -33,6 +33,7 @@ const Scrap = lazy(() => import('../pages/Scrap'));
 const SettlementRequest = lazy(() => import('../pages/Wallet/SettlementRequest'));
 const SettlementHistory = lazy(() => import('../pages/Wallet/SettlementHistory'));
 const MyRatings = lazy(() => import('../pages/MyRatings'));
+const AboutHomster = lazy(() => import('../pages/AboutHomster'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -89,6 +90,7 @@ const VendorRoutes = () => {
             <Route path="/notifications" element={<ProtectedRoute userType="vendor"><Notifications /></ProtectedRoute>} />
             <Route path="/scrap" element={<ProtectedRoute userType="vendor"><Scrap /></ProtectedRoute>} />
             <Route path="/my-ratings" element={<ProtectedRoute userType="vendor"><MyRatings /></ProtectedRoute>} />
+            <Route path="/about-homster" element={<ProtectedRoute userType="vendor"><AboutHomster /></ProtectedRoute>} />
           </Routes>
         </PageTransition>
       </Suspense>

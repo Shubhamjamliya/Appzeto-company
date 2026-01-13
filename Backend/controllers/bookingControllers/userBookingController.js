@@ -123,7 +123,17 @@ const createBooking = async (req, res) => {
 
     // Find vendors within 10km radius who offer this service category
     const vendorFilters = category ? { service: category.title } : {};
-    const nearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+    let nearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+
+    // Deduplicate nearbyVendors by _id to prevent duplicate notifications
+    const uniqueVendorIds = new Set();
+    nearbyVendors = nearbyVendors.filter(vendor => {
+      const idStr = vendor._id.toString();
+      if (uniqueVendorIds.has(idStr)) return false;
+      uniqueVendorIds.add(idStr);
+      return true;
+    });
+
     console.log(`[CreateBooking] Found ${nearbyVendors.length} nearby vendors for booking`);
     // --- END VENDOR SEARCH BLOCK ---
 
@@ -338,7 +348,7 @@ const createBooking = async (req, res) => {
         // Ensure proper push notification style for booking request
         pushData: {
           type: 'new_booking', // Triggers "Accept/Reject" buttons in SW
-          dataOnly: true,
+          dataOnly: false,
           link: `/vendor/bookings/${booking._id}`
         }
       })
@@ -375,7 +385,7 @@ const createBooking = async (req, res) => {
       .populate('serviceId', 'title iconUrl')
       .populate('categoryId', 'title slug');
 
-    // NOTIFICATION SUPPRESSED: Don't notify user until booking is confirmed/paid
+    // NOTIFY USER: Send actionable notification so they can track status
 
     // Send notification to user
     await createNotification({
@@ -389,6 +399,7 @@ const createBooking = async (req, res) => {
         type: 'booking_requested',
         bookingId: booking._id.toString(),
         link: `/user/booking/${booking._id}`
+        // dataOnly: true // Removed to ensure User sees the visual notification
       }
     });
 

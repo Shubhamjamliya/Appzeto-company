@@ -351,7 +351,14 @@ const JobDetails = () => {
 
           {job.status === 'journey_started' && (
             <button
-              onClick={() => handleStatusUpdate('visit')}
+              onClick={async () => {
+                try {
+                  handleStatusUpdate('visit');
+                  await workerService.workerReached(id);
+                } catch (err) {
+                  console.error('Failed to notify reached:', err);
+                }
+              }}
               disabled={actionLoading}
               className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
               style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}

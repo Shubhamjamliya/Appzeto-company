@@ -63,8 +63,8 @@ async function sendPushNotification(tokens, payload) {
       return { successCount: 0, failureCount: 0 };
     }
 
-    // Remove duplicates and empty values
-    const uniqueTokens = [...new Set(tokens.filter(t => t && t.trim()))];
+    // Remove duplicates and empty values (Robust deduplication)
+    const uniqueTokens = Array.from(new Set(tokens.filter(t => t && typeof t === 'string' && t.trim().length > 0)));
 
     if (uniqueTokens.length === 0) {
       console.log('No valid FCM tokens after filtering');
@@ -130,30 +130,53 @@ async function sendPushNotification(tokens, payload) {
         fcmOptions: {
           link: payload.data?.link || '/'
         }
-      }
+      },
+      priority: payload.highPriority !== false ? 'high' : 'normal'
     };
 
-    // Only add notification block if NOT data-only
-    // Always include notification block for reliable system tray display
+    // Standard notification block (Top-level)
     message.notification = {
       title: payload.title || 'App Notification',
       body: payload.body || 'New Update',
     };
 
-    // Add icon if provided
+    // Android specific (Sound, Priority, Channel, Icon)
+    message.android.notification = {
+      ...message.android.notification,
+      title: message.notification.title,
+      body: message.notification.body,
+      icon: 'stock_ticker_update',
+      color: '#f44336',
+      clickAction: 'FLUTTER_NOTIFICATION_CLICK', // Common for mobile apps
+    };
+
+    // iOS/APNs specific (Sound, Alert, Badge)
+    message.apns.payload.aps.alert = {
+      title: message.notification.title,
+      body: message.notification.body,
+    };
+
+    // WebPush specific (Title, Body, Icon, Badge)
+    message.webpush.notification = {
+      ...message.webpush.notification,
+      title: message.notification.title,
+      body: message.notification.body,
+      icon: payload.icon || '/Homster-logo.png',
+      badge: '/Homster-logo.png',
+    };
+
     if (payload.icon) {
       message.notification.image = payload.icon;
+      message.android.notification.image = payload.icon;
     }
 
-    // Ensure critical fields are ALSO in data for app handling
-    message.data.title = payload.title || 'App Notification';
-    message.data.body = payload.body || 'New Update';
+    // Ensure critical fields are also in data for background handling
+    message.data.title = message.notification.title;
+    message.data.body = message.notification.body;
     if (payload.icon) message.data.icon = payload.icon;
 
-    // Log intent (removed dataOnly check since we are enforcing notification block)
-    console.log('[FCM] Sending standard notification:', payload.title);
-
-    // message.notification.image handled above
+    // Log intent
+    console.log(`[FCM] Sending standard notification to ${uniqueTokens.length} tokens:`, payload.title);
 
     const response = await admin.messaging().sendEachForMulticast(message);
 
@@ -252,11 +275,9 @@ async function sendNotificationToUser(userId, payload, includeMobile = true) {
     // Add priority and sound for user notifications too
     const finalPayload = {
       ...payload,
-      title: payload.title, // Clean title
-      // For important updates (confirmed, accepted, started, completed), use high priority
       highPriority: payload.priority === 'high' ||
-        ['booking_accepted', 'worker_started', 'journey_started', 'work_done', 'booking_completed'].includes(payload.type),
-      dataOnly: true // Prevent duplicate notifications
+        ['booking_accepted', 'worker_started', 'journey_started', 'work_done', 'work_completed', 'booking_completed', 'vendor_reached', 'visit_verified', 'payment_success', 'payment_received'].includes(payload.data?.type),
+      dataOnly: false // Explicitly disable dataOnly to force system tray notification
     };
 
     await sendPushNotification(tokens, finalPayload);
@@ -298,8 +319,7 @@ async function sendNotificationToVendor(vendorId, payload, includeMobile = true)
 
     const finalPayload = {
       ...payload,
-      title: `🏢 [Partner] ${payload.title}`, // Add identification
-      dataOnly: true // Prevent duplicate notifications
+      title: `🏢 [Partner] ${payload.title}` // Add identification
     };
 
     await sendPushNotification(tokens, finalPayload);
@@ -341,8 +361,7 @@ async function sendNotificationToWorker(workerId, payload, includeMobile = true)
 
     const finalPayload = {
       ...payload,
-      title: `👷 [Pro] ${payload.title}`, // Add identification
-      dataOnly: true // Prevent duplicate notifications
+      title: `👷 [Pro] ${payload.title}` // Add identification
     };
 
     await sendPushNotification(tokens, finalPayload);
@@ -389,8 +408,7 @@ async function sendNotificationToAdmin(adminId, payload, includeMobile = true) {
 
     const finalPayload = {
       ...payload,
-      title: `🛡️ [Admin] ${payload.title}`, // Add identification
-      dataOnly: true // Prevent duplicate notifications
+      title: `🛡️ [Admin] ${payload.title}` // Add identification
     };
 
     await sendPushNotification(tokens, finalPayload);

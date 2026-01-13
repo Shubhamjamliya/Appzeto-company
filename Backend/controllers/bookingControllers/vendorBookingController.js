@@ -219,6 +219,7 @@ const acceptBooking = async (req, res) => {
         type: 'booking_accepted',
         bookingId: booking._id.toString(),
         link: `/user/booking/${booking._id}`
+        // dataOnly: true // Ensure user sees this
       }
     });
 
@@ -430,10 +431,12 @@ const assignWorker = async (req, res) => {
       message: `A worker has been assigned to your booking ${booking.bookingNumber}.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high', // Ensure high priority delivery
       pushData: {
         type: 'worker_assigned',
         bookingId: booking._id.toString(),
         link: `/user/booking/${booking._id}`
+        // dataOnly: false // Explicitly false
       }
     });
 
@@ -723,6 +726,62 @@ const startSelfJob = async (req, res) => {
 };
 
 /**
+ * Vendor Reached Location
+ * Notify user to share OTP
+ */
+const vendorReachedLocation = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { id } = req.params;
+
+    // Need visitOtp to resend it
+    const booking = await Booking.findOne({ _id: id, vendorId }).select('+visitOtp');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.status !== BOOKING_STATUS.JOURNEY_STARTED) {
+      return res.status(400).json({ success: false, message: 'Journey not started yet' });
+    }
+
+    const otp = booking.visitOtp;
+
+    // Notify user
+    const { createNotification } = require('../notificationControllers/notificationController');
+    await createNotification({
+      userId: booking.userId,
+      type: 'vendor_reached',
+      title: 'Vendor has Reached!',
+      message: `Vendor has reached your location. Please share this OTP: ${otp}`,
+      relatedId: booking._id,
+      relatedType: 'booking',
+      priority: 'high',
+      pushData: {
+        type: 'vendor_reached',
+        bookingId: booking._id.toString(),
+        visitOtp: otp,
+        link: `/user/booking/${booking._id}`
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('notification', {
+        title: 'Vendor has Reached!',
+        message: `Vendor has reached your location. OTP: ${otp}`,
+        relatedId: booking._id
+      });
+    }
+
+    res.status(200).json({ success: true, message: 'User notified that vendor reached' });
+  } catch (error) {
+    console.error('Vendor reached location error:', error);
+    res.status(500).json({ success: false, message: 'Failed to notify user' });
+  }
+};
+
+/**
  * Verify Self Visit
  */
 const verifySelfVisit = async (req, res) => {
@@ -756,6 +815,7 @@ const verifySelfVisit = async (req, res) => {
       message: `The professional has arrived and verified the visit. Service is now in progress.`,
       relatedId: booking._id,
       relatedType: 'booking',
+      priority: 'high', // Ensure high priority
       pushData: {
         type: 'visit_verified',
         bookingId: booking._id.toString(),
@@ -814,21 +874,24 @@ const completeSelfJob = async (req, res) => {
     await booking.save();
 
     const { createNotification } = require('../notificationControllers/notificationController');
+
+    // 1. Notify user that work is completed and billing is being prepared
     await createNotification({
       userId: booking.userId,
-      type: 'work_done',
+      type: 'work_completed',
       title: 'Work Completed',
-      message: `Work finished! Your verification OTP is ${payOtp}. Please verify amount ₹${booking.finalAmount} and share OTP to complete payment.`,
+      message: `Work finished! ${req.user.businessName || req.user.name} is preparing your final bill.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
       pushData: {
-        type: 'work_done',
+        type: 'work_completed',
         bookingId: booking._id.toString(),
-        paymentOtp: payOtp,
         link: `/user/booking/${booking._id}`
       }
     });
+
+    // 2. Notification for Bill Ready is now handled in initiateCashCollection
 
     // Send FCM push notification to user
     // Manual push removed - auto handled by createNotification
@@ -842,7 +905,7 @@ const completeSelfJob = async (req, res) => {
       });
       io.to(`user_${booking.userId}`).emit('notification', {
         title: 'Work Completed',
-        message: `Work finished! Your verification OTP is ${payOtp}.`,
+        message: `Work finished! ${req.user.businessName || req.user.name} is preparing your final bill.`,
         relatedId: booking._id
       });
     }
@@ -936,10 +999,11 @@ const collectSelfCash = async (req, res) => {
     await createNotification({
       userId: booking.userId,
       type: 'payment_received',
-      title: 'Booking Completed',
-      message: `Payment received. Booking completed.`,
+      title: 'Payment Received (Cash)',
+      message: `Payment of ₹${booking.finalAmount} received in cash for booking ${booking.bookingNumber}. Job Completed. Thanks!`,
       relatedId: booking._id,
-      relatedType: 'booking'
+      relatedType: 'booking',
+      priority: 'high'
     });
 
     res.status(200).json({ success: true, message: 'Cash collected', data: booking });
@@ -1078,6 +1142,7 @@ module.exports = {
   updateBookingStatus,
   addVendorNotes,
   startSelfJob,
+  vendorReachedLocation,
   verifySelfVisit,
   completeSelfJob,
   collectSelfCash,

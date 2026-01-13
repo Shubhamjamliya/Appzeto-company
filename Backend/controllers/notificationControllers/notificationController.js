@@ -17,7 +17,8 @@ const createNotification = async ({
   relatedType = null,
   data = {},
   skipPush = false,
-  pushData = {}
+  pushData = {},
+  priority = null
 }) => {
   try {
     const notification = await Notification.create({
@@ -40,6 +41,7 @@ const createNotification = async ({
       const payload = {
         title: title,
         body: message,
+        priority: priority || pushData.priority || 'normal',
         data: {
           ...data,
           ...pushData,

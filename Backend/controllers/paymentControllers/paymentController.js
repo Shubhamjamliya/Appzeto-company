@@ -169,25 +169,49 @@ const verifyPaymentWebhook = async (req, res) => {
       console.log(`[Payment] Credited ₹${booking.vendorEarnings} to vendor ${vendor._id}`);
     }
 
-    // Send notification to user
+    // Send notification to user (Ensure single notification)
     await createNotification({
       userId: booking.userId,
       type: 'payment_success',
       title: 'Payment Successful',
-      message: `Payment of ₹${booking.finalAmount} for booking ${booking.bookingNumber} was successful.`,
+      message: `Payment of ₹${booking.finalAmount} for booking ${booking.bookingNumber} was successful. Thank you!`,
       relatedId: booking._id,
-      relatedType: 'payment'
+      relatedType: 'payment',
+      priority: 'high'
     });
 
-    // Notify vendor
+    // Notify vendor & worker
+    let vendorTitle = 'Booking Confirmed';
+    let vendorMsg = `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`;
+
+    if (booking.status === BOOKING_STATUS.COMPLETED) {
+      vendorTitle = 'Payment Received (Online)';
+      vendorMsg = `User has successfully paid ₹${booking.finalAmount} online for booking ${booking.bookingNumber}. Job Completed!`;
+    }
+
+    // Send SINGLE notification to vendor
     await createNotification({
       vendorId: booking.vendorId,
-      type: 'booking_confirmed',
-      title: 'Booking Confirmed',
-      message: `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`,
+      type: 'payment_success',
+      title: vendorTitle,
+      message: vendorMsg,
       relatedId: booking._id,
-      relatedType: 'booking'
+      relatedType: 'booking',
+      priority: 'high'
     });
+
+    // Worker notification (if assigned)
+    if (booking.workerId) {
+      await createNotification({
+        workerId: booking.workerId,
+        type: 'payment_success',
+        title: vendorTitle,
+        message: vendorMsg,
+        relatedId: booking._id,
+        relatedType: 'booking',
+        priority: 'high'
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -307,18 +331,41 @@ const processWalletPayment = async (req, res) => {
       title: 'Payment Successful',
       message: `Payment of ₹${booking.finalAmount} for booking ${booking.bookingNumber} was successful.`,
       relatedId: booking._id,
-      relatedType: 'payment'
+      relatedType: 'payment',
+      priority: 'high'
     });
 
-    // Notify vendor
+    // Notify vendor & worker
+    let vendorTitle = 'Booking Confirmed';
+    let vendorMsg = `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`;
+
+    if (booking.status === BOOKING_STATUS.COMPLETED) {
+      vendorTitle = 'Payment Received (Wallet)';
+      vendorMsg = `User paid ₹${booking.finalAmount} via wallet for booking ${booking.bookingNumber}. Job Completed!`;
+    }
+
+    // Send SINGLE notification to vendor
     await createNotification({
       vendorId: booking.vendorId,
-      type: 'booking_confirmed',
-      title: 'Booking Confirmed',
-      message: `Payment received for booking ${booking.bookingNumber}. The service is now confirmed.`,
+      type: 'payment_success',
+      title: vendorTitle,
+      message: vendorMsg,
       relatedId: booking._id,
-      relatedType: 'booking'
+      relatedType: 'booking',
+      priority: 'high'
     });
+
+    if (booking.workerId) {
+      await createNotification({
+        workerId: booking.workerId,
+        type: 'payment_success',
+        title: vendorTitle,
+        message: vendorMsg,
+        relatedId: booking._id,
+        relatedType: 'booking',
+        priority: 'high'
+      });
+    }
 
     res.status(200).json({
       success: true,

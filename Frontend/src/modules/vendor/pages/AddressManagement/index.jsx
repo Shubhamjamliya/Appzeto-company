@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMapPin, FiSave, FiSearch, FiHome } from 'react-icons/fi';
-import { StandaloneSearchBox, useJsApiLoader } from '@react-google-maps/api';
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import vendorService from '../../../../services/vendorService';
@@ -16,11 +16,9 @@ const AddressManagement = () => {
   const [address, setAddress] = useState(''); // Display address
   const [houseNumber, setHouseNumber] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null); // { lat, lng, address, components... }
+  const [autocomplete, setAutocomplete] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // SearchBox state
-  const [searchBox, setSearchBox] = useState(null);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -80,33 +78,31 @@ const AddressManagement = () => {
 
   const handleLocationSelect = (location) => {
     setSelectedLocation(location);
+    // setAddress(location.address); 
     // Usually user selects from map -> we update search query & address field
     setSearchQuery(location.address);
     setAddress(location.address);
   };
 
-  const onSearchBoxLoad = (ref) => {
-    setSearchBox(ref);
-  };
-
-  const onPlacesChanged = () => {
-    if (searchBox !== null) {
-      const places = searchBox.getPlaces();
-      if (places && places.length > 0) {
-        const place = places[0]; // Use the first match
-        if (place.geometry) {
-          const location = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-            address: place.formatted_address,
-            components: place.address_components
-          };
-          setSelectedLocation(location);
-          setAddress(place.formatted_address);
-          setSearchQuery(place.formatted_address);
-        }
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      if (place.geometry) {
+        const location = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+          address: place.formatted_address,
+          components: place.address_components
+        };
+        setSelectedLocation(location);
+        setAddress(place.formatted_address);
+        setSearchQuery(place.formatted_address);
       }
     }
+  };
+
+  const onAutocompleteLoad = (autocompleteInstance) => {
+    setAutocomplete(autocompleteInstance);
   };
 
   const handleSave = async () => {
@@ -153,7 +149,10 @@ const AddressManagement = () => {
 
       if (response.success) {
         toast.success('Address saved successfully!');
-        // Optional: navigate back
+        setTimeout(() => {
+          //   navigate('/vendor/profile'); // Stay here or go back settings? User preference.
+          //   Let's just show success. Or maybe go back.
+        }, 500);
       } else {
         toast.error(response.message || 'Failed to save address');
       }
@@ -174,7 +173,7 @@ const AddressManagement = () => {
       />
 
       <main className="px-4 py-6">
-        {/* Info Card */}
+        {/* Info Card - Same logic as Modal */}
         <div className="rounded-xl p-3 mb-6 border" style={{ backgroundColor: `${themeColors.brand.teal}0D`, borderColor: `${themeColors.brand.teal}1A` }}>
           <div className="flex items-start gap-3">
             <FiMapPin className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: themeColors.button }} />
@@ -198,15 +197,19 @@ const AddressManagement = () => {
         {/* Form Inputs Container */}
         <div className="bg-white rounded-xl p-4 shadow-md space-y-4">
 
-          {/* Address Search Box (Replaces Autocomplete) */}
+          {/* Address Autocomplete */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Street Address / Area
             </label>
             {isLoaded ? (
-              <StandaloneSearchBox
-                onLoad={onSearchBoxLoad}
-                onPlacesChanged={onPlacesChanged}
+              <Autocomplete
+                onLoad={onAutocompleteLoad}
+                onPlaceChanged={onPlaceChanged}
+                options={{
+                  componentRestrictions: { country: 'in' },
+                  fields: ['formatted_address', 'geometry', 'name', 'address_components']
+                }}
               >
                 <div className="relative">
                   <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
@@ -221,7 +224,7 @@ const AddressManagement = () => {
                     onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                   />
                 </div>
-              </StandaloneSearchBox>
+              </Autocomplete>
             ) : (
               <div className="relative">
                 <input

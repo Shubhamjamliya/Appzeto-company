@@ -32,16 +32,15 @@ const CashCollectionModal = ({
 
   const isTotalChanged = showOTPInput && finalTotal !== lastInitiatedTotal;
 
+  // Clear state only when switching to a different booking
   useEffect(() => {
-    if (!isOpen) {
-      setExtraItems([]);
-      setShowOTPInput(false);
-      setOtp('');
-      setSubmitting(false);
-      setLastInitiatedTotal(0);
-      setDevOTP('');
-    }
-  }, [isOpen]);
+    setExtraItems([]);
+    setShowOTPInput(false);
+    setOtp('');
+    setSubmitting(false);
+    setLastInitiatedTotal(0);
+    setDevOTP('');
+  }, [booking?._id, booking?.id]);
 
   const handleAddItem = () => {
     setExtraItems([...extraItems, { title: '', price: '', qty: 1 }]);

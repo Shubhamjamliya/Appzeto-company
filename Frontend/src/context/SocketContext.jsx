@@ -132,7 +132,7 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Use HTTP URL for socket.io client - it handles WS upgrade automatically
-    const socketBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+    const socketBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
 
     const newSocket = io(socketBaseUrl, {
       auth: {

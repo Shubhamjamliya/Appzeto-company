@@ -13,6 +13,7 @@ const {
   updateBookingStatus,
   addVendorNotes,
   startSelfJob,
+  vendorReachedLocation,
   verifySelfVisit,
   completeSelfJob,
   collectSelfCash,
@@ -54,6 +55,7 @@ router.post('/:id/notes', authenticate, isVendor, addNotesValidation, addVendorN
 
 // Self-Job Routes
 router.post('/:id/self/start', authenticate, isVendor, startSelfJob);
+router.post('/:id/self/reached', authenticate, isVendor, vendorReachedLocation);
 router.post('/:id/self/visit/verify', authenticate, isVendor, verifySelfVisit);
 router.post('/:id/self/complete', authenticate, isVendor, completeSelfJob);
 router.post('/:id/self/payment/collect', authenticate, isVendor, collectSelfCash);

@@ -6,7 +6,7 @@ import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
-import PaymentVerificationModal from '../../components/booking/PaymentVerificationModal';
+
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -54,7 +54,7 @@ const BookingTrack = () => {
   const [routePath, setRoutePath] = useState([]);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
   const [isNavigationMode, setIsNavigationMode] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const [paying, setPaying] = useState(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -273,16 +273,9 @@ const BookingTrack = () => {
         socket.off('notification', handleBookingUpdate);
       };
     }
-  }, [socket, id, refreshBooking]);
+  }, [socket, id]); // Removed refreshBooking to prevent loop
 
-  // Handle Payment Modal Visibility
-  useEffect(() => {
-    if (booking && booking.customerConfirmationOTP && !booking.cashCollected) {
-      setShowPaymentModal(true);
-    } else {
-      setShowPaymentModal(false);
-    }
-  }, [booking]);
+
 
   const [heading, setHeading] = useState(0);
   const prevLocationRef = useRef(null);
@@ -743,13 +736,7 @@ const BookingTrack = () => {
         )}
       </div>
 
-      {/* Payment Verification Modal */}
-      <PaymentVerificationModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        booking={booking}
-        onPayOnline={handleOnlinePayment}
-      />
+
     </div>
   );
 };
