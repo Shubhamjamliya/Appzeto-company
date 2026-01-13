@@ -63,11 +63,22 @@ const BookingMap = () => {
 
   const mapRef = useRef(null);
 
+  // Error State
+  const [error, setError] = useState(null);
+
   useEffect(() => {
     const fetchBooking = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        console.log('Fetching booking:', id);
         const response = await getBookingById(id);
         const data = response.data || response;
+
+        if (!data) {
+          throw new Error('No data received');
+        }
+
         setBooking(data);
 
         // 1. Destination: Fixed Booking Address from DB
@@ -82,13 +93,17 @@ const BookingMap = () => {
             geocoder.geocode({ address: addressStr }, (results, status) => {
               if (status === 'OK' && results[0]) {
                 setCoords(results[0].geometry.location.toJSON());
+              } else {
+                console.warn('Geocoding failed:', status);
               }
             });
           }
         }
 
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching booking:', error);
+        setError(error.message || 'Unable to fetch booking details');
+        toast.error('Unable to fetch booking details');
       } finally {
         setLoading(false);
       }
@@ -110,21 +125,20 @@ const BookingMap = () => {
           }
         },
         (error) => {
-          console.warn('GPS Tracking Error:', error);
+          console.error('GPS Tracking Error:', error);
           if (error.code === 1) { // PERMISSION_DENIED
-            toast.error("Location permission denied. Map cannot track you.");
+            // Only toast once or handle gracefully to avoid spam
+            setError("Location permission denied. Please enable location services and ensure you are using a secure connection (HTTPS).");
           }
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
       return () => navigator.geolocation.clearWatch(watchId);
     } else {
-      toast.error("Geolocation not supported on this device");
+      console.warn("Geolocation not supported on this device");
     }
   }, []);
   const socket = useAppNotifications('vendor'); // Get socket instance 
-
-  // ... 
 
   // Sync Location to Backend (Periodic)
   useEffect(() => {
@@ -280,6 +294,22 @@ const BookingMap = () => {
     isFractionalZoomEnabled: true,
     mapId: mapId || '8e0a97af9386fefc',
   }), [mapId]);
+
+  if (error) return (
+    <div className="h-screen bg-gray-100 flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+        <FiX className="w-8 h-8 text-red-600" />
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h3>
+      <p className="text-gray-500 mb-6">{error}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors"
+      >
+        Retry
+      </button>
+    </div>
+  );
 
   if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 

@@ -89,7 +89,9 @@ const GoogleMapPicker = ({ onLocationSelect, initialPosition = null }) => {
   }, []);
 
   // Handle current location button
-  const handleCurrentLocation = () => {
+  const handleCurrentLocation = (e) => {
+    e?.preventDefault(); // Prevent accidental form submission if inside a form
+    setLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -97,18 +99,30 @@ const GoogleMapPicker = ({ onLocationSelect, initialPosition = null }) => {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude
           };
+          console.log('[GoogleMapPicker] Got location:', newPos);
           setMarker(newPos);
           if (map) {
             map.panTo(newPos);
-            map.setZoom(15);
+            map.setZoom(17); // Zoom in closer on user location
           }
           reverseGeocode(newPos);
+          setLoading(false);
         },
         (error) => {
           console.error('Error getting location:', error);
-          alert('Unable to get your current location. Please select manually on the map.');
-        }
+          setLoading(false);
+          let msg = 'Unable to get your current location.';
+          if (error.code === 1) msg = 'Location permission denied. Please enable it in browser settings.';
+          else if (error.code === 2) msg = 'Location unavailable. Try again.';
+          else if (error.code === 3) msg = 'Location request timed out.';
+
+          alert(msg);
+        },
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
       );
+    } else {
+      setLoading(false);
+      alert("Geolocation is not supported by your browser");
     }
   };
 

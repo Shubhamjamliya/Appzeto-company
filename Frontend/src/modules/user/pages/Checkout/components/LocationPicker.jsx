@@ -144,8 +144,8 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+          timeout: 30000,
+          maximumAge: 10000
         }
       );
     } else {
