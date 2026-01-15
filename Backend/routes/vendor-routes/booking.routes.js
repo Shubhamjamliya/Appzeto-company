@@ -18,7 +18,8 @@ const {
   completeSelfJob,
   collectSelfCash,
   payWorker,
-  getVendorRatings
+  getVendorRatings,
+  getPendingBookings
 } = require('../../controllers/bookingControllers/vendorBookingController');
 
 // Validation rules
@@ -44,6 +45,7 @@ const addNotesValidation = [
 ];
 
 // Routes
+router.get('/pending', authenticate, isVendor, getPendingBookings); // Fetch missed alerts on reconnect
 router.get('/ratings', authenticate, isVendor, getVendorRatings);
 router.get('/', authenticate, isVendor, getVendorBookings);
 router.get('/:id', authenticate, isVendor, getBookingById);

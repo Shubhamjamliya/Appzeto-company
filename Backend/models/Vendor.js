@@ -176,6 +176,32 @@ const vendorSchema = new mongoose.Schema({
     lng: Number,
     updatedAt: Date
   },
+  // GeoJSON Location for 2dsphere indexing (fast geo queries)
+  geoLocation: {
+    type: { type: String, enum: ['Point'], default: 'Point' },
+    coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
+  },
+  // Real-time Online Status
+  isOnline: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  lastSeenAt: {
+    type: Date,
+    default: null
+  },
+  currentSocketId: {
+    type: String,
+    default: null
+  },
+  // Availability Status
+  availability: {
+    type: String,
+    enum: ['AVAILABLE', 'BUSY', 'ON_JOB', 'OFFLINE'],
+    default: 'OFFLINE',
+    index: true
+  },
   // Rating & Stats
   rating: {
     type: Number,
@@ -226,6 +252,8 @@ const vendorSchema = new mongoose.Schema({
 // Indexes for faster queries
 vendorSchema.index({ approvalStatus: 1 });
 vendorSchema.index({ 'wallet.earnings': -1 });
+vendorSchema.index({ geoLocation: '2dsphere' }); // Fast geo queries
+vendorSchema.index({ isOnline: 1, availability: 1, approvalStatus: 1 }); // Compound index for vendor search
 
 // Hash password before saving
 vendorSchema.pre('save', async function (next) {

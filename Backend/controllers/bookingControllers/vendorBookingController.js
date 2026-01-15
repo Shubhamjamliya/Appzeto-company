@@ -158,6 +158,25 @@ const acceptBooking = async (req, res) => {
     // Booking successfully accepted by THIS vendor
     const booking = updatedBooking;
 
+    // Update vendor availability to ON_JOB
+    const Vendor = require('../../models/Vendor');
+    await Vendor.findByIdAndUpdate(vendorId, { availability: 'ON_JOB' });
+
+    // Update BookingRequest statuses
+    const BookingRequest = require('../../models/BookingRequest');
+
+    // Mark this vendor's request as ACCEPTED
+    await BookingRequest.findOneAndUpdate(
+      { bookingId: id, vendorId },
+      { status: 'ACCEPTED', respondedAt: new Date() }
+    );
+
+    // Mark all other vendors' requests as EXPIRED/CANCELLED
+    await BookingRequest.updateMany(
+      { bookingId: id, vendorId: { $ne: vendorId } },
+      { status: 'EXPIRED', respondedAt: new Date() }
+    );
+
     // Check payment status correction (if needed, though we set CONFIRMED above)
     if (booking.paymentMethod === 'plan_benefit' && booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
       // already good
@@ -241,6 +260,8 @@ const acceptBooking = async (req, res) => {
 
 /**
  * Reject booking
+ * IMPORTANT: This only marks the vendor's rejection, NOT the booking itself.
+ * Booking stays SEARCHING so other vendors can accept.
  */
 const rejectBooking = async (req, res) => {
   try {
@@ -257,12 +278,11 @@ const rejectBooking = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    // Find booking (either explicitly assigned to vendor or unassigned/requested)
+    // Find booking
     const booking = await Booking.findOne({
       _id: id,
       $or: [
-        { vendorId },
-        // Important: Allow rejecting 'requested' bookings that were broadcasted
+        { notifiedVendors: vendorId },
         { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING] } }
       ]
     });
@@ -282,37 +302,65 @@ const rejectBooking = async (req, res) => {
       });
     }
 
-    // Update booking
-    booking.status = BOOKING_STATUS.REJECTED;
-    booking.cancelledAt = new Date();
-    booking.cancelledBy = 'vendor';
-    booking.cancellationReason = reason || 'Rejected by vendor';
-
-    await booking.save();
-
-    // Send notification to user
-    await createNotification({
-      userId: booking.userId,
-      type: 'booking_rejected',
-      title: 'Booking Rejected',
-      message: `Your booking ${booking.bookingNumber} has been rejected by the vendor.`,
-      relatedId: booking._id,
-      relatedType: 'booking',
-      pushData: {
-        type: 'booking_rejected',
-        bookingId: booking._id.toString(),
-        link: `/user/booking/${booking._id}`
+    // Update BookingRequest for this vendor
+    const BookingRequest = require('../../models/BookingRequest');
+    await BookingRequest.findOneAndUpdate(
+      { bookingId: id, vendorId },
+      {
+        status: 'REJECTED',
+        respondedAt: new Date(),
+        rejectReason: reason || 'Rejected by vendor'
       }
+    );
+
+    // Remove vendor from notifiedVendors (they've responded)
+    booking.notifiedVendors = booking.notifiedVendors.filter(
+      v => v.toString() !== vendorId.toString()
+    );
+
+    // Remove from potentialVendors too
+    booking.potentialVendors = booking.potentialVendors.filter(
+      v => v.vendorId?.toString() !== vendorId.toString()
+    );
+
+    // Check if ALL vendors have rejected
+    const pendingRequests = await BookingRequest.countDocuments({
+      bookingId: id,
+      status: { $in: ['PENDING', 'VIEWED'] }
     });
 
-    // Send FCM push notification to user
-    // Manual push removed - auto handled by createNotification
-    // sendNotificationToUser(booking.userId, { ... });
+    const remainingPotential = booking.potentialVendors.length;
+
+    if (pendingRequests === 0 && remainingPotential === 0) {
+      // No vendors left - mark booking as rejected/failed
+      booking.status = BOOKING_STATUS.REJECTED;
+      booking.cancelledAt = new Date();
+      booking.cancelledBy = 'system';
+      booking.cancellationReason = 'No vendors available';
+
+      // Notify user that no vendors are available
+      await createNotification({
+        userId: booking.userId,
+        type: 'booking_rejected',
+        title: 'No Vendors Available',
+        message: `Sorry, no vendors are available for booking ${booking.bookingNumber}. Please try again later.`,
+        relatedId: booking._id,
+        relatedType: 'booking',
+        pushData: {
+          type: 'booking_rejected',
+          bookingId: booking._id.toString(),
+          link: `/user/booking/${booking._id}`
+        }
+      });
+    }
+    // Otherwise, booking stays SEARCHING for other vendors
+
+    await booking.save();
 
     res.status(200).json({
       success: true,
       message: 'Booking rejected successfully',
-      data: booking
+      data: { bookingId: id }
     });
   } catch (error) {
     console.error('Reject booking error:', error);
@@ -1157,6 +1205,66 @@ const getVendorRatings = async (req, res) => {
   }
 };
 
+/**
+ * Get pending booking requests for vendor (for reconnection)
+ * Called when vendor app reconnects to fetch any missed alerts
+ */
+const getPendingBookings = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const BookingRequest = require('../../models/BookingRequest');
+
+    // Get all pending booking requests for this vendor
+    const pendingRequests = await BookingRequest.find({
+      vendorId,
+      status: { $in: ['PENDING', 'VIEWED'] }
+    })
+      .populate({
+        path: 'bookingId',
+        match: { status: BOOKING_STATUS.SEARCHING, vendorId: null },
+        populate: [
+          { path: 'userId', select: 'name phone' },
+          { path: 'serviceId', select: 'title iconUrl' }
+        ]
+      })
+      .sort({ sentAt: -1 })
+      .limit(20);
+
+    // Filter out null bookings (already accepted by others)
+    const validRequests = pendingRequests.filter(r => r.bookingId !== null);
+
+    // Format response
+    const bookings = validRequests.map(req => ({
+      requestId: req._id,
+      bookingId: req.bookingId._id,
+      bookingNumber: req.bookingId.bookingNumber,
+      serviceName: req.bookingId.serviceId?.title || req.bookingId.serviceName,
+      customerName: req.bookingId.userId?.name,
+      customerPhone: req.bookingId.userId?.phone,
+      scheduledDate: req.bookingId.scheduledDate,
+      scheduledTime: req.bookingId.scheduledTime,
+      address: req.bookingId.address,
+      price: req.bookingId.finalAmount,
+      distance: req.distance,
+      wave: req.wave,
+      sentAt: req.sentAt,
+      status: req.status
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: bookings,
+      count: bookings.length
+    });
+  } catch (error) {
+    console.error('Get pending bookings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending bookings'
+    });
+  }
+};
+
 module.exports = {
   getVendorBookings,
   getBookingById,
@@ -1171,6 +1279,6 @@ module.exports = {
   completeSelfJob,
   collectSelfCash,
   payWorker,
-  getVendorRatings
+  getVendorRatings,
+  getPendingBookings
 };
-

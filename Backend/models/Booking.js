@@ -39,6 +39,22 @@ const bookingSchema = new mongoose.Schema({
   }],
 
   // ==========================================
+  // WAVE-BASED ALERTING
+  // ==========================================
+  potentialVendors: [{
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
+    distance: { type: Number } // in km
+  }],
+  currentWave: {
+    type: Number,
+    default: 1
+  },
+  waveStartedAt: {
+    type: Date,
+    default: null
+  },
+
+  // ==========================================
   // 2. SERVICE INFORMATION
   // ==========================================
   serviceId: {

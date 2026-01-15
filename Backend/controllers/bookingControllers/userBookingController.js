@@ -300,8 +300,8 @@ const createBooking = async (req, res) => {
       // isPlusAdded: isPlusAdded || false, // Removed
       paymentMethod: paymentMethod || null,
       status: bookingStatus,
-      paymentStatus: bookingPaymentStatus,
-      notifiedVendors: nearbyVendors.map(v => v._id) // Store notified vendors for later cleanup
+      paymentStatus: bookingPaymentStatus
+      // notifiedVendors will be set after wave sorting
     });
 
     // If Plus membership was added, update user status
@@ -319,14 +319,51 @@ const createBooking = async (req, res) => {
     }
 
     // Nearby vendors already found above
-    if (nearbyVendors.length > 0) {
-      console.log(`[CreateBooking] Target Vendor IDs:`, nearbyVendors.map(v => v._id));
+    // WAVE-BASED ALERTING: Sort by distance and only notify first wave
+    const sortedVendors = nearbyVendors.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
+    // Wave 1: First 3 vendors
+    const WAVE_1_COUNT = 3;
+    const wave1Vendors = sortedVendors.slice(0, WAVE_1_COUNT);
+
+    // Store all potential vendors in booking for scheduler to use
+    booking.potentialVendors = sortedVendors.map(v => ({
+      vendorId: v._id,
+      distance: v.distance || 0
+    }));
+    booking.currentWave = 1;
+    booking.waveStartedAt = new Date();
+    booking.notifiedVendors = wave1Vendors.map(v => v._id);
+    await booking.save();
+
+    if (wave1Vendors.length > 0) {
+      console.log(`[CreateBooking] Wave 1: Alerting ${wave1Vendors.length} closest vendors (of ${sortedVendors.length} total)`);
+
+      // Create BookingRequest entries for Wave 1 vendors
+      const BookingRequest = require('../../models/BookingRequest');
+      const bookingRequests = wave1Vendors.map(vendor => ({
+        bookingId: booking._id,
+        vendorId: vendor._id,
+        status: 'PENDING',
+        wave: 1,
+        distance: vendor.distance || null,
+        sentAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000) // Expires in 1 hour
+      }));
+
+      try {
+        await BookingRequest.insertMany(bookingRequests, { ordered: false });
+        console.log(`[CreateBooking] Created ${bookingRequests.length} BookingRequest entries`);
+      } catch (err) {
+        // Ignore duplicate key errors (if retrying)
+        if (err.code !== 11000) console.error('[CreateBooking] BookingRequest insert error:', err);
+      }
     } else {
       console.warn(`[CreateBooking] NO VENDORS FOUND nearby! Push notifications will not be sent.`);
     }
 
-    // Send notifications to nearby vendors
-    const vendorNotifications = nearbyVendors.map(vendor =>
+    // Send notifications to Wave 1 vendors ONLY
+    const vendorNotifications = wave1Vendors.map(vendor =>
       createNotification({
         vendorId: vendor._id,
         type: 'booking_request',
@@ -356,12 +393,12 @@ const createBooking = async (req, res) => {
 
     await Promise.all(vendorNotifications);
 
-    // Emit Socket.IO event to nearby vendors for real-time notification with sound
+    // Emit Socket.IO event to Wave 1 vendors for real-time notification with sound
     const io = req.app.get('io');
     if (io) {
-      console.log('Socket.IO instance found, emitting events...');
-      nearbyVendors.forEach(vendor => {
-        console.log(`Emitting new_booking_request to vendor_${vendor._id} (dist: ${vendor.distance})`);
+      console.log('Socket.IO instance found, emitting Wave 1 events...');
+      wave1Vendors.forEach(vendor => {
+        console.log(`[Wave 1] Emitting to vendor_${vendor._id} (dist: ${vendor.distance?.toFixed(1)}km)`);
         io.to(`vendor_${vendor._id}`).emit('new_booking_request', {
           bookingId: booking._id,
           serviceName: service.title,
@@ -372,7 +409,7 @@ const createBooking = async (req, res) => {
           price: finalAmount,
           distance: vendor.distance,
           playSound: true, // Trigger sound alert
-          message: `New booking request within ${vendor.distance.toFixed(1)}km!`
+          message: `New booking request within ${vendor.distance?.toFixed(1) || '?'}km!`
         });
       });
     } else {
