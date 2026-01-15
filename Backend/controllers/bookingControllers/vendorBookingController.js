@@ -415,8 +415,9 @@ const assignWorker = async (req, res) => {
     booking.workerId = workerId;
     booking.assignedAt = new Date();
 
-    // Do not set status to ASSIGNED yet. Wait for worker acceptance.
-    // booking.status = BOOKING_STATUS.ASSIGNED; 
+    // Set status to ASSIGNED immediately. 
+    // If worker rejects, respondToJob logic reverts it to CONFIRMED.
+    booking.status = BOOKING_STATUS.ASSIGNED;
 
     booking.workerResponse = 'PENDING';
     booking.workerAcceptedAt = undefined;
@@ -427,8 +428,8 @@ const assignWorker = async (req, res) => {
     await createNotification({
       userId: booking.userId,
       type: 'worker_assigned',
-      title: 'Worker Assigned',
-      message: `A worker has been assigned to your booking ${booking.bookingNumber}.`,
+      title: 'Service Provider Assigned',
+      message: `${worker.name} has been assigned to your booking. Check app for details.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high', // Ensure high priority delivery
@@ -1052,6 +1053,29 @@ const payWorker = async (req, res) => {
       relatedId: booking._id,
       relatedType: 'booking'
     });
+
+    // Send High Priority Push Notification to Worker
+    const worker = await Worker.findById(booking.workerId);
+    if (worker) {
+      const fcmTokens = [
+        ...(worker.fcmTokens || []),
+        ...(worker.fcmTokenMobile || [])
+      ];
+
+      if (fcmTokens.length > 0) {
+        const { sendPushNotification } = require('../../services/firebaseAdmin');
+        await sendPushNotification(fcmTokens, {
+          title: 'Payment Received! 💰',
+          body: `Vendor has released your payment for booking #${booking.bookingNumber}. check wallet for details.`,
+          data: {
+            type: 'payment_received',
+            bookingId: booking._id.toString(),
+            url: '/worker/wallet'
+          },
+          highPriority: true
+        });
+      }
+    }
 
     // Notify Vendor
     await createNotification({

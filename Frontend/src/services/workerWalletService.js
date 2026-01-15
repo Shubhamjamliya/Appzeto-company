@@ -17,6 +17,15 @@ const workerWalletService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  requestPayout: async (bookingId) => {
+    try {
+      const response = await api.post('/workers/wallet/request-payout', { bookingId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

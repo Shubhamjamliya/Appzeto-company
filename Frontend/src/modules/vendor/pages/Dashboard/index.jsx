@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBriefcase, FiUsers, FiBell, FiArrowRight, FiUser, FiClock, FiMapPin, FiCheckCircle, FiTrendingUp, FiChevronRight } from 'react-icons/fi';
 import { FaWallet } from 'react-icons/fa';
@@ -63,216 +63,108 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Load dashboard data from API
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Process API response - extracted to avoid duplication
+  const processApiResponse = useCallback((response) => {
+    if (!response.success) return;
 
-        // Fetch dashboard stats from API
-        const response = await vendorDashboardService.getDashboardStats();
+    const { stats: apiStats, recentBookings } = response.data;
 
-        if (response.success) {
-          const { stats: apiStats, recentBookings } = response.data;
+    // Separate REQUESTED/SEARCHING bookings from other bookings
+    const requestedBookings = (recentBookings || []).filter(booking =>
+      booking.status === 'REQUESTED' || booking.status === 'searching'
+    );
+    const otherBookings = (recentBookings || []).filter(booking =>
+      booking.status !== 'REQUESTED' && booking.status !== 'searching'
+    );
 
-          // Separate REQUESTED/SEARCHING bookings from other bookings
-          const requestedBookings = (recentBookings || []).filter(booking =>
-            booking.status === 'REQUESTED' || booking.status === 'searching'
-          );
-          const otherBookings = (recentBookings || []).filter(booking =>
-            booking.status !== 'REQUESTED' && booking.status !== 'searching'
-          );
+    // Build pending bookings map
+    const mergedMap = new Map();
+    requestedBookings.forEach(b => {
+      const id = String(b._id || b.id);
+      mergedMap.set(id, {
+        id,
+        serviceType: b.serviceId?.title || 'Service Request',
+        customerName: b.userId?.name || 'Customer',
+        location: {
+          address: b.address?.addressLine1 || 'Address not available',
+          distance: 'N/A'
+        },
+        price: (b.vendorEarnings || (b.finalAmount ? b.finalAmount * 0.9 : 0)).toFixed(2),
+        timeSlot: {
+          date: new Date(b.scheduledDate).toLocaleDateString(),
+          time: b.scheduledTimeSlot || 'Time not set'
+        },
+        status: b.status,
+        ...b
+      });
+    });
 
-          // --- MERGE LOGIC START ---
-          const localPending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+    const finalPendingBookings = Array.from(mergedMap.values());
 
-          // Use a Map to ensure uniqueness by String ID
-          const mergedMap = new Map();
-          const apiIds = new Set();
+    // Update stats
+    setStats({
+      todayEarnings: apiStats.vendorEarnings || 0,
+      activeJobs: apiStats.inProgressBookings || 0,
+      pendingAlerts: finalPendingBookings.length,
+      workersOnline: apiStats.workersOnline || 0,
+      totalEarnings: apiStats.vendorEarnings || 0,
+      completedJobs: apiStats.completedBookings || 0,
+      rating: apiStats.rating || 0,
+    });
 
-          // Add API items first - THIS IS THE SOURCE OF TRUTH
-          requestedBookings.forEach(b => {
-            const id = String(b._id || b.id);
-            apiIds.add(id);
-            mergedMap.set(id, {
-              id: id,
-              serviceType: b.serviceId?.title || 'Service Request',
-              customerName: b.userId?.name || 'Customer',
-              location: {
-                address: b.address?.addressLine1 || 'Address not available',
-                distance: 'N/A'
-              },
-              price: (b.vendorEarnings || (b.finalAmount ? b.finalAmount * 0.9 : 0)).toFixed(2),
-              timeSlot: {
-                date: new Date(b.scheduledDate).toLocaleDateString(),
-                time: b.scheduledTimeSlot || 'Time not set'
-              },
-              status: b.status,
-              ...b
-            });
-          });
+    setPendingBookings(finalPendingBookings);
 
-          // Sync localStorage: Remove items that are NO LONGER in the API stats
-          // (This handles the case where user deleted from DB)
-          // We only keep local items if we are sure they are valid but missing from API (unlikely now)
-          // OR if we want to trust API fully, we just filter localPending to be subset of API
+    // Recent jobs (non-requested)
+    const recentJobsData = otherBookings.slice(0, 3).map(booking => ({
+      id: booking._id,
+      serviceType: booking.serviceId?.title || 'Service',
+      customerName: booking.userId?.name || 'Customer',
+      location: booking.address?.addressLine1 || 'Address not available',
+      price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
+      timeSlot: {
+        date: new Date(booking.scheduledDate).toLocaleDateString(),
+        time: booking.scheduledTimeSlot || 'Time not set'
+      },
+      status: booking.status,
+      assignedTo: booking.workerId ? { name: booking.workerId.name } : null,
+    }));
+    setRecentJobs(recentJobsData);
 
-          const validLocalPending = localPending.filter(localB => {
-            const id = String(localB.id || localB._id);
-            return apiIds.has(id); // Only keep if it exists in API response
-          });
-
-          // Update localStorage to match API reality (removing deleted items)
-          localStorage.setItem('vendorPendingJobs', JSON.stringify(validLocalPending));
-
-          // The final list is just the API items (since we validated local against it)
-          const finalPendingBookings = Array.from(mergedMap.values());
-          // --- MERGE LOGIC END ---
-
-          // Update stats
-          setStats({
-            todayEarnings: apiStats.vendorEarnings || 0,
-            activeJobs: apiStats.inProgressBookings || 0,
-            pendingAlerts: finalPendingBookings.length,
-            workersOnline: apiStats.workersOnline || 0,
-            totalEarnings: apiStats.vendorEarnings || 0,
-            completedJobs: apiStats.completedBookings || 0,
-            rating: apiStats.rating || 0,
-          });
-
-          // Update pending bookings state
-          setPendingBookings(finalPendingBookings);
-
-          // Update recent jobs from API data (show recent non-requested bookings)
-          const recentJobsData = otherBookings.slice(0, 3).map(booking => ({
-            id: booking._id,
-            serviceType: booking.serviceId?.title || 'Service',
-            customerName: booking.userId?.name || 'Customer',
-            location: booking.address?.addressLine1 || 'Address not available',
-            price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
-            timeSlot: {
-              date: new Date(booking.scheduledDate).toLocaleDateString(),
-              time: booking.scheduledTimeSlot || 'Time not set'
-            },
-            status: booking.status,
-            assignedTo: booking.workerId ? { name: booking.workerId.name } : null,
-          }));
-          setRecentJobs(recentJobsData);
-
-          // Load vendor profile from localStorage (for now)
-          const profile = JSON.parse(localStorage.getItem('vendorData') || '{}');
-          setVendorProfile({
-            name: profile.name || 'Vendor Name',
-            businessName: profile.businessName || 'Business Name',
-            photo: profile.profilePhoto || null,
-          });
-        } else {
-          throw new Error(response.message || 'Failed to load dashboard data');
-        }
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-        setError(String(err.message || 'Failed to load dashboard data'));
-        // Fallback logic remains same...
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDashboardData();
+    // Load vendor profile from localStorage (once)
+    const profile = JSON.parse(localStorage.getItem('vendorData') || '{}');
+    setVendorProfile({
+      name: profile.name || 'Vendor Name',
+      businessName: profile.businessName || 'Business Name',
+      photo: profile.profilePhoto || null,
+    });
   }, []);
+
+  // Main data loader - useCallback to prevent recreation
+  const loadDashboardData = useCallback(async (showSpinner = true) => {
+    try {
+      if (showSpinner) setLoading(true);
+      setError(null);
+
+      const response = await vendorDashboardService.getDashboardStats();
+      processApiResponse(response);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError(String(err.message || 'Failed to load dashboard data'));
+    } finally {
+      setLoading(false);
+    }
+  }, [processApiResponse]);
+
+  // Initial load
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   // Listen for real-time updates via window events (dispatched by useAppNotifications)
   useEffect(() => {
     const handleUpdate = () => {
       console.log('🔄 Dashboard: Refreshing data due to real-time update');
-      // Re-fetch dashboard data
-      // We can just call the loading function again
-      const refreshData = async () => {
-        try {
-          const response = await vendorDashboardService.getDashboardStats();
-          if (response.success) {
-            const { stats: apiStats, recentBookings } = response.data;
-
-            // Separate REQUESTED/SEARCHING bookings from other bookings
-            const requestedBookings = (recentBookings || []).filter(booking =>
-              booking.status === 'REQUESTED' || booking.status === 'searching'
-            );
-            const otherBookings = (recentBookings || []).filter(booking =>
-              booking.status !== 'REQUESTED' && booking.status !== 'searching'
-            );
-
-            // --- MERGE LOGIC START ---
-            const localPending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
-            const mergedMap = new Map();
-            const apiIds = new Set();
-
-            // Add API items first - THIS IS THE SOURCE OF TRUTH
-            requestedBookings.forEach(b => {
-              const id = String(b._id || b.id);
-              apiIds.add(id);
-              mergedMap.set(id, {
-                id: id,
-                serviceType: b.serviceId?.title || 'Service Request',
-                customerName: b.userId?.name || 'Customer',
-                location: {
-                  address: b.address?.addressLine1 || 'Address not available',
-                  distance: 'N/A'
-                },
-                price: (b.vendorEarnings || (b.finalAmount ? b.finalAmount * 0.9 : 0)).toFixed(2),
-                timeSlot: {
-                  date: new Date(b.scheduledDate).toLocaleDateString(),
-                  time: b.scheduledTimeSlot || 'Time not set'
-                },
-                status: b.status,
-                ...b
-              });
-            });
-
-            // Sync localStorage: Remove items that are NO LONGER in the API stats
-            const validLocalPending = localPending.filter(localB => {
-              const id = String(localB.id || localB._id);
-              return apiIds.has(id);
-            });
-
-            // Update localStorage
-            localStorage.setItem('vendorPendingJobs', JSON.stringify(validLocalPending));
-
-            const finalPendingBookings = Array.from(mergedMap.values());
-            // --- MERGE LOGIC END ---
-
-            setStats({
-              todayEarnings: apiStats.vendorEarnings || 0,
-              activeJobs: apiStats.inProgressBookings || 0,
-              pendingAlerts: finalPendingBookings.length,
-              workersOnline: apiStats.workersOnline || 0,
-              totalEarnings: apiStats.vendorEarnings || 0,
-              completedJobs: apiStats.completedBookings || 0,
-              rating: apiStats.rating || 0,
-            });
-
-            setPendingBookings(finalPendingBookings);
-
-            const recentJobsData = otherBookings.slice(0, 3).map(booking => ({
-              id: booking._id,
-              serviceType: booking.serviceId?.title || 'Service',
-              customerName: booking.userId?.name || 'Customer',
-              location: booking.address?.addressLine1 || 'Address not available',
-              price: (booking.vendorEarnings || (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
-              timeSlot: {
-                date: new Date(booking.scheduledDate).toLocaleDateString(),
-                time: booking.scheduledTimeSlot || 'Time not set'
-              },
-              status: booking.status,
-              assignedTo: booking.workerId ? { name: booking.workerId.name } : null,
-            }));
-            setRecentJobs(recentJobsData);
-          }
-        } catch (err) {
-          console.error('Error refreshing dashboard data:', err);
-        }
-      };
-      refreshData();
+      loadDashboardData(false); // false = don't show spinner for background refresh
     };
 
     // Ask for notification permission and register FCM
@@ -285,9 +177,10 @@ const Dashboard = () => {
       window.removeEventListener('vendorJobsUpdated', handleUpdate);
       window.removeEventListener('vendorStatsUpdated', handleUpdate);
     };
-  }, []);
+  }, [loadDashboardData]);
 
-  const quickActions = [
+  // Memoize quickActions to prevent recreation on every render
+  const quickActions = useMemo(() => [
     {
       title: 'Active Jobs',
       icon: FiBriefcase,
@@ -311,7 +204,7 @@ const Dashboard = () => {
       path: '/vendor/wallet',
       subtitle: `₹${stats.totalEarnings.toLocaleString()} total`,
     },
-  ];
+  ], [stats.activeJobs, stats.workersOnline, stats.totalEarnings]);
 
   const getStatusColor = (status) => {
     const statusColors = {

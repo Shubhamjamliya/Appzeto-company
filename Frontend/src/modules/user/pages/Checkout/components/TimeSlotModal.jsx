@@ -142,47 +142,54 @@ const TimeSlotModal = ({
             {/* Time Selection */}
             <div className="mb-4">
               <h3 className="text-base font-semibold text-black mb-3">Select start time of service</h3>
-              <div
-                className="grid grid-cols-3 gap-2 pb-2"
-                style={{
-                  maxHeight: '280px',
-                  overflowY: 'auto',
-                  WebkitOverflowScrolling: 'touch',
-                  overscrollBehavior: 'contain'
-                }}
-              >
-                {getTimeSlots().map((slot, index) => {
-                  const isSelected = isTimeSelected(slot.value);
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => onTimeSelect(slot.value)}
-                      className="px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all"
-                      style={isSelected ? {
-                        backgroundColor: `${themeColors.brand.teal}1A`,
-                        borderColor: themeColors.button,
-                        color: themeColors.button
-                      } : {
-                        backgroundColor: 'white',
-                        borderColor: '#e5e7eb',
-                        color: '#374151'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.target.style.backgroundColor = '#f9fafb';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.target.style.backgroundColor = 'white';
-                        }
-                      }}
-                    >
-                      {slot.display}
-                    </button>
-                  );
-                })}
-              </div>
+              {getTimeSlots().length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                  <p className="text-gray-500 font-medium mb-1">No time slots available</p>
+                  <p className="text-sm text-gray-400">Please select a different date</p>
+                </div>
+              ) : (
+                <div
+                  className="grid grid-cols-3 gap-2 pb-2"
+                  style={{
+                    maxHeight: '280px',
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehavior: 'contain'
+                  }}
+                >
+                  {getTimeSlots().map((slot, index) => {
+                    const isSelected = isTimeSelected(slot.value);
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => onTimeSelect(slot.value)}
+                        className="px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all"
+                        style={isSelected ? {
+                          backgroundColor: `${themeColors.brand.teal}1A`,
+                          borderColor: themeColors.button,
+                          color: themeColors.button
+                        } : {
+                          backgroundColor: 'white',
+                          borderColor: '#e5e7eb',
+                          color: '#374151'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.target.style.backgroundColor = '#f9fafb';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.target.style.backgroundColor = 'white';
+                          }
+                        }}
+                      >
+                        {slot.display}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Proceed Button */}

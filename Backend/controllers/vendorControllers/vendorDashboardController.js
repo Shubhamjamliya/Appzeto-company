@@ -108,11 +108,12 @@ const getDashboardStats = async (req, res) => {
         }
       ]
     })
-      .populate('userId', 'name phone')
-      .populate('serviceId', 'title iconUrl')
-      .populate('workerId', 'name')
+      .populate('userId', 'name phone')  // Only select needed fields
+      .populate('serviceId', 'title iconUrl')  // Only select needed fields
+      .populate('workerId', 'name')  // Only select needed fields
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();  // Use lean() for faster read
 
     res.status(200).json({
       success: true,

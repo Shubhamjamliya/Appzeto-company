@@ -16,8 +16,10 @@ exports.initiateCashCollection = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.paymentMethod !== 'cash' && booking.paymentMethod !== 'pay_at_home') {
-      return res.status(400).json({ success: false, message: 'This booking is not a cash payment' });
+    // Allow cash, pay_at_home, AND plan_benefit (for final bill flow)
+    const allowedMethods = ['cash', 'pay_at_home', 'plan_benefit'];
+    if (!allowedMethods.includes(booking.paymentMethod)) {
+      return res.status(400).json({ success: false, message: 'This booking is not eligible for cash collection' });
     }
 
     // Optional: Update final total and extra items if provided during initiation
@@ -102,7 +104,10 @@ exports.confirmCashCollection = async (req, res) => {
     }
 
     // OTP Verification - REQUIRED to ensure customer agrees to final bill
-    if (booking.customerConfirmationOTP && otp && booking.customerConfirmationOTP !== otp) {
+    // EXCEPTION: For plan_benefit with no extras, OTP 0000 is allowed (no actual OTP sent)
+    const isPlanBenefitNoExtras = booking.paymentMethod === 'plan_benefit' && otp === '0000';
+
+    if (!isPlanBenefitNoExtras && booking.customerConfirmationOTP && otp && booking.customerConfirmationOTP !== otp) {
       // Allow 0000 only if explicitly allowed in environment (for testing) or just strict check
       if (process.env.NODE_ENV !== 'development' || otp !== '0000') {
         return res.status(400).json({ success: false, message: 'Invalid OTP. Please enter the code sent to the customer.' });
@@ -114,8 +119,9 @@ exports.confirmCashCollection = async (req, res) => {
     const settings = await Settings.findOne({ type: 'global' });
     const commissionRate = (settings?.commissionPercentage || 10) / 100;
 
-    // Optional: Update items if provided again
-    if (extraItems && Array.isArray(extraItems)) {
+    // Store extra items in both workDoneDetails and the new extraCharges field
+    if (extraItems && Array.isArray(extraItems) && extraItems.length > 0) {
+      // Store in workDoneDetails (legacy)
       booking.workDoneDetails = {
         ...booking.workDoneDetails,
         items: extraItems.map(item => ({
@@ -124,19 +130,77 @@ exports.confirmCashCollection = async (req, res) => {
           price: item.price
         }))
       };
-      booking.finalAmount = collectionAmount;
+
+      // Store in new extraCharges field with proper structure
+      booking.extraCharges = extraItems.map(item => ({
+        name: item.title,
+        quantity: Number(item.qty) || 1,
+        price: Number(item.price) || 0,
+        total: (Number(item.qty) || 1) * (Number(item.price) || 0)
+      }));
+
+      booking.extraChargesTotal = collectionAmount;
     }
 
-    // Recalculate earnings and commission if amount changed or just to be safe
-    booking.adminCommission = parseFloat((collectionAmount * commissionRate).toFixed(2));
-    booking.vendorEarnings = parseFloat((collectionAmount - booking.adminCommission).toFixed(2));
+    // Recalculate earnings and commission
+    // Recalculate earnings and commission
+
+    // LOGIC: 
+    // 1. Base Amount (Base + Tax + Visit - Discount) -> Commission Applies (10% Admin, 90% Vendor)
+    // 2. Extra Charges -> NO Commission (100% Vendor)
+
+    const extraChargesTotal = booking.extraChargesTotal || 0;
+
+    if (booking.paymentMethod === 'plan_benefit') {
+      // PLAN BENEFIT
+      // Base earnings already calculated at booking creation
+      const originalVendorEarnings = booking.vendorEarnings || 0;
+
+      // Extras go 100% to vendor
+      booking.vendorEarnings = parseFloat((originalVendorEarnings + collectionAmount).toFixed(2));
+
+      // Admin commission unchanged (stays on base only)
+
+      // Update FINAL AMOUNT (User Pays)
+      // For plan, User Pays = Extras Only
+      // collectionAmount IS the extras total here
+      booking.finalAmount = (booking.finalAmount || 0) + collectionAmount;
+      booking.userPayableAmount = collectionAmount; // Explicitly set user payable
+
+    } else {
+      // NORMAL BOOKING
+
+      // "collectionAmount" is the TOTAL user is paying now (Base Remainder + Extras)
+      // We need to separate Base part from Extras part
+
+      // Base Part = Total Collection - Extras (ensure not negative)
+      const basePart = Math.max(0, collectionAmount - extraChargesTotal);
+
+      // Calculate Commission on Base Part ONLY
+      const adminCommissionOnBase = parseFloat((basePart * commissionRate).toFixed(2));
+      const vendorEarningsOnBase = parseFloat((basePart - adminCommissionOnBase).toFixed(2));
+
+      // Vendor Total = Base Earnings + Extras (100%)
+      booking.adminCommission = adminCommissionOnBase;
+      booking.vendorEarnings = parseFloat((vendorEarningsOnBase + extraChargesTotal).toFixed(2));
+
+      // Final Amount and User Payable are the same for normal
+      booking.finalAmount = collectionAmount;
+      booking.userPayableAmount = collectionAmount;
+    }
 
     // Update Booking
     booking.cashCollected = true;
     booking.cashCollectedAt = new Date();
     booking.cashCollectedBy = userRole === 'vendor' ? 'vendor' : 'worker';
     booking.cashCollectorId = userId;
-    booking.paymentStatus = PAYMENT_STATUS.COLLECTED_BY_VENDOR;
+
+    // PLAN BENEFIT: Set to SUCCESS instead of COLLECTED_BY_VENDOR
+    if (booking.paymentMethod === 'plan_benefit') {
+      booking.paymentStatus = PAYMENT_STATUS.SUCCESS;
+    } else {
+      booking.paymentStatus = PAYMENT_STATUS.COLLECTED_BY_VENDOR;
+    }
 
     // If it was a self-job or completed by worker, mark booking as completed or work_done?
     // Usually cash collection is the last step for cash bookings.

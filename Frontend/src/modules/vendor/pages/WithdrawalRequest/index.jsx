@@ -194,7 +194,6 @@ const WithdrawalRequest = () => {
               value={amount}
               onChange={(e) => handleAmountChange(e.target.value)}
               placeholder="0"
-              autoFocus
               className={`w-full pl-10 pr-4 py-5 bg-white rounded-2xl border-2 border-dashed ${error ? 'border-red-300 bg-red-50 text-red-500' : 'border-emerald-300 focus:border-emerald-500'
                 } text-4xl font-black text-center focus:outline-none transition-all shadow-sm focus:shadow-emerald-100/50 focus:shadow-lg text-gray-900 caret-emerald-500 placeholder:text-gray-200`}
             />
@@ -403,14 +402,14 @@ const WithdrawalRequest = () => {
                 <div
                   key={item._id}
                   className={`rounded-[1.2rem] p-4 flex justify-between items-center shadow-sm border transition-all ${item.status === 'approved' ? 'bg-emerald-50/50 border-emerald-100 hover:border-emerald-200' :
-                      item.status === 'rejected' ? 'bg-red-50/50 border-red-100 hover:border-red-200' :
-                        'bg-amber-50/50 border-amber-100 hover:border-amber-200'
+                    item.status === 'rejected' ? 'bg-red-50/50 border-red-100 hover:border-red-200' :
+                      'bg-amber-50/50 border-amber-100 hover:border-amber-200'
                     }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
-                        item.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                          'bg-amber-100 text-amber-600'
+                      item.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                        'bg-amber-100 text-amber-600'
                       }`}>
                       <FiClock className="w-4 h-4" />
                     </div>
@@ -422,8 +421,8 @@ const WithdrawalRequest = () => {
                     </div>
                   </div>
                   <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${item.status === 'approved' ? 'bg-white/60 text-emerald-700 border border-emerald-100' :
-                      item.status === 'rejected' ? 'bg-white/60 text-red-700 border border-red-100' :
-                        'bg-white/60 text-amber-700 border border-amber-100'
+                    item.status === 'rejected' ? 'bg-white/60 text-red-700 border border-red-100' :
+                      'bg-white/60 text-amber-700 border border-amber-100'
                     }`}>
                     {item.status}
                   </div>

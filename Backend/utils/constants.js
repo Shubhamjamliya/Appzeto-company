@@ -59,7 +59,8 @@ const PAYMENT_STATUS = {
   SUCCESS: 'success',
   FAILED: 'failed',
   REFUNDED: 'refunded',
-  COLLECTED_BY_VENDOR: 'collected_by_vendor'
+  COLLECTED_BY_VENDOR: 'collected_by_vendor',
+  PLAN_COVERED: 'plan_covered' // For plan_benefit bookings until bill is finalized
 };
 
 // Service Status

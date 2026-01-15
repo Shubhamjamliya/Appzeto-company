@@ -171,7 +171,7 @@ const createBooking = async (req, res) => {
         visitingCharges = 0;
         finalAmount = 0; // User pays nothing
         bookingStatus = BOOKING_STATUS.SEARCHING;
-        bookingPaymentStatus = PAYMENT_STATUS.SUCCESS;
+        bookingPaymentStatus = PAYMENT_STATUS.PLAN_COVERED;
       } else {
         return res.status(400).json({ success: false, message: 'Service not covered by your plan' });
       }

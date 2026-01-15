@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBriefcase, FiMapPin, FiClock, FiUser, FiFilter, FiSearch, FiLoader } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
@@ -73,9 +73,8 @@ const ActiveJobs = () => {
       }
     };
 
-    // Load immediately and after a delay
+    // Load immediately (removed duplicate setTimeout call)
     loadJobs();
-    setTimeout(loadJobs, 200);
 
     window.addEventListener('vendorJobsUpdated', loadJobs);
 
@@ -104,7 +103,15 @@ const ActiveJobs = () => {
     });
   };
 
-  const getStatusColor = (status) => {
+  // Memoize hexToRgba helper to prevent recreation
+  const hexToRgba = useCallback((hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }, []);
+
+  const getStatusColor = useCallback((status) => {
     const colors = {
       'ACCEPTED': '#F59E0B',
       'ASSIGNED': '#3B82F6',
@@ -115,20 +122,23 @@ const ActiveJobs = () => {
       'COMPLETED': '#059669',
     };
     return colors[status] || '#6B7280';
-  };
+  }, []);
 
-  const filteredJobs = jobs.filter(job => {
-    const matchesFilter = filter === 'all' ||
-      (filter === 'assigned' && job.status === 'ASSIGNED') ||
-      (filter === 'in_progress' && ['VISITED', 'WORK_DONE'].includes(job.status)) ||
-      (filter === 'completed' && job.status === 'COMPLETED');
+  // Memoize filtered jobs to prevent recalculation on every render
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const matchesFilter = filter === 'all' ||
+        (filter === 'assigned' && job.status === 'ASSIGNED') ||
+        (filter === 'in_progress' && ['VISITED', 'WORK_DONE'].includes(job.status)) ||
+        (filter === 'completed' && job.status === 'COMPLETED');
 
-    const matchesSearch = searchQuery === '' ||
-      job.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.user?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = searchQuery === '' ||
+        job.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.user?.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesFilter && matchesSearch;
-  });
+      return matchesFilter && matchesSearch;
+    });
+  }, [jobs, filter, searchQuery]);
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
@@ -204,12 +214,6 @@ const ActiveJobs = () => {
           <div className="space-y-3">
             {filteredJobs.map((job) => {
               const statusColor = getStatusColor(job.status);
-              const hexToRgba = (hex, alpha) => {
-                const r = parseInt(hex.slice(1, 3), 16);
-                const g = parseInt(hex.slice(3, 5), 16);
-                const b = parseInt(hex.slice(5, 7), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-              };
 
               return (
                 <div

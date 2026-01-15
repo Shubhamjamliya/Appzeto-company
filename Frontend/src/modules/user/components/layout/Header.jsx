@@ -55,6 +55,7 @@ const Header = ({ location, onLocationClick }) => {
               />
             </div>
 
+            {/* Right: Location */}
             <div className="flex flex-col items-end cursor-pointer" onClick={onLocationClick}>
               <div className="flex items-center gap-1 mb-0.5">
                 {/* Gradient Definition for Icons */}
@@ -90,4 +91,3 @@ const Header = ({ location, onLocationClick }) => {
 };
 
 export default Header;
-

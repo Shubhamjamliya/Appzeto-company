@@ -4,6 +4,7 @@ import { FiArrowLeft, FiClock, FiMapPin, FiCheckCircle, FiXCircle, FiLoader, FiC
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import NotificationBell from '../../components/common/NotificationBell';
 import { bookingService } from '../../../../services/bookingService';
 
 const MyBookings = () => {
@@ -153,7 +154,7 @@ const MyBookings = () => {
     <div className="min-h-screen bg-[#F8FAFC] pb-24">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-slate-100 sticky top-0 z-30 transition-all">
-        <div className="px-4 pt-4 pb-3">
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
@@ -163,6 +164,9 @@ const MyBookings = () => {
             </button>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">My Bookings</h1>
           </div>
+
+          {/* Notification Bell with Vendor Style */}
+          <NotificationBell />
         </div>
       </header>
 

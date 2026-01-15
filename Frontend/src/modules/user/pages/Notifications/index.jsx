@@ -81,35 +81,42 @@ const Notifications = () => {
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'all') return true;
-    return notif.type.toLowerCase() === filter;
+
+    const type = (notif.type || '').toLowerCase();
+
+    if (filter === 'payments') {
+      return ['payment_', 'refund_', 'wallet_'].some(prefix => type.includes(prefix));
+    }
+
+    if (filter === 'jobs') { // Mapped to 'Bookings' in UI
+      return ['booking_', 'job_', 'worker_', 'visit_', 'work_', 'journey_', 'vendor_'].some(prefix => type.includes(prefix));
+    }
+
+    if (filter === 'alerts') {
+      return ['alert', 'general', 'security', 'account'].some(prefix => type.includes(prefix));
+    }
+
+    return type === filter;
   });
 
-  const getNotificationIcon = (type) => {
-    switch (type.toLowerCase()) {
-      case 'alert':
-        return '🔔';
-      case 'job':
-      case 'booking':
-        return '📋';
-      case 'payment':
-        return '💰';
-      default:
-        return '📢';
-    }
+  const getNotificationIcon = (originalType) => {
+    const type = (originalType || '').toLowerCase();
+
+    if (['payment', 'refund', 'wallet'].some(t => type.includes(t))) return '💰';
+    if (['booking', 'job', 'work', 'visit', 'journey', 'vendor'].some(t => type.includes(t))) return '📋';
+    if (['alert', 'general'].some(t => type.includes(t))) return '🔔';
+
+    return '📢';
   };
 
-  const getNotificationColor = (type) => {
-    switch (type.toLowerCase()) {
-      case 'alert':
-        return themeColors.button;
-      case 'job':
-      case 'booking':
-        return '#3B82F6';
-      case 'payment':
-        return '#10B981';
-      default:
-        return '#6B7280';
-    }
+  const getNotificationColor = (originalType) => {
+    const type = (originalType || '').toLowerCase();
+
+    if (['payment', 'refund', 'wallet'].some(t => type.includes(t))) return '#10B981'; // Green
+    if (['booking', 'job', 'work', 'visit', 'journey', 'vendor'].some(t => type.includes(t))) return '#3B82F6'; // Blue
+    if (['alert', 'general'].some(t => type.includes(t))) return themeColors.button;
+
+    return '#6B7280'; // Gray
   };
 
   return (
@@ -135,7 +142,6 @@ const Notifications = () => {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
           {[
             { id: 'all', label: 'All' },
-            { id: 'alerts', label: 'Alerts' },
             { id: 'jobs', label: 'Bookings' }, // Changed 'Jobs' to 'Bookings' for User
             { id: 'payments', label: 'Payments' },
           ].map((filterOption) => (

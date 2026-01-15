@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+// JobMap component for tracking worker journey and arrival verification
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView, MarkerF } from '@react-google-maps/api';
-import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiClock, FiMaximize2 } from 'react-icons/fi';
-import { FaMotorcycle } from 'react-icons/fa';
+import { GoogleMap, useJsApiLoader, DirectionsRenderer, OverlayView } from '@react-google-maps/api';
+import { FiArrowLeft, FiNavigation, FiMapPin, FiCrosshair, FiPhone, FiCheckCircle } from 'react-icons/fi';
 import workerService from '../../../../services/workerService';
+import { VisitVerificationModal } from '../../components/common'; // Import from local worker common
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
 
@@ -42,12 +43,11 @@ const JobMap = () => {
   const [directions, setDirections] = useState(null);
   const [distance, setDistance] = useState('');
   const [duration, setDuration] = useState('');
-  const [routePath, setRoutePath] = useState(null);
+  const [routePath, setRoutePath] = useState([]);
   const [isAutoCenter, setIsAutoCenter] = useState(true);
   const [isNavigationMode, setIsNavigationMode] = useState(false);
-  const [heading, setHeading] = useState(0); // Lifted state up
-
-  const socket = useAppNotifications('worker');
+  const [heading, setHeading] = useState(0);
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -64,25 +64,26 @@ const JobMap = () => {
     const fetchJob = async () => {
       try {
         const response = await workerService.getJobById(id);
-        if (response.success) {
-          setJob(response.data);
-          // 1. Destination: Fixed Booking Address from DB
-          const bAddr = response.data.address || {};
+        const data = response.data || response;
+        setJob(data);
 
-          if (bAddr.lat && bAddr.lng) {
-            setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
-          } else {
-            const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
-            if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
-              const geocoder = new window.google.maps.Geocoder();
-              geocoder.geocode({ address: addressStr }, (results, status) => {
-                if (status === 'OK' && results[0]) {
-                  setCoords(results[0].geometry.location.toJSON());
-                }
-              });
-            }
+        // 1. Destination: Fixed Job Address from DB
+        const bAddr = data.address || {};
+
+        if (bAddr.lat && bAddr.lng) {
+          setCoords({ lat: parseFloat(bAddr.lat), lng: parseFloat(bAddr.lng) });
+        } else {
+          const addressStr = typeof bAddr === 'string' ? bAddr : `${bAddr.addressLine1 || ''}, ${bAddr.city || ''}, ${bAddr.state || ''} ${bAddr.pincode || ''}`;
+          if (addressStr.replaceAll(',', '').trim() && !addressStr.toLowerCase().includes('current location')) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ address: addressStr }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                setCoords(results[0].geometry.location.toJSON());
+              }
+            });
           }
         }
+
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -105,12 +106,21 @@ const JobMap = () => {
             setHeading(gpsHeading);
           }
         },
-        null,
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        (error) => {
+          console.warn('GPS Tracking Error:', error);
+          if (error.code === 1) { // PERMISSION_DENIED
+            toast.error("Location permission denied. Map cannot track you.");
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
       return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      toast.error("Geolocation not supported on this device");
     }
   }, []);
+
+  const socket = useAppNotifications('worker'); // Use worker namespace
 
   // Sync Location to Backend (Periodic)
   useEffect(() => {
@@ -129,18 +139,14 @@ const JobMap = () => {
             lng: currentLocation.lng
           });
         }
-      }, 5000); // Sync every 5 seconds
+      }, 5000);
 
       return () => clearInterval(syncInterval);
     }
   }, [currentLocation, socket, id]);
 
-
-
-
   const prevLocationRef = useRef(null);
 
-  // Calculate Route - Run ONCE
   // Calculate Route & Adjust Bounds
   useEffect(() => {
     if (isLoaded && currentLocation && coords && map) {
@@ -179,7 +185,7 @@ const JobMap = () => {
     }
   }, [isLoaded, coords, map, directions, currentLocation, isAutoCenter, isNavigationMode, heading]);
 
-  // Calculate Heading based on movement (Direction Sense)
+  // Calculate Heading based on movement
   useEffect(() => {
     if (isLoaded && currentLocation && window.google) {
       if (prevLocationRef.current) {
@@ -187,13 +193,11 @@ const JobMap = () => {
         const end = new window.google.maps.LatLng(currentLocation);
         const distanceMoved = window.google.maps.geometry.spherical.computeDistanceBetween(start, end);
 
-        // Update heading only if movement is significant (> 2 meters) to prevent jitter
-        if (distanceMoved > 1) { // Reduced threshold for better responsiveness
+        if (distanceMoved > 1) { // Reduced threshold
           const newHeading = window.google.maps.geometry.spherical.computeHeading(start, end);
           setHeading(newHeading);
         }
       } else if (coords) {
-        // Initial heading towards job location
         const start = new window.google.maps.LatLng(currentLocation);
         const end = new window.google.maps.LatLng(coords);
         setHeading(window.google.maps.geometry.spherical.computeHeading(start, end));
@@ -202,7 +206,7 @@ const JobMap = () => {
     }
   }, [currentLocation, isLoaded, coords]);
 
-  // Sync Map Heading & Tilt for Navigation Feel
+  // Sync Map Heading & Tilt
   useEffect(() => {
     if (map && currentLocation && heading && isAutoCenter) {
       map.setHeading(heading);
@@ -210,7 +214,6 @@ const JobMap = () => {
     }
   }, [map, heading, isAutoCenter, currentLocation]);
 
-  // Memoize Map Markers to prevent flickering/blinking
   const destinationMarker = useMemo(() => coords && (
     <OverlayView
       position={coords}
@@ -223,12 +226,13 @@ const JobMap = () => {
     </OverlayView>
   ), [coords]);
 
+  // Use standard image for rider or generate a similar one if 'rider-3D.png' is missing. 
+  // Assuming 'rider-3D.png' exists in public folder as per Vendor map.
   const riderMarker = useMemo(() => currentLocation && (
     <OverlayView
       position={currentLocation}
       mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
     >
-      {/* Container - centered on the coordinate */}
       <div
         style={{
           position: 'absolute',
@@ -236,22 +240,19 @@ const JobMap = () => {
           cursor: 'pointer'
         }}
       >
-        {/* Icon Container - No background/border */}
         <div
           className="relative z-20 w-16 h-16 transition-transform duration-500 ease-in-out"
           style={{ transform: `rotate(${heading - 180}deg)` }}
         >
+          {/* Using a fallback image if rider-3D is specific to vendor, but usually shared in public */}
           <img
             src="/rider-3D.png"
             alt="Rider"
             className="w-full h-full object-contain drop-shadow-xl"
+            onError={(e) => { e.target.onerror = null; e.target.src = "https://cdn-icons-png.flaticon.com/512/2972/2972185.png" }} // Fallback
           />
         </div>
-
-        {/* Pulse Animation */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-teal-500/30 rounded-full animate-ping z-10 pointer-events-none"></div>
-
-        {/* Shadow */}
         <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-12 h-3 bg-black/20 blur-sm rounded-full z-0"></div>
       </div>
     </OverlayView>
@@ -268,7 +269,7 @@ const JobMap = () => {
     mapId: mapId || '8e0a97af9386fefc',
   }), [mapId]);
 
-  if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
+  if (!isLoaded || loading) return <div className="h-screen bg-gray-100 flex items-center justify-center"><div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
     <div className="h-screen flex flex-col relative bg-white overflow-hidden">
@@ -289,7 +290,6 @@ const JobMap = () => {
           defaultZoom={14}
           onLoad={map => {
             setMap(map);
-            // Ensure map doesn't tilt automatically unless we want it to
             map.setTilt(0);
           }}
           onDragStart={() => setIsAutoCenter(false)}
@@ -301,7 +301,7 @@ const JobMap = () => {
               options={{
                 suppressMarkers: true,
                 polylineOptions: {
-                  strokeColor: "#0F766E", // Dark Teal for Worker (Unified)
+                  strokeColor: "#0F766E", // Dark Teal
                   strokeWeight: 8,
                   strokeOpacity: 1,
                   zIndex: 50
@@ -315,20 +315,15 @@ const JobMap = () => {
         </GoogleMap>
 
         {/* Recenter Button */}
-        {/* Recenter / Start Navigation Button */}
-
-
-        {/* Recenter Button */}
         <button
           onClick={() => {
             setIsAutoCenter(true);
             if (map && currentLocation) {
               map.panTo(currentLocation);
-              // Do NOT change zoom/tilt here, respect user's current mode
               if (!isNavigationMode) {
                 map.setZoom(15);
               } else {
-                map.setZoom(18); // If in nav mode, ensure close zoom
+                map.setZoom(18);
               }
             }
           }}
@@ -348,7 +343,7 @@ const JobMap = () => {
           <div>
             <p className="text-sm font-medium text-teal-600 mb-1 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
-              {duration ? `Arriving in ${duration}` : 'Calculating route...'}
+              {duration ? `Trip time: ${duration}` : 'Calculating path...'}
             </p>
             <h2 className="text-2xl font-black text-gray-900 tracking-tight">Job Location</h2>
           </div>
@@ -366,18 +361,40 @@ const JobMap = () => {
             <FiMapPin className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 mb-0.5 truncate">Destination Location</h3>
+            <h3 className="font-bold text-gray-900 mb-0.5 truncate">Address</h3>
             <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
-              {job?.address ? `${job.address.addressLine1}, ${job.address.city}, ${job.address.state}` : 'Address loading...'}
+              {(() => {
+                const addr = job?.address;
+                if (!addr) return 'Address loading...';
+                if (typeof addr === 'string') return addr;
+                return `${addr.addressLine2 ? addr.addressLine2 + ', ' : ''}${addr.addressLine1 || ''}, ${addr.city || ''} ${addr.pincode || ''}`;
+              })()}
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          {job?.userId?.phone && (
-            <a href={`tel:${job.userId.phone}`} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30 transition-all active:scale-95">
-              <FiPhone className="w-5 h-5" /> Call Customer
+          {job?.status === 'journey_started' && (
+            <button
+              onClick={async () => {
+                try {
+                  await workerService.workerReached(id);
+                  toast.success('Customer notified that you reached');
+                } catch (e) {
+                  console.error('Reached notification failed', e);
+                }
+                setIsVisitModalOpen(true);
+              }}
+              className="px-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+            >
+              <FiCheckCircle className="w-5 h-5" /> Reached
+            </button>
+          )}
+
+          {(job?.userId?.phone || job?.customerPhone) && (
+            <a href={`tel:${job.userId?.phone || job.customerPhone}`} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30 transition-all active:scale-95">
+              <FiPhone className="w-5 h-5" /> Call
             </a>
           )}
           <button
@@ -393,7 +410,15 @@ const JobMap = () => {
           </button>
         </div>
       </div>
-    </div >
+
+      {/* Visit OTP Modal */}
+      <VisitVerificationModal
+        isOpen={isVisitModalOpen}
+        onClose={() => setIsVisitModalOpen(false)}
+        bookingId={id}
+        onSuccess={() => navigate(`/worker/job/${id}`)}
+      />
+    </div>
   );
 };
 

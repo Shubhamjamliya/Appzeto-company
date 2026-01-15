@@ -12,6 +12,39 @@ const BottomNav = memo(() => {
   const iconRefs = useRef({});
   const activeAnimations = useRef({});
   const [pendingJobsCount, setPendingJobsCount] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Detect when any modal is open (elements with z-index >= 100 or fixed overlays)
+  useEffect(() => {
+    const checkForModal = () => {
+      // Check for elements with high z-index that indicate a modal
+      const modalElements = document.querySelectorAll('[class*="z-[100]"], [class*="z-\\[100\\]"], .modal-overlay, [role="dialog"]');
+      const hasModal = modalElements.length > 0;
+
+      // Also check for any fixed elements that cover the screen (modal overlays)
+      const fixedOverlays = document.querySelectorAll('.fixed.inset-0');
+      const hasOverlay = Array.from(fixedOverlays).some(el => {
+        const style = window.getComputedStyle(el);
+        return style.zIndex && parseInt(style.zIndex) >= 50;
+      });
+
+      setIsModalOpen(hasModal || hasOverlay);
+    };
+
+    // Initial check
+    checkForModal();
+
+    // Watch for DOM changes (modals being added/removed)
+    const observer = new MutationObserver(checkForModal);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Load pending jobs count from localStorage (mock data for now)
   useEffect(() => {
@@ -56,7 +89,10 @@ const BottomNav = memo(() => {
     }
   };
 
-
+  // Hide nav when modal is open
+  if (isModalOpen) {
+    return null;
+  }
 
   return (
     <nav

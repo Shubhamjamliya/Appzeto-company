@@ -21,6 +21,25 @@ const createNotification = async ({
   priority = null
 }) => {
   try {
+    // Check for duplicate notification within short window (5 seconds) to prevent spam
+    const duplicateQuery = {
+      type,
+      title,
+      createdAt: { $gt: new Date(Date.now() - 5000) }
+    };
+
+    if (userId) duplicateQuery.userId = userId;
+    if (vendorId) duplicateQuery.vendorId = vendorId;
+    if (workerId) duplicateQuery.workerId = workerId;
+    if (adminId) duplicateQuery.adminId = adminId;
+    if (relatedId) duplicateQuery.relatedId = relatedId;
+
+    const existingNotification = await Notification.findOne(duplicateQuery);
+    if (existingNotification) {
+      console.log(`[Notification] Duplicate suppression: ${type} for ${relatedId}`);
+      return existingNotification;
+    }
+
     const notification = await Notification.create({
       userId,
       vendorId,

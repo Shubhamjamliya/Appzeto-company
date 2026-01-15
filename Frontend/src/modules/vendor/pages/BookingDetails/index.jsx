@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck, FiTool, FiXCircle } from 'react-icons/fi';
+import { FiMapPin, FiClock, FiDollarSign, FiUser, FiPhone, FiNavigation, FiArrowRight, FiEdit, FiCheckCircle, FiCreditCard, FiX, FiCheck, FiTool, FiXCircle, FiAward } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
@@ -15,6 +15,9 @@ import {
   completeSelfJob
 } from '../../services/bookingService';
 import { CashCollectionModal, ConfirmDialog } from '../../components/common';
+import VisitVerificationModal from '../../components/common/VisitVerificationModal';
+// Import shared WorkCompletionModal from worker directory or move to shared
+import { WorkCompletionModal } from '../../../worker/components/common';
 import vendorWalletService from '../../../../services/vendorWalletService';
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
@@ -212,46 +215,55 @@ export default function BookingDetails() {
     const otp = otpInput.join('');
     if (otp.length !== 4) return toast.error('Enter 4-digit OTP');
 
+    setActionLoading(true);
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation required for verification');
+      setActionLoading(false);
+      return;
+    }
+
+    // Robust Geolocation Helper - PERMISSIVE MODE
+    const getPosition = () => {
+      return new Promise((resolve, reject) => {
+        // FASTEST STRATEGY: Prefer Wi-Fi/Cell (Low Accuracy) + Cached Positions
+        // Detailed GPS is often blocked indoors where vendors verify arrival
+        const options = {
+          enableHighAccuracy: false, // Critical fix: Disable GPS requirement
+          timeout: 30000,            // 30s timeout
+          maximumAge: Infinity       // Accept any valid cached position
+        };
+
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          (error) => {
+            console.warn("Standard geo failed, trying high accuracy as last resort...", error);
+            // Emergency fallback: Try GPS if Wi-Fi location fails (rare)
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              reject,
+              { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+            );
+          },
+          options
+        );
+      });
+    };
+
     try {
-      setActionLoading(true);
-      if (!navigator.geolocation) {
-        toast.error('Geolocation required for verification');
-        return;
-      }
-
-      // Updated Geolocation Options for Mobile
-      const options = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      };
-
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        try {
-          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
-          await verifySelfVisit(id, otp, location);
-          toast.success('Visit Verified');
-          setIsVisitModalOpen(false);
-          window.location.reload();
-        } catch (err) {
-          toast.error(err.response?.data?.message || 'Verification failed');
-        } finally {
-          setActionLoading(false);
-        }
-      }, (error) => {
-        console.error("Geo Error:", error);
-        // Fallback: Try low accuracy if high fails, or just error out with clear message
-        if (error.code === error.TIMEOUT) {
-          toast.error('Location timeout. Please ensure GPS is on and try again.');
-        } else if (error.code === error.PERMISSION_DENIED) {
-          toast.error('Location permission denied. Please enable it in browser settings.');
-        } else {
-          toast.error('Failed to get location. Ensure GPS is enabled.');
-        }
-        setActionLoading(false);
-      }, options);
+      const position = await getPosition();
+      const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+      await verifySelfVisit(id, otp, location);
+      toast.success('Visit Verified');
+      setIsVisitModalOpen(false);
+      window.location.reload();
     } catch (error) {
-      toast.error('Something went wrong');
+      console.error("Geo Error:", error);
+      if (error.code === 1) toast.error('Location permission denied');
+      else if (error.code === 2) toast.error('Location unavailable. Check GPS.');
+      else if (error.code === 3) toast.error('Location timeout. Move to better signal area.');
+      else toast.error('Failed to get location');
+    } finally {
       setActionLoading(false);
     }
   };
@@ -442,7 +454,7 @@ export default function BookingDetails() {
 
   const canCollectCash = (booking) => {
     // Hide if already collected or paid online
-    if (booking?.cashCollected || booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.paymentStatus === 'collected_by_vendor') {
+    if (booking?.cashCollected || booking?.paymentStatus === 'collected_by_vendor') {
       return false;
     }
 
@@ -452,11 +464,20 @@ export default function BookingDetails() {
       ? (booking?.status === 'work_done' || booking?.status === 'completed')
       : booking?.status === 'completed';
 
-    // IMPORTANT: Only for Cash/Pay at Home methods. If method is 'online' but status is pending, we still might wait.
-    // However, if the user switches to cash, the method usually updates.
-    // For now, assume simple logic.
-    return validStatus &&
-      (booking?.paymentMethod === 'cash' || booking?.paymentMethod === 'pay_at_home');
+    if (!validStatus) return false;
+
+    // CRITICAL FIX: Allow bill preparation for Plan Benefit bookings
+    // Even if base is pre-paid (SUCCESS), vendor must generate final bill (for extras etc.)
+    if (booking?.paymentMethod === 'plan_benefit') {
+      return true;
+    }
+
+    if (booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid') {
+      return false;
+    }
+
+    // IMPORTANT: Only for Cash/Pay at Home methods.
+    return (booking?.paymentMethod === 'cash' || booking?.paymentMethod === 'pay_at_home');
   };
 
 
@@ -733,17 +754,29 @@ export default function BookingDetails() {
         </div>
 
         {/* Service Description */}
-        {booking.description && (
-          <div
-            className="bg-white rounded-xl p-4 mb-4 shadow-md"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <p className="text-sm text-gray-600 mb-2">Service Description</p>
-            <p className="text-gray-800">{booking.description}</p>
-          </div>
-        )}
+        {/* Service Description */}
+        {(() => {
+          const genericDesc = 'No description provided';
+          const mainDesc = booking.description === genericDesc ? null : booking.description;
+          const serviceDesc = booking.serviceId?.description;
+          const itemDesc = booking.items?.[0]?.card?.description;
+
+          const displayDesc = mainDesc || serviceDesc || itemDesc;
+
+          if (!displayDesc) return null;
+
+          return (
+            <div
+              className="bg-white rounded-xl p-4 mb-4 shadow-md"
+              style={{
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              <p className="text-sm text-gray-600 mb-2">Service Description</p>
+              <p className="text-gray-800">{displayDesc}</p>
+            </div>
+          );
+        })()}
 
         {/* Booked Items Details */}
         {booking.items && booking.items.length > 0 && (
@@ -774,8 +807,8 @@ export default function BookingDetails() {
               ))}
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-              <p className="font-semibold text-gray-700">Total Price</p>
-              <p className="font-bold text-lg" style={{ color: themeColors.button }}>₹{booking.price}</p>
+              <p className="font-semibold text-gray-700">Total Base Price</p>
+              <p className="font-bold text-lg" style={{ color: themeColors.button }}>₹{(booking.basePrice || 0).toFixed(2)}</p>
             </div>
           </div>
         )}
@@ -798,60 +831,151 @@ export default function BookingDetails() {
         </div>
 
         {/* Payment Details */}
+        {/* Payment Details - Professional Card */}
         <div
-          className="bg-white rounded-xl p-4 mb-4 shadow-md"
+          className="bg-white rounded-xl p-5 mb-4 shadow-sm border border-gray-100"
           style={{
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <FiDollarSign className="w-5 h-5" style={{ color: themeColors.icon }} />
-            <h3 className="font-bold text-gray-800">Payment Summary</h3>
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+            <div className={`p-2 rounded-lg ${booking.paymentMethod === 'plan_benefit' ? 'bg-amber-100' : 'bg-gray-100'}`}>
+              <FiDollarSign className="w-5 h-5" style={{ color: booking.paymentMethod === 'plan_benefit' ? '#d97706' : themeColors.icon }} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">
+                {booking.paymentMethod === 'plan_benefit' ? 'Plan Benefit Summary' : 'Payment Summary'}
+              </h3>
+              {booking.paymentMethod === 'plan_benefit' && (
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                  Plan Membership Active
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="space-y-3 text-sm">
+            {/* Base Items */}
+            <div className="flex justify-between items-center text-gray-600">
               <span>Base Price</span>
-              <span>₹{(booking.basePrice || 0).toFixed(2)}</span>
+              {booking.paymentMethod === 'plan_benefit' ? (
+                <div className="flex items-center gap-2">
+                  <span className="line-through text-gray-400 text-xs">₹{(booking.basePrice || 0).toFixed(2)}</span>
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                </div>
+              ) : (
+                <span>₹{(booking.basePrice || 0).toFixed(2)}</span>
+              )}
             </div>
-            {(booking.tax > 0) && (
-              <div className="flex justify-between text-gray-600">
+
+            {(booking.tax > 0 || booking.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-gray-600">
                 <span>Tax</span>
-                <span>+₹{(booking.tax || 0).toFixed(2)}</span>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400 text-xs">₹{(booking.tax || 0).toFixed(2)}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span>+₹{(booking.tax || 0).toFixed(2)}</span>
+                )}
               </div>
             )}
-            {(booking.visitingCharges > 0) && (
-              <div className="flex justify-between text-gray-600">
+
+            {(booking.visitingCharges > 0 || booking.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-gray-600">
                 <span>Convenience Fee</span>
-                <span>+₹{(booking.visitingCharges || 0).toFixed(2)}</span>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400 text-xs">₹{(booking.visitingCharges || 0).toFixed(2)}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span>+₹{(booking.visitingCharges || 0).toFixed(2)}</span>
+                )}
               </div>
             )}
-            {(booking.discount > 0) && (
+
+            {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
               <div className="flex justify-between text-green-600 font-medium">
                 <span>Discount</span>
                 <span>-₹{(booking.discount || 0).toFixed(2)}</span>
               </div>
             )}
 
-            <div className="my-2 border-t border-gray-200"></div>
+            {/* Extra Charges Section */}
+            {booking.extraCharges && booking.extraCharges.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Extra Charges (User Pays)</p>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+                  {booking.extraCharges.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-gray-700 text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-bold bg-white border px-1.5 rounded text-gray-500">x{item.quantity || 1}</span>
+                        <span>{item.name}</span>
+                      </span>
+                      <span className="font-medium">+₹{(item.total || item.price || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-blue-600 pt-2 mt-2 border-t border-gray-200">
+                    <span>Subtotal Extras</span>
+                    <span>+₹{(booking.extraChargesTotal || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <div className="flex justify-between font-bold text-gray-900">
-              <span>Total Amount (User Pays)</span>
-              <span>₹{(booking.finalAmount || 0).toFixed(2)}</span>
-            </div>
+            <div className="my-4 border-t border-gray-200"></div>
 
-            <div className="my-2 border-t border-dashed border-gray-200"></div>
-
-            <div className="flex justify-between text-gray-500 text-xs">
-              <span>Platform Commission</span>
-              <span>-₹{(booking.platformCommission || 0).toFixed(2)}</span>
-            </div>
-
-            <div className="flex justify-between items-center mt-2 bg-green-50 p-2 rounded-lg">
-              <span className="font-bold text-gray-700">Your Net Earnings</span>
-              <span className="font-bold text-xl" style={{ color: themeColors.button }}>
-                ₹{(booking.vendorEarnings || 0).toFixed(2)}
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-gray-900 font-bold">Total Amount (User Pays)</span>
+              <span className="text-2xl font-bold text-gray-900">
+                ₹{(booking.paymentMethod === 'plan_benefit' ? (booking.extraChargesTotal || 0) : (booking.finalAmount || 0)).toFixed(2)}
               </span>
+            </div>
+
+            {/* Vendor Net Earnings Highlight */}
+            {/* Vendor Net Earnings Highlight */}
+            <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4">
+              {/* Earnings Breakdown */}
+              <div className="mb-2 space-y-1">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600 font-medium">Base Job Earnings</span>
+                  <span className="font-bold text-gray-700">
+                    ₹{Math.max(0, (booking.vendorEarnings || 0) - (booking.extraChargesTotal || 0)).toFixed(2)}
+                  </span>
+                </div>
+                {(booking.extraChargesTotal > 0) && (
+                  <div className="flex justify-between items-center text-sm border-b border-emerald-200/50 pb-2 mb-2">
+                    <span className="text-gray-600 font-medium">Earnings from Extras</span>
+                    <span className="font-bold text-emerald-600">
+                      +₹{(booking.extraChargesTotal || 0).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center pt-1">
+                <span className="font-bold text-gray-800 flex items-center gap-2">
+                  <FiCheckCircle className="text-emerald-500 w-5 h-5" />
+                  Total Net Earnings
+                </span>
+                <span className="font-bold text-2xl text-emerald-700">
+                  ₹{(booking.vendorEarnings || 0).toFixed(2)}
+                </span>
+              </div>
+
+              {booking.paymentMethod === 'plan_benefit' && (
+                <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1.5 bg-emerald-100/50 p-2 rounded-lg border border-emerald-100">
+                  <FiAward className="w-3.5 h-3.5" />
+                  <span>Includes Plan Base Payout + 100% of Extras</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-between text-gray-400 text-xs mt-2 px-1">
+              <span>Platform Commission</span>
+              <span>-₹{(booking.adminCommission || 0).toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -933,88 +1057,118 @@ export default function BookingDetails() {
               )}
             </div>
 
-            {/* Status Section */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Current Status</span>
-                {booking.workerAcceptedAt && <span className="text-[10px] text-gray-400 font-medium">{new Date(booking.workerAcceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+            {/* Status Section - Premium Design */}
+            <div className="rounded-2xl p-6 relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)',
+                boxShadow: 'inset 0 0 40px rgba(74, 222, 128, 0.05)'
+              }}>
+
+              {/* Decorative background blur */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+
+              <div className="flex justify-between items-center mb-6 relative z-10">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-green-800 uppercase tracking-widest">Live Status</span>
+                </div>
+                {booking.workerAcceptedAt && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60 border border-green-100/50 backdrop-blur-sm shadow-sm">
+                    <FiClock className="w-3 h-3 text-green-600" />
+                    <span className="text-[10px] text-green-700 font-bold font-mono">
+                      {new Date(booking.workerAcceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Status Display */}
               {!booking.workerResponse || booking.workerResponse === 'PENDING' ? (
-                <div className="flex items-center gap-3 text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                  <FiClock className="w-5 h-5 animate-pulse" />
+                <div className="flex items-center gap-4 text-amber-600 bg-white/80 backdrop-blur-md p-4 rounded-xl border border-amber-100 shadow-sm relative z-10">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                    <FiClock className="w-5 h-5 animate-pulse" />
+                  </div>
                   <div className="flex-1">
-                    <p className="font-bold text-sm">Awaiting Acceptance</p>
-                    <p className="text-[10px] opacity-80">Worker has not responded yet</p>
+                    <p className="font-bold text-sm text-gray-900">Awaiting Acceptance</p>
+                    <p className="text-xs text-amber-700/80 font-medium mt-0.5">Worker has not responded yet</p>
                   </div>
                 </div>
               ) : booking.workerResponse === 'ACCEPTED' ? (
-                <div className="space-y-4">
-                  {/* Progress Steps Visual */}
-                  <div className="relative flex justify-between items-center px-2">
+                <div className="space-y-6 relative z-10">
+                  {/* Progress Steps Visual - Pro Design */}
+                  <div className="relative px-2">
                     {/* Track Line */}
-                    <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 -z-10"></div>
-
-                    {/* Accepted Step */}
-                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
-                      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs shadow-sm ring-2 ring-white">
-                        <FiCheck className="w-3 h-3" />
+                    <div className="absolute left-6 right-6 top-[15px] h-1.5 bg-gray-100/80 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{
+                        width: booking.status === 'completed' || booking.status === 'work_done' ? '100%' :
+                          booking.status === 'in_progress' || booking.status === 'visited' ? '66%' :
+                            booking.status === 'journey_started' ? '33%' : '0%'
+                      }}>
+                        <div className="w-full h-full bg-white/20 animate-[shimmer_2s_infinite]"></div>
                       </div>
-                      <span className="text-[9px] font-bold text-green-700">Accepted</span>
                     </div>
 
-                    {/* Started Step */}
-                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                        <FiNavigation className="w-3 h-3" />
+                    <div className="flex justify-between items-start relative">
+                      {/* Accepted Step */}
+                      <div className="flex flex-col items-center gap-2 group cursor-default">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-green-200 ring-4 ring-white z-10 transition-transform group-hover:scale-110 duration-300">
+                          <FiCheck className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 tracking-wide uppercase bg-white/50 px-2 py-0.5 rounded-full backdrop-blur-sm">Accepted</span>
                       </div>
-                      <span className={`text-[9px] font-bold ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-blue-700' : 'text-gray-400'}`}>On Way</span>
-                    </div>
 
-                    {/* Working Step */}
-                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                        <FiTool className="w-3 h-3" />
+                      {/* Started Step */}
+                      <div className="flex flex-col items-center gap-2 group cursor-default">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white z-10 transition-all duration-500 group-hover:scale-110 ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-green-200' : 'bg-white text-gray-300 border-2 border-dashed border-gray-200'}`}>
+                          <FiNavigation className="w-4 h-4" />
+                        </div>
+                        <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full backdrop-blur-sm transition-colors ${['journey_started', 'visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-emerald-800 bg-white/50' : 'text-gray-400'}`}>On Way</span>
                       </div>
-                      <span className={`text-[9px] font-bold ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-orange-700' : 'text-gray-400'}`}>Working</span>
-                    </div>
 
-                    {/* Done Step */}
-                    <div className={`flex flex-col items-center gap-1 bg-gray-50 px-1`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-sm ring-2 ring-white ${['work_done', 'completed'].includes(booking.status) ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                        <FiCheckCircle className="w-3 h-3" />
+                      {/* Working Step */}
+                      <div className="flex flex-col items-center gap-2 group cursor-default">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white z-10 transition-all duration-500 group-hover:scale-110 ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-green-200' : 'bg-white text-gray-300 border-2 border-dashed border-gray-200'}`}>
+                          <FiTool className="w-4 h-4" />
+                        </div>
+                        <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full backdrop-blur-sm transition-colors ${['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status) ? 'text-emerald-800 bg-white/50' : 'text-gray-400'}`}>Working</span>
                       </div>
-                      <span className={`text-[9px] font-bold ${['work_done', 'completed'].includes(booking.status) ? 'text-green-700' : 'text-gray-400'}`}>Done</span>
+
+                      {/* Done Step */}
+                      <div className="flex flex-col items-center gap-2 group cursor-default">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white z-10 transition-all duration-500 group-hover:scale-110 ${['work_done', 'completed'].includes(booking.status) ? 'bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-green-200' : 'bg-white text-gray-300 border-2 border-dashed border-gray-200'}`}>
+                          <FiCheckCircle className="w-4 h-4" />
+                        </div>
+                        <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full backdrop-blur-sm transition-colors ${['work_done', 'completed'].includes(booking.status) ? 'text-emerald-800 bg-white/50' : 'text-gray-400'}`}>Done</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Clear Text Status */}
-                  <div className="bg-white rounded-lg p-3 border border-gray-100 flex items-center gap-3 shadow-sm">
-                    <div className={`p-2 rounded-lg ${booking.status === 'journey_started' ? 'bg-blue-100 text-blue-600' :
-                      booking.status === 'in_progress' ? 'bg-orange-100 text-orange-600' :
-                        ['work_done', 'completed'].includes(booking.status) ? 'bg-green-100 text-green-600' :
-                          'bg-gray-100 text-gray-600'
+                  {/* Clear Text Status with Glass Effect */}
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/50 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner ${booking.status === 'journey_started' ? 'bg-blue-50 text-blue-600' :
+                      booking.status === 'in_progress' ? 'bg-orange-50 text-orange-600' :
+                        ['work_done', 'completed'].includes(booking.status) ? 'bg-green-50 text-green-600' :
+                          'bg-gray-100 text-gray-500'
                       }`}>
-                      {booking.status === 'journey_started' ? <FiNavigation className="w-5 h-5" /> :
-                        booking.status === 'in_progress' ? <FiTool className="w-5 h-5 animate-pulse" /> :
-                          ['work_done', 'completed'].includes(booking.status) ? <FiCheckCircle className="w-5 h-5" /> :
-                            <FiCheck className="w-5 h-5" />}
+                      {booking.status === 'journey_started' ? <FiNavigation className="w-6 h-6 drop-shadow-sm" /> :
+                        booking.status === 'in_progress' ? <FiTool className="w-6 h-6 animate-pulse drop-shadow-sm" /> :
+                          ['work_done', 'completed'].includes(booking.status) ? <FiCheckCircle className="w-6 h-6 drop-shadow-sm" /> :
+                            <FiCheck className="w-6 h-6 text-gray-400" />}
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-gray-800">
-                        {booking.status === 'journey_started' ? 'Marked: On the Way' :
-                          booking.status === 'visited' ? 'Worker Reached' :
-                            booking.status === 'in_progress' ? 'Marked: In Progress' :
-                              ['work_done', 'completed'].includes(booking.status) ? 'Marked: Work Done' :
+                      <p className="font-bold text-gray-900 text-base tracking-tight mb-0.5">
+                        {booking.status === 'journey_started' ? 'Worker is On the Way' :
+                          booking.status === 'visited' ? 'Worker Reached Location' :
+                            booking.status === 'in_progress' ? 'Work In Progress' :
+                              ['work_done', 'completed'].includes(booking.status) ? 'Work Completed' :
                                 'Worker Accepted Job'}
                       </p>
-                      <p className="text-[10px] text-gray-400">
-                        {booking.status === 'journey_started' ? 'Worker is traveling to site' :
-                          booking.status === 'visited' ? 'Waiting for start otp verification' :
-                            booking.status === 'in_progress' ? 'Service is being performed' :
-                              ['work_done', 'completed'].includes(booking.status) ? 'Worker waiting for payment' :
-                                'Worker will start journey soon'}
+                      <p className="text-xs text-gray-500 font-medium">
+                        {booking.status === 'journey_started' ? 'Tracking is active. Monitor live location.' :
+                          booking.status === 'visited' ? 'Waiting for OTP verification to start work.' :
+                            booking.status === 'in_progress' ? 'Service is currently being performed.' :
+                              ['work_done', 'completed'].includes(booking.status) ? 'Service marked as done. Pending final checks.' :
+                                'Worker is preparing to start the journey.'}
                       </p>
                     </div>
                   </div>
@@ -1035,52 +1189,74 @@ export default function BookingDetails() {
           </div>
         )}
 
-        {/* Payment Collection Section (New Improved UI) */}
+        {/* Payment Collection Section */}
         {canCollectCash(booking) && (
           <div
             className="bg-white rounded-2xl mb-4 overflow-hidden shadow-lg border-none relative group"
             style={{
-              boxShadow: '0 10px 30px -5px rgba(249, 115, 22, 0.2)',
+              boxShadow: booking.paymentMethod === 'plan_benefit'
+                ? '0 10px 30px -5px rgba(16, 185, 129, 0.2)'
+                : '0 10px 30px -5px rgba(249, 115, 22, 0.2)',
             }}
           >
             {/* Top Accent Gradient */}
-            <div className="h-2 bg-gradient-to-r from-orange-400 to-orange-600" />
+            <div className={`h-2 bg-gradient-to-r ${booking.paymentMethod === 'plan_benefit' ? 'from-emerald-400 to-teal-600' : 'from-orange-400 to-orange-600'}`} />
 
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500 shadow-inner">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${booking.paymentMethod === 'plan_benefit' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-500'}`}>
                   <FiCreditCard className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight">Collect Payment</h3>
-                  <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Step 1: Finish Settlement</p>
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight">
+                    {booking.paymentMethod === 'plan_benefit' ? 'Prepare Final Bill' : 'Collect Payment'}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">
+                    {booking.paymentMethod === 'plan_benefit' ? 'Add extra charges if any' : 'Step 1: Finish Settlement'}
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-orange-50/50 rounded-2xl p-4 mb-6 border border-orange-100/50">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Amount to Collect</span>
-                  <span className="text-2xl font-black text-orange-600">
-                    ₹{(booking.finalAmount || parseFloat(booking.price) || 0).toLocaleString()}
-                  </span>
+              {booking.paymentMethod === 'plan_benefit' ? (
+                /* Plan Benefit UI */
+                <div className="bg-emerald-50/50 rounded-2xl p-4 mb-6 border border-emerald-100/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FiCheckCircle className="w-5 h-5 text-emerald-600" />
+                    <span className="font-bold text-emerald-800">Base Service Covered by Plan</span>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    The base service fee is covered by customer's membership. You can add extra charges for parts or additional work.
+                  </p>
                 </div>
-                <div className="mt-3 flex items-start gap-2 text-[11px] text-orange-700/80 leading-relaxed">
-                  <FiClock className="w-3 h-3 mt-0.5" />
-                  <span>Customer chose {booking.paymentMethod?.replace('_', ' ') || 'Cash'} payment. Please verify collection to proceed.</span>
+              ) : (
+                /* Normal Cash Collection UI */
+                <div className="bg-orange-50/50 rounded-2xl p-4 mb-6 border border-orange-100/50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Amount to Collect</span>
+                    <span className="text-2xl font-black text-orange-600">
+                      ₹{(booking.finalAmount || parseFloat(booking.price) || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 text-[11px] text-orange-700/80 leading-relaxed">
+                    <FiClock className="w-3 h-3 mt-0.5" />
+                    <span>Customer chose {booking.paymentMethod?.replace('_', ' ') || 'Cash'} payment. Please verify collection to proceed.</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 onClick={handleCollectCashClick}
                 disabled={loading}
                 className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 hover:brightness-105"
                 style={{
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  background: booking.paymentMethod === 'plan_benefit'
+                    ? 'linear-gradient(135deg, #10B981, #059669)'
+                    : 'linear-gradient(135deg, #10B981, #059669)',
                   boxShadow: '0 8px 16px -4px rgba(16, 185, 129, 0.4)',
                 }}
               >
                 <FiDollarSign className="w-5 h-5" />
-                Prepare Final Payment
+                {booking.paymentMethod === 'plan_benefit' ? 'Generate Bill' : 'Prepare Final Payment'}
               </button>
             </div>
           </div>
@@ -1133,7 +1309,7 @@ export default function BookingDetails() {
               }}
             >
               <FiCheckCircle className="w-5 h-5" />
-              Pay Worker ₹{(booking.vendorEarnings || 0).toLocaleString()}
+              Pay Worker
             </button>
           </div>
         )}
@@ -1384,139 +1560,34 @@ export default function BookingDetails() {
       </AnimatePresence>
 
       {/* Visit OTP Modal */}
-      <AnimatePresence>
-        {isVisitModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsVisitModalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-[24px] p-8 shadow-2xl relative z-10"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 leading-tight">Verify Arrival</h3>
-                  <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mt-1">Check-in Verification</p>
-                </div>
-                <button
-                  onClick={() => setIsVisitModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
-                >
-                  <FiX className="w-6 h-6" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-                Please enter the <span className="text-gray-900 font-bold">4-digit OTP</span> from the customer to verify your arrival at the location.
-              </p>
+      <VisitVerificationModal
+        isOpen={isVisitModalOpen}
+        onClose={() => setIsVisitModalOpen(false)}
+        bookingId={id}
+        onSuccess={() => window.location.reload()}
+      />
 
-              <div className="flex gap-3 justify-center mb-10">
-                {[0, 1, 2, 3].map((i) => (
-                  <input
-                    key={i}
-                    id={`otp-input-${i}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={otpInput[i]}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    className="w-14 h-16 border-2 border-gray-100 rounded-2xl text-center text-3xl font-bold focus:border-blue-500 focus:outline-none bg-gray-50 transition-all font-mono shadow-sm"
-                    maxLength={1}
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={handleVerifyVisit}
-                disabled={actionLoading}
-                className="w-full py-5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  boxShadow: '0 10px 20px rgba(59, 130, 246, 0.3)',
-                }}
-              >
-                {actionLoading ? 'Verifying...' : 'Verify & Arrive'}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Work Done Modal */}
-      <AnimatePresence>
-        {isWorkDoneModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsWorkDoneModalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-[24px] p-8 shadow-2xl relative z-10"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 leading-tight">Complete Work</h3>
-                  <p className="text-xs text-green-500 font-bold uppercase tracking-wider mt-1">Final Step</p>
-                </div>
-                <button
-                  onClick={() => setIsWorkDoneModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
-                >
-                  <FiX className="w-6 h-6" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
-                Are you sure you have completed all the tasks for this service? Clicking "Confirm" will notify the customer for payment.
-              </p>
-
-              <div className="bg-emerald-50/50 p-6 rounded-2xl mb-8 border border-emerald-100">
-                <div className="flex items-center gap-3 text-emerald-600 mb-3">
-                  <FiCheckCircle className="w-6 h-6" />
-                  <span className="font-bold">Quality Checklist</span>
-                </div>
-                <ul className="text-sm text-gray-600 space-y-2 list-none font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">•</span>
-                    <span>Double check the results</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">•</span>
-                    <span>Clean up the work area</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-1">•</span>
-                    <span>Customer satisfaction check</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={handleCompleteWork}
-                disabled={actionLoading}
-                className="w-full py-5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
-                  boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)',
-                }}
-              >
-                {actionLoading ? 'Updating...' : 'Confirm Work Completed'}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Unified Worker Completion Modal - REUSABLE COMPONENT */}
+      <WorkCompletionModal
+        isOpen={isWorkDoneModalOpen}
+        onClose={() => setIsWorkDoneModalOpen(false)}
+        job={booking}
+        onComplete={async (photos) => {
+          try {
+            setActionLoading(true);
+            // Use vendor-specific service call (completeSelfJob)
+            await completeSelfJob(id, { workPhotos: photos });
+            toast.success('Work marked done');
+            setIsWorkDoneModalOpen(false);
+            window.location.reload();
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to complete job');
+          } finally {
+            setActionLoading(false);
+          }
+        }}
+        loading={actionLoading}
+      />
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

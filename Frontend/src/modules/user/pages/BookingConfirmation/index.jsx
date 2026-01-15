@@ -338,72 +338,94 @@ const BookingConfirmation = () => {
           </div>
         </div>
 
-        {/* Payment Summary Card */}
+        {/* Payment Summary - Professional Card */}
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ background: themeColors.gradient || themeColors.button }}></div>
-          <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
-            <FiDollarSign className="w-5 h-5" style={{ color: themeColors.button }} />
-            Payment Summary
-          </h3>
 
-          {(booking.paymentMethod === 'plan_benefit' || (booking.finalAmount === 0 && !booking.paymentId)) ? (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                  <FiCheckCircle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-green-800">Covered by Your Plan!</p>
-                  <p className="text-xs text-green-600">No payment required</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-green-200">
-                <span className="text-sm text-green-700">Amount Saved</span>
-                <span className="text-lg font-bold text-green-700">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-              </div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className={`p-2 rounded-lg ${booking.paymentMethod === 'plan_benefit' ? 'bg-amber-100' : 'bg-slate-100'}`}>
+              {booking.paymentMethod === 'plan_benefit' ? (
+                <FiPackage className="w-5 h-5 text-amber-600" />
+              ) : (
+                <FiDollarSign className="w-5 h-5 text-slate-600" />
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
+            <h3 className="text-lg font-bold text-slate-900">Payment Summary</h3>
+          </div>
+
+          <div className="space-y-3">
+            {/* Base Price */}
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600">Base Price</span>
+              {booking.paymentMethod === 'plan_benefit' ? (
+                <div className="flex items-center gap-2">
+                  <span className="line-through text-slate-400 text-xs">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                </div>
+              ) : (
+                <span className="font-medium text-slate-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+              )}
+            </div>
+
+            {/* Discount */}
+            {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-green-600 font-medium">Discount</span>
+                <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            {/* Tax */}
+            {(booking.tax > 0 || booking.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">GST (18%)</span>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-slate-400 text-xs">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span className="font-medium text-slate-700">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                )}
+              </div>
+            )}
+
+            {/* Convenience Fee */}
+            {(booking.visitingCharges > 0 || booking.visitationFee > 0 || booking.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Convenience Fee</span>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-slate-400 text-xs">₹{(booking.visitingCharges || booking.visitationFee || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span className="font-medium text-slate-700">₹{(booking.visitingCharges || booking.visitationFee || 0).toLocaleString('en-IN')}</span>
+                )}
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="border-t border-slate-200 pt-4 mt-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600">Base Price</span>
-                <span className="text-sm font-medium text-slate-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-              </div>
-              {booking.discount > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Discount</span>
-                  <span className="text-sm font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              {booking.tax > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-500">GST (18%)</span>
-                  <span className="text-sm font-medium text-slate-700">₹{booking.tax.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              {(booking.visitingCharges > 0 || booking.visitationFee > 0) && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-500">Convenience Fee</span>
-                  <span className="text-sm font-medium text-slate-700">₹{(booking.visitingCharges || booking.visitationFee).toLocaleString('en-IN')}</span>
-                </div>
-              )}
-
-              <div className="border-t border-slate-200 pt-4 mt-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-base font-bold text-slate-900">Total Paid</span>
-                  <span className="text-xl font-black text-slate-900">₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}</span>
-                </div>
+                <span className="text-base font-bold text-slate-900">Total Paid</span>
+                <span className="text-xl font-black text-slate-900">
+                  ₹{(booking.paymentMethod === 'plan_benefit' ? 0 : (booking.finalAmount || booking.totalAmount || 0)).toLocaleString('en-IN')}
+                </span>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Payment Success Badge */}
-          {booking.paymentId && (
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
-                <FiCheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+          {(booking.paymentId || booking.paymentMethod === 'plan_benefit') && (
+            <div className={`mt-4 pt-3 border-t border-dashed ${booking.paymentMethod === 'plan_benefit' ? 'border-amber-200' : 'border-slate-200'}`}>
+              <div className={`flex items-center gap-2 border rounded-lg p-3 ${booking.paymentMethod === 'plan_benefit' ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-200'}`}>
+                <FiCheckCircle className={`w-5 h-5 shrink-0 ${booking.paymentMethod === 'plan_benefit' ? 'text-amber-600' : 'text-green-600'}`} />
                 <div>
-                  <p className="text-sm font-bold text-green-700">Payment Successful</p>
-                  <p className="text-xs text-green-600">ID: {booking.paymentId}</p>
+                  <p className={`text-sm font-bold ${booking.paymentMethod === 'plan_benefit' ? 'text-amber-700' : 'text-green-700'}`}>
+                    {booking.paymentMethod === 'plan_benefit' ? 'Membership Benefit Applied' : 'Payment Successful'}
+                  </p>
+                  {booking.paymentId && <p className="text-xs text-green-600">ID: {booking.paymentId}</p>}
                 </div>
               </div>
             </div>

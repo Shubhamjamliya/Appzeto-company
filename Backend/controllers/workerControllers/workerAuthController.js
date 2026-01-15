@@ -220,6 +220,18 @@ const register = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
+    const { fcmToken } = req.body;
+
+    // If fcmToken is provided, remove it from worker's profile
+    if (fcmToken && req.user && req.user._id) {
+      await Worker.findByIdAndUpdate(req.user._id, {
+        $pull: {
+          fcmTokens: fcmToken,
+          fcmTokenMobile: fcmToken
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'

@@ -144,6 +144,33 @@ const updateJobStatus = async (req, res) => {
       if (status === BOOKING_STATUS.COMPLETED) {
         booking.completedAt = new Date();
       }
+
+      // Emit socket event for real-time update to user
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user_${booking.userId}`).emit('booking_updated', {
+          bookingId: booking._id,
+          status: booking.status,
+          message: `Job status updated to ${booking.status}`
+        });
+      }
+
+      // Add Push Notification for User
+      const { createNotification } = require('../notificationControllers/notificationController');
+
+      if (status === BOOKING_STATUS.IN_PROGRESS) {
+        await createNotification({
+          userId: booking.userId,
+          type: 'work_started',
+          title: 'Work In Progress',
+          message: 'Professional has started working on your service.',
+          relatedId: booking._id,
+          relatedType: 'booking',
+          priority: 'high',
+          pushData: { type: 'in_progress', bookingId: booking._id.toString(), link: `/user/booking/${booking._id}` }
+        });
+      }
+
     }
 
     // Update additional fields
@@ -157,16 +184,6 @@ const updateJobStatus = async (req, res) => {
     }
 
     await booking.save();
-
-    // Emit socket event for real-time update to user
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${booking.userId}`).emit('booking_updated', {
-        bookingId: booking._id,
-        status: booking.status,
-        message: `Job status updated to ${booking.status}`
-      });
-    }
 
     res.status(200).json({
       success: true,
@@ -182,9 +199,6 @@ const updateJobStatus = async (req, res) => {
   }
 };
 
-/**
- * Mark job as started (Visited)
- */
 /**
  * Mark job as started (Journey Started)
  */
@@ -412,9 +426,6 @@ const verifyVisit = async (req, res) => {
 };
 
 /**
- * Mark job as completed (Work Done)
- */
-/**
  * Mark job as completed (Work Done) & Generate Payment OTP
  */
 const completeJob = async (req, res) => {
@@ -569,40 +580,9 @@ const collectCash = async (req, res) => {
     booking.completedAt = new Date();
     booking.paymentOtp = undefined; // Clear OTP
 
-    // Deduct from Vendor Wallet (Negative Balance logic)
-    // "negative balance is deducted from vedors only in both vendor worker cases"
-    // Assuming this means the amount collected is DEBT the vendor owes to the platform (admin)
-    // Or if it's commission based?
-    // "the full control of timeline is with worker till job completion and cash collection"
-    // "when worker collects the cash the neagtive balance is deducted from vedors only"
-    // This implies Vendor Wallet Balance -= Amount Collected (making it negative if they held 0).
-    // Because they (Vendor entity) now hold the cash (physically via worker).
-
     if (booking.vendorId) {
       const vendor = await Vendor.findById(booking.vendorId);
       if (vendor) {
-        // Decrease balance by Full Amount (since cash is collected)
-        // Or remove commission? Usually platform takes commission.
-        // If Vendor collects 1000 cash. Commission is 100.
-        // Vendor owes 100 to Admin.
-        // Wallet decreases by 100?
-        // OR: Vendor Wallet tracks "How much money Vendor holds that belongs to Admin"?
-        // Usually: Wallet Balance = Money Admin Holds for Vendor.
-        // If Vendor collects Cash, they essentially "Withdrew" money instantly.
-        // If they collect 1000, and their share is 900.
-        // They should have received 900. They took 1000.
-        // So they took 100 extra (Admin's share).
-        // Wallet Balance -= 100?
-        // BUT Logic says "negative balance is deducted from vendors only".
-        // Let's assume simplest interpretation: Deduct the Cash Amount from Wallet.
-        // Wait, if I deduct 1000 from Wallet. 
-        // Before: Wallet 0.
-        // After: Wallet -1000.
-        // This means Vendor owes 1000 to Admin. 
-        // But Vendor EARNED 900. So Vendor owes 100.
-        // So we should ADD Vendor Earnings (+900) and SUBTRACT Cash Collected (-1000). 
-        // Net: -100. Correct.
-
         // Update DUES (Cash Collected)
         vendor.wallet.dues = (vendor.wallet.dues || 0) + booking.finalAmount;
 
@@ -744,12 +724,23 @@ const respondToJob = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Job not found' });
     }
 
+    // Idempotency check: If already in desired state, return success without re-notifying
+    if (status === 'ACCEPTED' && booking.workerResponse === 'ACCEPTED') {
+      return res.status(200).json({ success: true, message: 'Job already accepted', data: booking });
+    }
+
+    if (status === 'REJECTED' && booking.workerResponse === 'REJECTED') {
+      return res.status(200).json({ success: true, message: 'Job already rejected', data: booking });
+    }
+
     if (status === 'ACCEPTED') {
       booking.status = BOOKING_STATUS.ASSIGNED;
       booking.workerAcceptedAt = new Date();
       booking.workerResponse = 'ACCEPTED';
 
       const { createNotification } = require('../notificationControllers/notificationController');
+
+      // Notify Vendor
       await createNotification({
         vendorId: booking.vendorId,
         type: 'job_accepted',
@@ -758,6 +749,19 @@ const respondToJob = async (req, res) => {
         relatedId: booking._id,
         relatedType: 'booking'
       });
+
+      // Notify User
+      await createNotification({
+        userId: booking.userId,
+        type: 'worker_accepted',
+        title: 'Worker Confirmed',
+        message: 'The assigned professional has accepted your booking.',
+        relatedId: booking._id,
+        relatedType: 'booking',
+        priority: 'high',
+        pushData: { type: 'worker_accepted', bookingId: booking._id.toString(), link: `/user/booking/${booking._id}` }
+      });
+
     } else if (status === 'REJECTED') {
       booking.workerId = null;
       booking.status = BOOKING_STATUS.CONFIRMED; // Revert to unassigned state
@@ -794,4 +798,3 @@ module.exports = {
   collectCash,
   respondToJob
 };
-

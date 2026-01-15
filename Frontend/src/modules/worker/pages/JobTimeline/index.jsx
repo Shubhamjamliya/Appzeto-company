@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FiCheck, FiClock, FiUser, FiMapPin, FiTool, FiDollarSign, FiCheckCircle, FiX, FiNavigation } from 'react-icons/fi';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
-import { CashCollectionModal } from '../../../../components/common';
+import { CashCollectionModal, WorkCompletionModal } from '../../components/common';
 import workerService from '../../../../services/workerService';
 import { toast } from 'react-hot-toast';
 
@@ -286,14 +286,14 @@ const JobTimeline = () => {
       title: 'Final Settlement',
       icon: FiCheckCircle,
       action: null,
-      description: job?.finalSettlementStatus === 'DONE' ? 'Settlement confirmed by vendor.' : 'Waiting for vendor confirmation.',
+      description: job?.finalSettlementStatus === 'DONE' ? 'Final settlement done.' : 'Waiting for vendor confirmation.',
     },
     {
       id: 10,
       title: 'Job Closed',
       icon: FiCheckCircle,
       action: null,
-      description: 'Job and payment cycle successfully completed.',
+      description: 'Final settlement done. Job closed.',
     }
   ];
 
@@ -418,19 +418,28 @@ const JobTimeline = () => {
         </div>
       )}
 
-      {/* Work Done Modal */}
-      {isWorkDoneModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl">
-            <h3 className="font-bold text-lg mb-4">Mark Work Done</h3>
-            <p className="text-sm text-gray-500 mb-6">Ensure all tasks are completed. (Photos skipped for quick action)</p>
-            <button onClick={handleCompleteJob} disabled={actionLoading} className="w-full py-3 rounded-xl text-white font-bold mb-3" style={{ background: themeColors.button }}>
-              {actionLoading ? 'Updating...' : 'Confirm'}
-            </button>
-            <button onClick={() => setIsWorkDoneModalOpen(false)} className="w-full text-gray-500">Cancel</button>
-          </div>
-        </div>
-      )}
+      {/* Work Done Modal - Reused Component */}
+      <WorkCompletionModal
+        isOpen={isWorkDoneModalOpen}
+        onClose={() => setIsWorkDoneModalOpen(false)}
+        job={job}
+        onComplete={async (photos) => {
+          try {
+            setActionLoading(true);
+            const response = await workerService.completeJob(id, { workPhotos: photos });
+            if (response.success) {
+              toast.success('Work marked done');
+              setIsWorkDoneModalOpen(false);
+              fetchJobDetails();
+            }
+          } catch (error) {
+            toast.error(error.response?.data?.message || 'Completion failed');
+          } finally {
+            setActionLoading(false);
+          }
+        }}
+        loading={actionLoading}
+      />
 
       {/* Unified Cash Collection Modal */}
       <CashCollectionModal

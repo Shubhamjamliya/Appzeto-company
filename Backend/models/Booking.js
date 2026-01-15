@@ -4,41 +4,43 @@ const { BOOKING_STATUS, PAYMENT_STATUS } = require('../utils/constants');
 /**
  * Booking Model
  * Represents service bookings made by users
+ * Organized by logical sections for better maintainability
  */
 const bookingSchema = new mongoose.Schema({
-  // Unique Booking Number
+  // ==========================================
+  // 1. IDENTIFIERS
+  // ==========================================
   bookingNumber: {
     type: String,
     unique: true,
     required: true
   },
-  // User Information
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: [true, 'User is required'],
     index: true
   },
-  // Vendor Information
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
-    required: false, // Optional initially, assigned when vendor accepts
+    required: false,
     index: true
   },
-  // Track vendors notified about this booking
-  notifiedVendors: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor'
-  }],
-  // Worker Information (optional - assigned later)
   workerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Worker',
     default: null,
     index: true
   },
-  // Service Information
+  notifiedVendors: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  }],
+
+  // ==========================================
+  // 2. SERVICE INFORMATION
+  // ==========================================
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service',
@@ -51,7 +53,6 @@ const bookingSchema = new mongoose.Schema({
     required: [true, 'Category is required'],
     index: true
   },
-  // Service Details (snapshot at booking time)
   serviceName: {
     type: String,
     required: true
@@ -67,91 +68,69 @@ const bookingSchema = new mongoose.Schema({
   serviceImages: [{
     type: String
   }],
-  // Booked Items - Matches Service catalog structure
-  // Structure: Section > Card (specific service selected)
+  // Booked Items (Section > Card snapshot)
   bookedItems: [{
-    // Section info (from service.sections[])
-    sectionTitle: {
-      type: String,
-      default: 'General'
-    },
-    sectionId: {
-      type: String
-    },
-    // Card info (specific item from section.cards[])
+    sectionTitle: { type: String, default: 'General' },
+    sectionId: { type: String },
     card: {
-      title: {
-        type: String
-      },
-      subtitle: {
-        type: String
-      },
-      price: {
-        type: Number,
-        default: 0
-      },
-      originalPrice: {
-        type: Number
-      },
-      duration: {
-        type: String
-      },
-      description: {
-        type: String
-      },
-      imageUrl: {
-        type: String
-      },
-      features: [{
-        type: String
-      }]
+      title: { type: String },
+      subtitle: { type: String },
+      price: { type: Number, default: 0 },
+      originalPrice: { type: Number },
+      duration: { type: String },
+      description: { type: String },
+      imageUrl: { type: String },
+      features: [{ type: String }]
     },
-    quantity: {
-      type: Number,
-      default: 1
-    }
+    quantity: { type: Number, default: 1 }
   }],
-  // Booking Status
-  status: {
-    type: String,
-    enum: Object.values(BOOKING_STATUS),
-    default: BOOKING_STATUS.PENDING,
-    index: true
-  },
-  workerResponse: {
-    type: String,
-    enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
-    default: 'PENDING'
-  },
-  workerAcceptedAt: {
-    type: Date
-  },
-  // Pricing Information
+
+  // ==========================================
+  // 3. PRICING & BILLING
+  // ==========================================
   basePrice: {
     type: Number,
     required: [true, 'Base price is required'],
-    min: [0, 'Price cannot be negative']
+    min: 0
   },
   discount: {
     type: Number,
     default: 0,
-    min: [0, 'Discount cannot be negative']
+    min: 0
   },
   tax: {
     type: Number,
     default: 0,
-    min: [0, 'Tax cannot be negative']
+    min: 0
   },
   visitingCharges: {
     type: Number,
     default: 0,
-    min: [0, 'Visiting charges cannot be negative']
+    min: 0
   },
+  // Extra Charges (Added by Vendor)
+  extraCharges: [{
+    name: { type: String, required: true },
+    quantity: { type: Number, default: 1 },
+    price: { type: Number, required: true },
+    total: { type: Number, required: true }
+  }],
+  extraChargesTotal: {
+    type: Number,
+    default: 0
+  },
+  // Total Value of the Booking
   finalAmount: {
     type: Number,
     required: [true, 'Final amount is required'],
-    min: [0, 'Amount cannot be negative']
+    min: 0
   },
+  // Amount specifically payable by the user (might differ from finalAmount in plan cases)
+  userPayableAmount: {
+    type: Number,
+    default: 0
+  },
+  // Platform & Vendor Splits
   adminCommission: {
     type: Number,
     default: 0
@@ -160,7 +139,10 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Payment Information
+
+  // ==========================================
+  // 4. PAYMENT INFORMATION
+  // ==========================================
   paymentStatus: {
     type: String,
     enum: Object.values(PAYMENT_STATUS),
@@ -168,11 +150,11 @@ const bookingSchema = new mongoose.Schema({
     index: true
   },
   paymentMethod: {
-    type: String, // 'wallet', 'razorpay', 'cash', 'card'
+    type: String, // 'wallet', 'razorpay', 'cash', 'card', 'plan_benefit'
     default: null
   },
   paymentId: {
-    type: String, // Razorpay payment ID or transaction ID
+    type: String,
     default: null
   },
   razorpayOrderId: {
@@ -184,176 +166,7 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Address Information
-  address: {
-    type: {
-      type: String, // 'home', 'work', 'other'
-      default: 'home'
-    },
-    addressLine1: {
-      type: String,
-      required: [true, 'Address line 1 is required']
-    },
-    addressLine2: {
-      type: String,
-      default: ''
-    },
-    city: {
-      type: String,
-      required: [true, 'City is required']
-    },
-    state: {
-      type: String,
-      required: [true, 'State is required']
-    },
-    pincode: {
-      type: String,
-      required: [true, 'Pincode is required']
-    },
-    landmark: {
-      type: String,
-      default: ''
-    },
-    lat: {
-      type: Number,
-      default: null
-    },
-    lng: {
-      type: Number,
-      default: null
-    }
-  },
-  // Scheduling Information
-  scheduledDate: {
-    type: Date,
-    required: [true, 'Scheduled date is required'],
-    index: true
-  },
-  scheduledTime: {
-    type: String, // e.g., "10:00 AM - 12:00 PM"
-    required: [true, 'Scheduled time is required']
-  },
-  timeSlot: {
-    start: {
-      type: String, // e.g., "10:00"
-      required: true
-    },
-    end: {
-      type: String, // e.g., "12:00"
-      required: true
-    }
-  },
-  // Completion Information
-  completedAt: {
-    type: Date,
-    default: null
-  },
-  cancelledAt: {
-    type: Date,
-    default: null
-  },
-  cancellationReason: {
-    type: String,
-    default: null
-  },
-  cancelledBy: {
-    type: String, // 'user', 'vendor', 'worker', 'admin'
-    default: null
-  },
-  workPhotos: [{
-    type: String // Cloudinary URLs
-  }],
-  // Review & Rating (after completion)
-  rating: {
-    type: Number,
-    default: null,
-    min: 1,
-    max: 5
-  },
-  review: {
-    type: String,
-    default: null
-  },
-  reviewImages: [{
-    type: String
-  }],
-  reviewedAt: {
-    type: Date,
-    default: null
-  },
-  // Additional Notes
-  // userNotes and isPlusAdded removed per request
-  vendorNotes: {
-    type: String,
-    default: null
-  },
-  workerNotes: {
-    type: String,
-    default: null
-  },
-  // Tracking
-  acceptedAt: {
-    type: Date,
-    default: null
-  },
-  assignedAt: {
-    type: Date,
-    default: null
-  },
-  startedAt: {
-    type: Date,
-    default: null
-  },
-  journeyStartedAt: {
-    type: Date,
-    default: null
-  },
-  visitedAt: {
-    type: Date,
-    default: null
-  },
-  visitOtp: {
-    type: String,
-    select: false // Secure field, not returned by default
-  },
-  paymentOtp: {
-    type: String,
-    select: false // Secure field
-  },
-  visitLocation: {
-    lat: Number,
-    lng: Number,
-    address: String,
-    verifiedAt: Date
-  },
-  workDoneDetails: {
-    description: String,
-    items: [{
-      title: String,
-      qty: Number,
-      price: Number
-    }]
-  },
-  // Additional Status Tracking
-  workerPaymentStatus: {
-    type: String,
-    enum: ['PENDING', 'PAID', 'SUCCESS'],
-    default: 'PENDING'
-  },
-  isWorkerPaid: {
-    type: Boolean,
-    default: false
-  },
-  workerPaidAt: {
-    type: Date,
-    default: null
-  },
-  finalSettlementStatus: {
-    type: String,
-    enum: ['PENDING', 'DONE'],
-    default: 'PENDING'
-  },
-  // Cash Collection Tracking
+  // Cash Collection Details
   cashCollected: {
     type: Boolean,
     default: false
@@ -372,19 +185,146 @@ const bookingSchema = new mongoose.Schema({
     refPath: 'cashCollectedBy',
     default: null
   },
-  customerConfirmed: {
-    type: Boolean,
-    default: false
+
+  // ==========================================
+  // 5. ADDRESS INFORMATION
+  // ==========================================
+  address: {
+    type: { type: String, default: 'home' },
+    addressLine1: { type: String, required: true },
+    addressLine2: { type: String, default: '' },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pincode: { type: String, required: true },
+    landmark: { type: String, default: '' },
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null }
+  },
+
+  // ==========================================
+  // 6. SCHEDULING
+  // ==========================================
+  scheduledDate: {
+    type: Date,
+    required: [true, 'Scheduled date is required'],
+    index: true
+  },
+  scheduledTime: {
+    type: String,
+    required: [true, 'Scheduled time is required']
+  },
+  timeSlot: {
+    start: { type: String, required: true },
+    end: { type: String, required: true },
+    date: { type: String }, // redundant but kept for frontend convenience format
+    time: { type: String }  // redundant but kept for frontend convenience format
+  },
+
+  // ==========================================
+  // 7. STATUS & TRACKING
+  // ==========================================
+  status: {
+    type: String,
+    enum: Object.values(BOOKING_STATUS),
+    default: BOOKING_STATUS.PENDING,
+    index: true
+  },
+  workerResponse: {
+    type: String,
+    enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
+    default: 'PENDING'
+  },
+  // Timestamps
+  acceptedAt: { type: Date, default: null },
+  assignedAt: { type: Date, default: null },
+  startedAt: { type: Date, default: null },
+  journeyStartedAt: { type: Date, default: null },
+  visitedAt: { type: Date, default: null },
+  completedAt: { type: Date, default: null },
+
+  // ==========================================
+  // 8. SECURITY & OTPs
+  // ==========================================
+  visitOtp: {
+    type: String,
+    select: false
+  },
+  paymentOtp: {
+    type: String,
+    select: false
   },
   customerConfirmationOTP: {
     type: String,
     default: null
-  }
+  },
+  customerConfirmed: {
+    type: Boolean,
+    default: false
+  },
+
+  // ==========================================
+  // 9. WORK COMPLETION
+  // ==========================================
+  workPhotos: [{
+    type: String
+  }],
+  visitLocation: {
+    lat: Number,
+    lng: Number,
+    address: String,
+    verifiedAt: Date
+  },
+  workDoneDetails: {
+    description: String,
+    items: [{
+      title: String,
+      qty: Number,
+      price: Number
+    }]
+  },
+
+  // ==========================================
+  // 10. CANCELLATION
+  // ==========================================
+  cancelledAt: { type: Date, default: null },
+  cancellationReason: { type: String, default: null },
+  cancelledBy: { type: String, default: null },
+
+  // ==========================================
+  // 11. REVIEW & RATING
+  // ==========================================
+  rating: { type: Number, default: null, min: 1, max: 5 },
+  review: { type: String, default: null },
+  reviewImages: [{ type: String }],
+  reviewedAt: { type: Date, default: null },
+
+  // ==========================================
+  // 12. SETTLEMENT (Worker/User)
+  // ==========================================
+  workerPaymentStatus: {
+    type: String,
+    enum: ['PENDING', 'PAID', 'SUCCESS'],
+    default: 'PENDING'
+  },
+  isWorkerPaid: { type: Boolean, default: false },
+  workerPaidAt: { type: Date, default: null },
+  finalSettlementStatus: {
+    type: String,
+    enum: ['PENDING', 'DONE'],
+    default: 'PENDING'
+  },
+
+  // ==========================================
+  // 13. NOTES
+  // ==========================================
+  vendorNotes: { type: String, default: null },
+  workerNotes: { type: String, default: null }
+
 }, {
   timestamps: true
 });
 
-// Generate unique booking number before saving
+// Generate unique booking number
 bookingSchema.pre('save', async function (next) {
   if (this.isNew && !this.bookingNumber) {
     const timestamp = Date.now().toString().slice(-8);
@@ -394,7 +334,7 @@ bookingSchema.pre('save', async function (next) {
   next();
 });
 
-// Indexes for faster queries
+// Indexes
 bookingSchema.index({ userId: 1, status: 1, createdAt: -1 });
 bookingSchema.index({ vendorId: 1, status: 1, createdAt: -1 });
 bookingSchema.index({ workerId: 1, status: 1, createdAt: -1 });
@@ -402,4 +342,3 @@ bookingSchema.index({ scheduledDate: 1, status: 1 });
 bookingSchema.index({ paymentStatus: 1, status: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
-

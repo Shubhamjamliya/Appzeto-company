@@ -663,6 +663,49 @@ const BookingDetails = () => {
           </div>
         )}
 
+        {/* Plan Covered Card - Show for plan_benefit bookings (before OTP is sent) */}
+        {(booking.paymentStatus === 'plan_covered' || (booking.paymentMethod === 'plan_benefit' && booking.paymentStatus !== 'success')) &&
+          ['visited', 'in_progress', 'work_done', 'completed'].includes(booking.status?.toLowerCase()) &&
+          !booking.customerConfirmationOTP && (
+            <div className="relative overflow-hidden rounded-3xl shadow-lg border border-emerald-100 mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700 opacity-95"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.15)_0%,transparent_50%)]"></div>
+
+              <div className="relative z-10 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                    <FiCheckCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">
+                      {booking.status?.toLowerCase() === 'work_done' ? 'Finalizing Bill' : 'Plan Benefit Active'}
+                    </h3>
+                    <p className="text-xs font-medium text-emerald-100">
+                      {booking.status?.toLowerCase() === 'work_done' ? 'Vendor preparing final bill' : 'Base service covered by your plan'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiCheckCircle className="w-5 h-5 text-emerald-200" />
+                    <span className="font-bold text-white">Base Service Covered</span>
+                  </div>
+                  <p className="text-sm text-emerald-100 leading-relaxed">
+                    Your base service fee is covered by your membership plan. {booking.status?.toLowerCase() === 'work_done' ? 'The vendor is preparing the final bill for any additional charges.' : 'You may only need to pay for extra parts or services.'}
+                  </p>
+                </div>
+
+                {booking.status?.toLowerCase() === 'work_done' && (
+                  <div className="mt-4 flex items-center justify-center gap-2 text-white/80">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium">Waiting for vendor to finalize...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         {/* Payment Card - Show when work is done AND bill is finalized (OTP exists) or paid */}
         {(booking.customerConfirmationOTP || booking.paymentStatus === 'success') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
           <div
@@ -736,7 +779,11 @@ const BookingDetails = () => {
                   )}
                   <div className="text-sm">
                     {booking.paymentStatus === 'success'
-                      ? <p className="font-medium">Booking completed successfully. Thank you for choosing us!</p>
+                      ? (
+                        booking.paymentMethod === 'plan_benefit'
+                          ? <p className="font-medium">Covered by your Membership Plan</p>
+                          : <p className="font-medium">Booking completed successfully. Thank you for choosing us!</p>
+                      )
                       : <p className="font-medium">Total Amount: <span className="text-lg font-black ml-1">₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}</span></p>
                     }
                     {booking.paymentStatus !== 'success' && <p className="text-[10px] text-orange-100 mt-0.5 opacity-80">Pay online above or prepare cash for the professional.</p>}
@@ -878,58 +925,116 @@ const BookingDetails = () => {
           </div>
         </section>
 
-        {/* Payment Summary */}
+        {/* Payment Summary - Professional Card */}
         <section className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden">
-          <div className="p-5 space-y-3">
-            {booking.paymentMethod === 'plan_benefit' ? (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-green-200">
-                  <FiCheckCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-green-800">Covered by Membership</p>
-                  <p className="text-xs text-green-600">You saved ₹{(booking.basePrice || 0).toLocaleString('en-IN')}</p>
-                </div>
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+              <div className={`p-2 rounded-lg ${booking.paymentMethod === 'plan_benefit' ? 'bg-amber-100' : 'bg-green-50'}`}>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <FiAward className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <FiDollarSign className="w-5 h-5 text-green-600" />
+                )}
               </div>
-            ) : (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Base Price</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900">
+                  {booking.paymentMethod === 'plan_benefit' ? 'Membership Benefit' : 'Payment Summary'}
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              {/* Base Items */}
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Base Price</span>
+                {booking.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400 text-xs">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
                   <span className="font-medium text-gray-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                )}
+              </div>
+
+              {(booking.tax > 0 || booking.paymentMethod === 'plan_benefit') && (
+                <div className="flex justify-between items-center text-gray-600">
+                  <span>GST (18%)</span>
+                  {booking.paymentMethod === 'plan_benefit' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="line-through text-gray-400 text-xs">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-gray-900">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                  )}
                 </div>
-                {booking.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600">Discount</span>
-                    <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                {booking.tax > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">GST (18%)</span>
-                    <span className="font-medium text-gray-900">₹{booking.tax.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                {(booking.visitationFee > 0 || booking.visitingCharges > 0) && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Convenience Fee</span>
-                    <span className="font-medium text-gray-900">₹{(booking.visitationFee || booking.visitingCharges).toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="pt-3 mt-2 border-t border-gray-100 flex justify-between items-center">
-                  <span className="font-bold text-gray-900 text-lg">Total Amount</span>
-                  <span className="font-black text-gray-900 text-xl">₹{(booking.finalAmount || booking.totalAmount || 0).toLocaleString('en-IN')}</span>
+              )}
+
+              {(booking.visitingCharges > 0 || booking.visitationFee > 0 || booking.paymentMethod === 'plan_benefit') && (
+                <div className="flex justify-between items-center text-gray-600">
+                  <span>Convenience Fee</span>
+                  {booking.paymentMethod === 'plan_benefit' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="line-through text-gray-400 text-xs">₹{(booking.visitingCharges || booking.visitationFee || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-gray-900">₹{(booking.visitingCharges || booking.visitationFee || 0).toLocaleString('en-IN')}</span>
+                  )}
                 </div>
-              </>
-            )}
+              )}
+
+              {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Discount</span>
+                  <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
+              {/* Extra Charges Section */}
+              {booking.extraCharges && booking.extraCharges.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Extra Charges</p>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+                    {booking.extraCharges.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-gray-700 text-sm">
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs font-bold bg-white border px-1.5 rounded text-gray-500">x{item.quantity || 1}</span>
+                          <span>{item.name}</span>
+                        </span>
+                        <span className="font-medium">+₹{(item.total || item.price || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between font-bold text-blue-600 pt-2 mt-2 border-t border-gray-200">
+                      <span>Total Extras</span>
+                      <span>+₹{(booking.extraChargesTotal || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 mt-2 border-t border-gray-100 flex justify-between items-center">
+                <span className="font-bold text-gray-900 text-lg">Total Payable</span>
+                <span className="font-black text-gray-900 text-xl">
+                  ₹{(booking.paymentMethod === 'plan_benefit'
+                    ? (booking.userPayableAmount || booking.extraChargesTotal || 0)
+                    : (booking.finalAmount || booking.totalAmount || 0)
+                  ).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Payment Status Footer */}
           <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between items-center">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payment Status</span>
             <span className={`px-2.5 py-1 rounded-md text-xs font-bold capitalize ${booking.paymentStatus === 'success' ? 'bg-green-100 text-green-700' :
-              booking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+              booking.paymentStatus === 'pending' || booking.paymentStatus === 'plan_covered' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
               }`}>
-              {booking.paymentStatus === 'success' ? 'Paid' : booking.paymentStatus || 'Pending'}
+              {booking.paymentStatus === 'success' ? 'Paid' :
+                booking.paymentStatus === 'plan_covered' ? 'Processing Bill' :
+                  booking.paymentStatus || 'Pending'}
             </span>
           </div>
         </section>

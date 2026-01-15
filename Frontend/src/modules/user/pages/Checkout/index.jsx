@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { FiArrowLeft, FiShoppingCart, FiTrash2, FiMinus, FiPlus, FiPhone, FiHome, FiClock, FiEdit2 } from 'react-icons/fi';
+import { FiArrowLeft, FiShoppingCart, FiTrash2, FiMinus, FiPlus, FiPhone, FiHome, FiClock, FiEdit2, FiCheckCircle } from 'react-icons/fi';
 import { MdStar } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
@@ -444,7 +444,7 @@ const Checkout = () => {
         scheduledTime: getTimeSlots().find(slot => slot.value === selectedTime)?.display || selectedTime,
         timeSlot: timeSlotObj,
         // userNotes: null, // Removed per request
-        paymentMethod: 'pay_at_home',
+        paymentMethod: amountToPay === 0 ? 'plan_benefit' : 'pay_at_home',
         amount: amountToPay,
 
         // Pass Full Breakdown to Backend
@@ -825,6 +825,12 @@ const Checkout = () => {
   const totalAmount = itemTotal + taxesAndFee + finalVisitedFee;
   const amountToPay = totalAmount;
 
+  // Helper for Free Plan Full Breakdown Display
+  // If the booking is free, we still want to show what the Tax/Fee WOULD have been
+  const displayTax = totalAmount === 0 ? Math.round((totalOriginalPrice * gstPercentage) / 100) : taxesAndFee;
+  const displayFee = totalAmount === 0 ? visitedFee : finalVisitedFee;
+  const displaySavings = totalAmount === 0 ? (totalOriginalPrice + displayTax + displayFee) : savings;
+
   // Date and time slot helper functions
   const getDates = () => {
     const dates = [];
@@ -838,7 +844,7 @@ const Checkout = () => {
   };
 
   const getTimeSlots = () => {
-    return [
+    const allSlots = [
       { value: '09:00', end: '10:00', display: '9:00 AM' },
       { value: '10:00', end: '11:00', display: '10:00 AM' },
       { value: '11:00', end: '12:00', display: '11:00 AM' },
@@ -852,6 +858,23 @@ const Checkout = () => {
       { value: '19:00', end: '20:00', display: '7:00 PM' },
       { value: '20:00', end: '21:00', display: '8:00 PM' },
     ];
+
+    // If today is selected, filter out past time slots
+    const now = new Date();
+    const isToday = selectedDate && selectedDate.toDateString() === now.toDateString();
+
+    if (!isToday) {
+      return allSlots;
+    }
+
+    // Get current hour + 1 (minimum 1 hour buffer for vendors to accept)
+    const currentHour = now.getHours();
+    const minHour = currentHour + 1;
+
+    return allSlots.filter(slot => {
+      const slotHour = parseInt(slot.value.split(':')[0], 10);
+      return slotHour >= minHour;
+    });
   };
 
   const formatDate = (date) => {
@@ -1063,10 +1086,10 @@ const Checkout = () => {
             </div>
 
             {/* Discount Line */}
-            {savings > 0 && (
+            {displaySavings > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-green-600">Discount</span>
-                <span className="text-sm font-medium text-green-600">-₹{savings.toLocaleString('en-IN')}</span>
+                <span className="text-sm font-medium text-green-600">-₹{displaySavings.toLocaleString('en-IN')}</span>
               </div>
             )}
 
@@ -1079,18 +1102,18 @@ const Checkout = () => {
             )}
 
             {/* Taxes */}
-            {taxesAndFee > 0 && (
+            {displayTax > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-500">GST ({gstPercentage}%)</span>
-                <span className="text-sm font-medium text-slate-700">₹{taxesAndFee.toLocaleString('en-IN')}</span>
+                <span className="text-sm font-medium text-slate-700">₹{displayTax.toLocaleString('en-IN')}</span>
               </div>
             )}
 
             {/* Visited Fee */}
-            {finalVisitedFee > 0 && (
+            {displayFee > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-500">Convenience Fee</span>
-                <span className="text-sm font-medium text-slate-700">₹{finalVisitedFee.toLocaleString('en-IN')}</span>
+                <span className="text-sm font-medium text-slate-700">₹{displayFee.toLocaleString('en-IN')}</span>
               </div>
             )}
 
@@ -1098,22 +1121,42 @@ const Checkout = () => {
             <div className="border-t border-slate-200 pt-4 mt-2">
               <div className="flex justify-between items-center">
                 <span className="text-base font-bold text-slate-900">Total Payable</span>
-                <span className="text-xl font-black text-slate-900">
+                <div className="flex flex-col items-end">
                   {totalAmount === 0 ? (
-                    <span className="text-green-600">FREE</span>
+                    <>
+                      <span className="text-sm font-medium text-slate-400 line-through">
+                        ₹{Math.round(totalOriginalPrice + displayTax + displayFee).toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-xl font-black text-green-600">FREE</span>
+                    </>
                   ) : (
-                    `₹${totalAmount.toLocaleString('en-IN')}`
+                    <span className="text-xl font-black text-slate-900">
+                      ₹{totalAmount.toLocaleString('en-IN')}
+                    </span>
                   )}
-                </span>
+                </div>
               </div>
-              {savings > 0 && (
-                <p className="text-xs text-green-600 mt-1 text-right font-medium">
-                  You save ₹{savings.toLocaleString('en-IN')} with {planBenefits.name}!
-                </p>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Free Plan Benefit Card */}
+        {totalAmount === 0 && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-100/50 border border-green-200 rounded-2xl p-5 mb-6 relative overflow-hidden">
+            <div className="flex items-start gap-4 z-10 relative">
+              <div className="bg-green-500 rounded-full p-2 shadow-lg shadow-green-200 shrink-0">
+                <FiCheckCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-green-800 mb-1">Covered by {planBenefits.name}</h3>
+                <p className="text-sm text-green-700 leading-relaxed font-medium opacity-90">
+                  You save <span className="font-bold">₹{Math.round(totalOriginalPrice + displayTax + displayFee).toLocaleString('en-IN')}</span> on this booking!
+                  Your plan covers all costs.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cancellation Policy */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">

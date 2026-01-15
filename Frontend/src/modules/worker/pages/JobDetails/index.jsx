@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiMapPin, FiPhone, FiClock, FiUser, FiCheck, FiX, FiArrowRight, FiNavigation, FiTool, FiCheckCircle, FiDollarSign, FiCamera, FiPlus, FiTrash, FiXCircle } from 'react-icons/fi';
+import { FiMapPin, FiPhone, FiClock, FiUser, FiCheck, FiX, FiArrowRight, FiNavigation, FiTool, FiCheckCircle, FiDollarSign, FiCamera, FiPlus, FiTrash, FiXCircle, FiAward } from 'react-icons/fi';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
-import { CashCollectionModal } from '../../../../components/common';
+import { CashCollectionModal, VisitVerificationModal, WorkCompletionModal } from '../../components/common'; // Updated import
 import workerService from '../../../../services/workerService';
 import api from '../../../../services/api';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,7 @@ const JobDetails = () => {
   const [workPhotos, setWorkPhotos] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [collectionAmount, setCollectionAmount] = useState('');
+  const actionLoadingRef = useRef(false);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -87,54 +88,6 @@ const JobDetails = () => {
     setWorkPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    const newOtp = [...otpInput];
-    newOtp[index] = value;
-    setOtpInput(newOtp);
-
-    // Auto focus next
-    if (value && index < 3) {
-      document.getElementById(`otp-${index + 1}`).focus();
-    }
-  };
-
-  const verifyVisit = async () => {
-    const otp = otpInput.join('');
-    if (otp.length !== 4) return toast.error('Please enter valid 4-digit OTP');
-
-    setActionLoading(true);
-    // Get Location
-    if (!navigator.geolocation) {
-      setActionLoading(false);
-      return toast.error('Geolocation is not supported by your browser');
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      try {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        const response = await workerService.verifyVisit(id, otp, location);
-        if (response.success) {
-          toast.success('Site visit verified!');
-          setIsVisitModalOpen(false);
-          setOtpInput(['', '', '', '']);
-          fetchJobDetails();
-        }
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Verification failed');
-      } finally {
-        setActionLoading(false);
-      }
-    }, (err) => {
-      console.error(err);
-      toast.error('Unable to retrieve your location');
-      setActionLoading(false);
-    });
-  };
-
   const handleInitiateCashOTP = async (totalAmount, extraItems = []) => {
     try {
       setActionLoading(true);
@@ -170,6 +123,8 @@ const JobDetails = () => {
   };
 
   const handleJobResponse = async (status) => {
+    if (actionLoadingRef.current) return;
+    actionLoadingRef.current = true;
     try {
       setActionLoading(true);
       const response = (await api.put(`/workers/jobs/${id}/respond`, { status })).data;
@@ -188,12 +143,20 @@ const JobDetails = () => {
       toast.error(error.response?.data?.message || 'Failed to update status');
     } finally {
       setActionLoading(false);
+      setTimeout(() => { actionLoadingRef.current = false; }, 500);
     }
   };
 
   const handleStatusUpdate = async (type) => {
     if (type === 'visit' && !isVisitModalOpen) {
-      setOtpInput(['', '', '', '']);
+      if (job.status === 'journey_started') {
+        try {
+          await workerService.workerReached(id);
+          toast.success('Customer notified that you reached');
+        } catch (e) {
+          console.error('Reached notification failed', e);
+        }
+      }
       setIsVisitModalOpen(true);
       return;
     }
@@ -215,6 +178,8 @@ const JobDetails = () => {
       let response;
       if (type === 'start') {
         response = await workerService.startJob(id);
+        navigate(`/worker/job/${id}/map`); // Navigate to map on start
+        return;
       } else if (type === 'complete') {
         if (workPhotos.length === 0) {
           toast.error('Please upload at least one work photo');
@@ -224,7 +189,7 @@ const JobDetails = () => {
         response = await workerService.completeJob(id, { workPhotos });
       }
 
-      if (response.success) {
+      if (response && response.success) {
         toast.success(response.message || 'Updated successfully');
         setIsCompletionModalOpen(false);
         fetchJobDetails();
@@ -287,22 +252,6 @@ const JobDetails = () => {
     return colors[status.toLowerCase()] || '#6B7280';
   };
 
-  const getTimelineStep = (status) => {
-    switch (status) {
-      case 'confirmed':
-      case 'assigned': return 0;
-      case 'journey_started': return 1;
-      case 'visited':
-      case 'in_progress': return 2;
-      case 'work_done': return 3;
-      case 'completed': return 4;
-      default: return -1;
-    }
-  };
-
-  const currentStep = getTimelineStep(job.status);
-  const statusColor = getStatusColor(job.status || 'pending');
-
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
       <Header title="Job Details" />
@@ -351,19 +300,12 @@ const JobDetails = () => {
 
           {job.status === 'journey_started' && (
             <button
-              onClick={async () => {
-                try {
-                  handleStatusUpdate('visit');
-                  await workerService.workerReached(id);
-                } catch (err) {
-                  console.error('Failed to notify reached:', err);
-                }
-              }}
+              onClick={() => navigate(`/worker/job/${id}/map`)}
               disabled={actionLoading}
               className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
               style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}
             >
-              <FiMapPin className="w-5 h-5" /> ARRIVED (VERIFY OTP)
+              <FiNavigation className="w-5 h-5" /> TRACK JOURNEY / REACHED
             </button>
           )}
 
@@ -510,37 +452,107 @@ const JobDetails = () => {
           </div>
         )}
 
-        {/* Pricing Summary */}
-        <div className="bg-white rounded-2xl p-5 mb-6 shadow-md border-b-2 border-gray-50">
-          <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <FiDollarSign className="w-5 h-5 text-green-600" /> Payment Summary
-          </h4>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Base Price</span>
-              <span className="font-medium">₹{job.basePrice || job.baseAmount || 0}</span>
+        {/* Payment Details - Professional Card (Matched with Vendor) */}
+        <div
+          className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100"
+          style={{
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+            <div className={`p-2 rounded-lg ${job.paymentMethod === 'plan_benefit' ? 'bg-amber-100' : 'bg-gray-100'}`}>
+              <FiDollarSign className="w-5 h-5" style={{ color: job.paymentMethod === 'plan_benefit' ? '#d97706' : themeColors.button }} />
             </div>
-            {job.tax > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">GST (18%)</span>
-                <span className="font-medium">₹{job.tax || 0}</span>
+            <div>
+              <h3 className="font-bold text-gray-800">
+                {job.paymentMethod === 'plan_benefit' ? 'Plan Benefit Summary' : 'Payment Summary'}
+              </h3>
+              {job.paymentMethod === 'plan_benefit' && (
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                  Plan Membership Active
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 text-sm">
+            {/* Base Items */}
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Base Price</span>
+              {job.paymentMethod === 'plan_benefit' ? (
+                <div className="flex items-center gap-2">
+                  <span className="line-through text-gray-400 text-xs">₹{(job.basePrice || 0).toFixed(2)}</span>
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                </div>
+              ) : (
+                <span>₹{(job.basePrice || 0).toFixed(2)}</span>
+              )}
+            </div>
+
+            {(job.tax > 0 || job.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Tax</span>
+                {job.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400 text-xs">₹{(job.tax || 0).toFixed(2)}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span>+₹{(job.tax || 0).toFixed(2)}</span>
+                )}
               </div>
             )}
-            {(job.visitingCharges > 0 || job.visitationFee > 0) && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Convenience Fee</span>
-                <span className="font-medium">₹{job.visitingCharges || job.visitationFee || 0}</span>
+
+            {(job.visitingCharges > 0 || job.paymentMethod === 'plan_benefit') && (
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Convenience Fee</span>
+                {job.paymentMethod === 'plan_benefit' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400 text-xs">₹{(job.visitingCharges || 0).toFixed(2)}</span>
+                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  </div>
+                ) : (
+                  <span>+₹{(job.visitingCharges || 0).toFixed(2)}</span>
+                )}
               </div>
             )}
-            {job.discount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
+
+            {job.paymentMethod !== 'plan_benefit' && job.discount > 0 && (
+              <div className="flex justify-between text-green-600 font-medium">
                 <span>Discount</span>
-                <span>-₹{job.discount}</span>
+                <span>-₹{(job.discount || 0).toFixed(2)}</span>
               </div>
             )}
-            <div className="pt-3 border-t border-dashed border-gray-100 flex justify-between items-center">
-              <span className="font-bold text-gray-900 text-lg uppercase">Total</span>
-              <span className="font-black text-2xl text-green-600">₹{job.finalAmount || ((job.basePrice || 0) + (job.tax || 0) - (job.discount || 0))}</span>
+
+            {/* Extra Charges Section */}
+            {job.extraCharges && job.extraCharges.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Extra Charges (User Pays)</p>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+                  {job.extraCharges.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-gray-700 text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-bold bg-white border px-1.5 rounded text-gray-500">x{item.quantity || 1}</span>
+                        <span>{item.name}</span>
+                      </span>
+                      <span className="font-medium">+₹{(item.total || item.price || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-blue-600 pt-2 mt-2 border-t border-gray-200">
+                    <span>Subtotal Extras</span>
+                    <span>+₹{(job.extraChargesTotal || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="my-4 border-t border-gray-200"></div>
+
+            <div className="flex justify-between items-end mb-2">
+              <span className="text-gray-900 font-bold">Total Amount (User Pays)</span>
+              <span className="text-2xl font-bold text-gray-900">
+                ₹{(job.paymentMethod === 'plan_benefit' ? (job.extraChargesTotal || 0) : (job.finalAmount || 0)).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
@@ -563,117 +575,54 @@ const JobDetails = () => {
         </div>
       </main>
 
-      {/* Completion Modal */}
-      {isCompletionModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-black text-gray-900">Finish Job</h3>
-                <button onClick={() => setIsCompletionModalOpen(false)} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <FiX className="w-6 h-6" />
-                </button>
-              </div>
+      {/* Unified Worker Completion Modal - REUSABLE COMPONENT */}
+      <WorkCompletionModal
+        isOpen={isCompletionModalOpen}
+        onClose={() => setIsCompletionModalOpen(false)}
+        job={job}
+        onComplete={(photos) => {
+          // Pass photos to the handler
+          // Since handler expects local 'workPhotos' state which we removed, we need to adapt handleStatusUpdate or pass generic data
+          // Better: Update handleStatusUpdate to accept data payload
+          // For now, let's update local state just for compatibility or adapt the call
+          setWorkPhotos(photos);
+          // Trigger the update call immediately with these photos
+          // We need to slightly modify handleStatusUpdate logic to accept photos directly or set state then call
+          // Here we can call workerService directly or adaptation:
+          (async () => {
+            // We can't easily call handleStatusUpdate with payload without modifying it first
+            // So let's call service directly here or use a specific adapter function
+            try {
+              setActionLoading(true);
+              const response = await workerService.completeJob(id, { workPhotos: photos });
+              if (response && response.success) {
+                toast.success(response.message || 'Updated successfully');
+                setIsCompletionModalOpen(false);
+                fetchJobDetails();
+              }
+              setActionLoading(false);
+            } catch (error) {
+              console.error('Action error:', error);
+              toast.error(error.response?.data?.message || 'Action failed');
+              setActionLoading(false);
+            }
+          })();
+        }}
+        loading={actionLoading}
+      />
 
-              <div className="mb-8">
-                <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-4">Upload Work Photos</p>
+      {/* Visit OTP Modal - REUSABLE COMPONENT */}
+      <VisitVerificationModal
+        isOpen={isVisitModalOpen}
+        onClose={() => setIsVisitModalOpen(false)}
+        bookingId={id}
+        onSuccess={() => {
+          setIsVisitModalOpen(false);
+          fetchJobDetails();
+        }}
+      />
 
-                <div className="grid grid-cols-3 gap-3">
-                  {workPhotos.map((photo, index) => (
-                    <div key={index} className="aspect-square rounded-2xl bg-gray-100 border-2 border-gray-50 relative overflow-hidden shadow-sm">
-                      <img src={photo} className="w-full h-full object-cover" alt="work" />
-                      <button
-                        onClick={() => handleRemovePhoto(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white shadow-md active:scale-95"
-                      >
-                        <FiTrash className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {workPhotos.length < 3 && (
-                    <label className="aspect-square rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 cursor-pointer active:scale-95 transition-transform hover:bg-gray-100">
-                      <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
-                      <FiCamera className="w-8 h-8 mb-1" />
-                      <span className="text-[10px] font-black uppercase">Add Photo</span>
-                    </label>
-                  )}
-                </div>
-
-                {isUploading && <p className="text-blue-500 text-[10px] font-bold mt-2 animate-pulse">UPLOADING...</p>}
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
-                      <FiDollarSign className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-green-600 uppercase">Collect Cash</p>
-                      <p className="text-xl font-black text-green-700">₹{job.finalAmount || ((job.basePrice || 0) + (job.tax || 0) - (job.discount || 0))}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 mb-2">
-                  <p className="text-xs text-blue-800">
-                    <strong>Note:</strong> Upon completion, an OTP will be sent to the customer. You will need to enter it next to confirm payment.
-                  </p>
-                </div>
-
-                <p className="text-xs text-center text-gray-400 font-medium">By clicking complete, you confirm that the work is finished.</p>
-
-                <button
-                  onClick={() => handleStatusUpdate('complete')}
-                  disabled={actionLoading || isUploading || workPhotos.length === 0}
-                  className="w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 shadow-xl shadow-green-500/30 active:scale-95 transition-all text-lg"
-                  style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
-                >
-                  {actionLoading ? 'UPDATING...' : 'MARK WORK DONE'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Visit OTP Modal */}
-      {isVisitModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">Verify Site Visit</h3>
-              <button onClick={() => setIsVisitModalOpen(false)}><FiX className="w-6 h-6" /></button>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Enter the 4-digit OTP sent to the customer to verify your arrival.</p>
-
-            <div className="flex gap-3 justify-center mb-8">
-              {[0, 1, 2, 3].map((i) => (
-                <input
-                  key={i}
-                  id={`otp-${i}`}
-                  type="number"
-                  value={otpInput[i]}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  className="w-12 h-14 rounded-xl border-2 border-gray-200 text-center text-2xl font-bold focus:border-blue-500 focus:outline-none"
-                  maxLength={1}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={verifyVisit}
-              disabled={actionLoading}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200"
-            >
-              {actionLoading ? 'Verifying...' : 'Verify & Check-in'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Unified Cash Collection Modal */}
+      {/* Unified Cash Collection Modal - REUSABLE COMPONENT */}
       <CashCollectionModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
