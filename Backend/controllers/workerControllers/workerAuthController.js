@@ -1,8 +1,9 @@
 const Worker = require('../../models/Worker');
-const { createOTPToken, verifyOTPToken, markTokenAsUsed } = require('../../services/otpService');
+const { generateOTP, hashOTP, storeOTP, verifyOTP, checkRateLimit } = require('../../utils/redisOtp.util');
 const { generateTokenPair, verifyRefreshToken } = require('../../utils/tokenService');
+const { sendOTP: sendSMSOTP } = require('../../services/smsService');
 const cloudinaryService = require('../../services/cloudinaryService');
-const { TOKEN_TYPES, USER_ROLES, WORKER_STATUS } = require('../../utils/constants');
+const { USER_ROLES, WORKER_STATUS } = require('../../utils/constants');
 const { validationResult } = require('express-validator');
 
 /**
@@ -21,26 +22,38 @@ const sendOTP = async (req, res) => {
 
     const { phone, email } = req.body;
 
-    const existingWorker = await Worker.findOne({ phone });
+    // 1. Rate limit check
+    const allowed = await checkRateLimit(phone);
+    if (!allowed) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many OTP requests. Please try again after 10 minutes.'
+      });
+    }
 
-    const { token, otp } = await createOTPToken({
-      userId: existingWorker ? existingWorker._id : null,
-      phone,
-      email: email || null,
-      type: TOKEN_TYPES.PHONE_VERIFICATION,
-      expiryMinutes: 10
-    });
+    // 2. Generate OTP
+    const otp = generateOTP();
+    const otpHash = hashOTP(otp);
 
+    // 3. Store OTP (Redis primary, MongoDB fallback)
+    await storeOTP(phone, otpHash);
+
+    // 4. Send OTP via SMS
+    const smsResult = await sendSMSOTP(phone, otp);
+
+    // Log OTP in development mode only
     if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV MODE] Default OTP for worker ${phone}: ${otp}`);
-    } else {
-      console.log(`OTP for worker ${phone}: ${otp}`);
+      console.log(`[DEV] Worker OTP for ${phone}: ${otp}`);
+    }
+
+    if (!smsResult.success) {
+      console.warn(`[OTP] SMS failed for worker ${phone}, but OTP stored`);
     }
 
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
-      token
+      token: 'verification-pending'
     });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -65,21 +78,14 @@ const login = async (req, res) => {
       });
     }
 
-    const { phone, otp, token } = req.body;
+    const { phone, otp } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -98,9 +104,6 @@ const login = async (req, res) => {
         message: 'Your account has been deactivated. Please contact support.'
       });
     }
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // Generate JWT tokens
     const tokens = generateTokenPair({
@@ -134,8 +137,6 @@ const login = async (req, res) => {
  * Register worker (if allowed directly)
  */
 const register = async (req, res) => {
-  // Implementing same as vendor/user if needed, but usually workers are added by vendors
-  // For now, let's keep it consistent with the requirement
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -146,21 +147,14 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, phone, otp, token, aadharNumber, aadharDocument } = req.body;
+    const { name, email, phone, otp, aadharNumber, aadharDocument } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -192,9 +186,6 @@ const register = async (req, res) => {
       },
       status: WORKER_STATUS.OFFLINE
     });
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // Generate JWT tokens
     const tokens = generateTokenPair({

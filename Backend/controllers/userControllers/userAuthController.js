@@ -1,11 +1,10 @@
 const User = require('../../models/User');
-const Token = require('../../models/Token');
 const { generateTokenPair, verifyRefreshToken } = require('../../utils/tokenService');
-const { createOTPToken, verifyOTPToken, markTokenAsUsed } = require('../../services/otpService');
+const { generateOTP, hashOTP, storeOTP, verifyOTP, checkRateLimit } = require('../../utils/redisOtp.util');
+const { sendOTP: sendSMSOTP } = require('../../services/smsService');
 const { sendOTPEmail } = require('../../services/emailService');
-const { TOKEN_TYPES, USER_ROLES } = require('../../utils/constants');
+const { USER_ROLES } = require('../../utils/constants');
 const { validationResult } = require('express-validator');
-const { generateOTP } = require('../../utils/generateOTP');
 
 /**
  * Send OTP for user registration/login
@@ -23,33 +22,44 @@ const sendOTP = async (req, res) => {
 
     const { phone, email } = req.body;
 
-    // Check if user exists (for login) or not (for signup)
-    const existingUser = await User.findOne({ phone });
-
-    // Create OTP token
-    const { token, otp } = await createOTPToken({
-      userId: existingUser ? existingUser._id : null,
-      phone,
-      email: email || null,
-      type: existingUser ? TOKEN_TYPES.PHONE_VERIFICATION : TOKEN_TYPES.PHONE_VERIFICATION,
-      expiryMinutes: 10
-    });
-
-    // Send OTP via SMS (simulated) or Email
-    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV MODE] Default OTP for ${phone}: ${otp}`);
-    } else {
-      console.log(`OTP for ${phone}: ${otp}`);
+    // 1. Rate limit check
+    const allowed = await checkRateLimit(phone);
+    if (!allowed) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many OTP requests. Please try again after 10 minutes.'
+      });
     }
 
+    // 2. Generate OTP
+    const otp = generateOTP();
+    const otpHash = hashOTP(otp);
+
+    // 3. Store OTP (Redis primary, MongoDB fallback)
+    await storeOTP(phone, otpHash);
+
+    // 4. Send OTP via SMS
+    const smsResult = await sendSMSOTP(phone, otp);
+
+    // Log OTP in development mode only (NEVER in production)
+    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
+      console.log(`[DEV] OTP for ${phone}: ${otp}`);
+    }
+
+    // 5. Optional: Send email notification if email provided
     if (email) {
       await sendOTPEmail(email, otp, 'verification');
+    }
+
+    // Check if SMS failed
+    if (!smsResult.success) {
+      console.warn(`[OTP] SMS failed for ${phone}, but OTP stored for manual entry`);
     }
 
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
-      token // Return token for verification
+      token: 'verification-pending' // Required by frontend to allow login
     });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -74,22 +84,14 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, phone, otp, token } = req.body;
+    const { name, email, phone, otp } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    // Verify token
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -110,9 +112,6 @@ const register = async (req, res) => {
       isPhoneVerified: true,
       isEmailVerified: email ? false : true
     });
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // Generate JWT tokens
     const tokens = generateTokenPair({
@@ -156,22 +155,14 @@ const login = async (req, res) => {
       });
     }
 
-    const { phone, otp, token } = req.body;
+    const { phone, otp } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    // Verify token
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -190,9 +181,6 @@ const login = async (req, res) => {
         message: 'Your account has been deactivated. Please contact support.'
       });
     }
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // Generate JWT tokens
     const tokens = generateTokenPair({

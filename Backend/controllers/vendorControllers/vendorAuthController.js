@@ -1,8 +1,9 @@
 const Vendor = require('../../models/Vendor');
-const { createOTPToken, verifyOTPToken, markTokenAsUsed } = require('../../services/otpService');
+const { generateOTP, hashOTP, storeOTP, verifyOTP, checkRateLimit } = require('../../utils/redisOtp.util');
 const { generateTokenPair, verifyRefreshToken } = require('../../utils/tokenService');
+const { sendOTP: sendSMSOTP } = require('../../services/smsService');
 const cloudinaryService = require('../../services/cloudinaryService');
-const { TOKEN_TYPES, USER_ROLES, VENDOR_STATUS } = require('../../utils/constants');
+const { USER_ROLES, VENDOR_STATUS } = require('../../utils/constants');
 const { validationResult } = require('express-validator');
 
 /**
@@ -21,26 +22,38 @@ const sendOTP = async (req, res) => {
 
     const { phone, email } = req.body;
 
-    const existingVendor = await Vendor.findOne({ phone });
+    // 1. Rate limit check
+    const allowed = await checkRateLimit(phone);
+    if (!allowed) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many OTP requests. Please try again after 10 minutes.'
+      });
+    }
 
-    const { token, otp } = await createOTPToken({
-      userId: existingVendor ? existingVendor._id : null,
-      phone,
-      email: email || null,
-      type: TOKEN_TYPES.PHONE_VERIFICATION,
-      expiryMinutes: 10
-    });
+    // 2. Generate OTP
+    const otp = generateOTP();
+    const otpHash = hashOTP(otp);
 
+    // 3. Store OTP (Redis primary, MongoDB fallback)
+    await storeOTP(phone, otpHash);
+
+    // 4. Send OTP via SMS
+    const smsResult = await sendSMSOTP(phone, otp);
+
+    // Log OTP in development mode only
     if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV MODE] Default OTP for vendor ${phone}: ${otp}`);
-    } else {
-      console.log(`OTP for vendor ${phone}: ${otp}`);
+      console.log(`[DEV] Vendor OTP for ${phone}: ${otp}`);
+    }
+
+    if (!smsResult.success) {
+      console.warn(`[OTP] SMS failed for vendor ${phone}, but OTP stored`);
     }
 
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
-      token
+      token: 'verification-pending'
     });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -68,21 +81,14 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, phone, aadhar, pan, service, otp, token } = req.body;
+    const { name, email, phone, aadhar, pan, service, otp } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -141,9 +147,6 @@ const register = async (req, res) => {
       approvalStatus: VENDOR_STATUS.PENDING,
       isPhoneVerified: true
     });
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // 🔔 NOTIFY ALL ADMINS about new vendor registration
     try {
@@ -211,21 +214,14 @@ const login = async (req, res) => {
       });
     }
 
-    const { phone, otp, token } = req.body;
+    const { phone, otp } = req.body;
 
-    // Verify OTP
-    const verification = await verifyOTPToken({ phone, otp, type: TOKEN_TYPES.PHONE_VERIFICATION });
+    // Verify OTP (checks Redis first, falls back to MongoDB)
+    const verification = await verifyOTP(phone, otp);
     if (!verification.success) {
       return res.status(400).json({
         success: false,
         message: verification.message
-      });
-    }
-
-    if (verification.tokenDoc.token !== token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid verification token'
       });
     }
 
@@ -266,9 +262,6 @@ const login = async (req, res) => {
         message: 'Your account has been deactivated. Please contact support.'
       });
     }
-
-    // Mark token as used
-    await markTokenAsUsed(verification.tokenDoc._id);
 
     // Generate JWT tokens
     const tokens = generateTokenPair({
