@@ -103,35 +103,72 @@ const VendorSignup = () => {
     });
   };
 
+  // Validation helpers
+  const validateName = (name) => {
+    if (!name || !name.trim()) return 'Name is required';
+    if (name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) return 'Name can only contain letters and spaces';
+    return null;
+  };
+
+  const validateEmail = (email) => {
+    if (!email || !email.trim()) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return null;
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return 'Phone number is required';
+    if (phone.length !== 10) return 'Phone number must be exactly 10 digits';
+    if (!/^[6-9]\d{9}$/.test(phone)) return 'Please enter a valid Indian phone number';
+    return null;
+  };
+
+  const validateAadhar = (aadhar) => {
+    if (!aadhar) return 'Aadhar number is required';
+    if (aadhar.length !== 12) return 'Aadhar number must be exactly 12 digits';
+    if (!/^\d{12}$/.test(aadhar)) return 'Aadhar number can only contain digits';
+    return null;
+  };
+
+  const validatePAN = (pan) => {
+    if (!pan) return 'PAN number is required';
+    if (pan.length !== 10) return 'PAN number must be exactly 10 characters';
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan)) return 'Please enter a valid PAN format (e.g., ABCDE1234F)';
+    return null;
+  };
+
+  const validateForm = () => {
+    const errors = [];
+    const nameError = validateName(formData.name);
+    const emailError = validateEmail(formData.email);
+    const phoneError = validatePhone(formData.phoneNumber);
+    const aadharError = validateAadhar(formData.aadhar);
+    const panError = validatePAN(formData.pan);
+
+    if (nameError) errors.push(nameError);
+    if (emailError) errors.push(emailError);
+    if (phoneError) errors.push(phoneError);
+    if (aadharError) errors.push(aadharError);
+    if (panError) errors.push(panError);
+
+    // Document validation
+    const hasAadharDoc = formData.documents.some(d => d.type === 'aadhar');
+    const hasPanDoc = formData.documents.some(d => d.type === 'pan');
+    if (!hasAadharDoc) errors.push('Please upload Aadhar document');
+    if (!hasPanDoc) errors.push('Please upload PAN document');
+
+    return errors;
+  };
+
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.name.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-    if (!formData.email.trim()) {
-      toast.error('Please enter your email');
-      return;
-    }
-    if (!formData.phoneNumber || formData.phoneNumber.length < 10) {
-      toast.error('Please enter a valid phone number');
-      return;
-    }
-    // Aadhar and PAN validations remain
-    if (!formData.aadhar || formData.aadhar.length !== 12) {
-      toast.error('Please enter a valid 12-digit Aadhar number');
-      return;
-    }
-    if (!formData.pan || formData.pan.length !== 10) {
-      toast.error('Please enter a valid 10-character PAN number');
-      return;
-    }
-    // Service validation removed
-
-    if (formData.documents.length < 2) {
-      toast.error('Please upload both Aadhar and PAN documents');
+    // Run all validations
+    const errors = validateForm();
+    if (errors.length > 0) {
+      errors.forEach(err => toast.error(err));
       return;
     }
 
